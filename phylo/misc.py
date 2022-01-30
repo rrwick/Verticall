@@ -12,9 +12,7 @@ If not, see <http://www.gnu.org/licenses/>.
 """
 
 import gzip
-import multiprocessing
 import os
-import pathlib
 import sys
 
 from .log import log, bold_yellow
@@ -65,3 +63,72 @@ def get_ascii_art():
                  bold_yellow(r"                 __/ |          ") + '\n' +
                  bold_yellow(r"                |___/         ") + '\n')
     return ascii_art
+
+
+def get_sequence_file_type(filename):
+    """
+    Peeks into a file and returns either 'FASTA', 'FASTQ' or 'GFA' based on what the start of the
+    file looks like.
+    """
+    if not os.path.isfile(filename):
+        sys.exit(f'\nError: could not find {filename}')
+    with get_open_func(filename)(filename, 'rt') as seq_file:
+        try:
+            first_char = seq_file.read(1)
+        except UnicodeDecodeError:
+            first_char = ''
+    if first_char == '>':
+        return 'FASTA'
+    elif first_char == '@':
+        return 'FASTQ'
+    elif first_char == 'H' or first_char == 'S' or first_char == 'L':
+        return 'GFA'
+    else:
+        return 'unknown'
+
+
+def iterate_fasta(filename):
+    """
+    Takes a FASTA file as input and yields the contents as (name, seq) tuples.
+    """
+    with get_open_func(filename)(filename, 'rt') as fasta_file:
+        name = ''
+        sequence = []
+        for line in fasta_file:
+            line = line.strip()
+            if not line:
+                continue
+            if line[0] == '>':  # Header line = start of new contig
+                if name:
+                    yield name.split()[0], ''.join(sequence)
+                    sequence = []
+                name = line[1:]
+            else:
+                sequence.append(line.upper())
+        if name:
+            yield name.split()[0], ''.join(sequence)
+
+
+def iterate_gfa(filename):
+    """
+    Takes a GFA file as input and yields the contents as (name, seq) tuples. Only 'S' lines are
+    used - everything else in the GFA file is ignored.
+    """
+    with get_open_func(filename)(filename, 'rt') as gfa_file:
+        for line in gfa_file:
+            if not line.startswith('S\t'):
+                continue
+            parts = line.strip().split('\t')
+            yield parts[1], parts[2]
+
+
+def get_generator(filename):
+    """
+    Returns either the iterate_fasta generator or the iterate_gfa generator, as appropriate for the
+    file type.
+    """
+    file_type = get_sequence_file_type(filename)
+    if file_type == 'FASTA':
+        return iterate_fasta
+    elif file_type == 'GFA':
+        return iterate_gfa
