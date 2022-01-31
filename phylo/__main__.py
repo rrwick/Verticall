@@ -16,6 +16,7 @@ import argparse
 import pathlib
 import sys
 
+from .align import align
 from .shred import shred
 from .help_formatter import MyParser, MyHelpFormatter
 from .misc import check_python_version, get_ascii_art
@@ -31,6 +32,10 @@ def main():
         check_shred_args(args)
         shred(args)
 
+    if args.subparser_name == 'align':
+        check_align_args(args)
+        align(args)
+
 
 def parse_args(args):
     description = 'R|' + get_ascii_art() + '\n' + \
@@ -39,6 +44,7 @@ def parse_args(args):
 
     subparsers = parser.add_subparsers(title='Commands', dest='subparser_name')
     shred_subparser(subparsers)
+    align_subparser(subparsers)
 
     longest_choice_name = max(len(c) for c in subparsers.choices)
     subparsers.help = 'R|'
@@ -88,9 +94,34 @@ def shred_subparser(subparsers):
                             help="Show program's version number and exit")
 
 
+def align_subparser(subparsers):
+    group = subparsers.add_parser('align', description='align pieces to assemblies',
+                                  formatter_class=MyHelpFormatter, add_help=False)
+
+    required_args = group.add_argument_group('Required arguments')
+    required_args.add_argument('-i', '--in_dir', type=pathlib.Path, required=True,
+                               help='Directory containing sequences and pieces')
+    required_args.add_argument('-o', '--out_file', type=pathlib.Path, required=True,
+                               help='Output file where alignment results will be saved')
+
+    setting_args = group.add_argument_group('Settings')
+    setting_args.add_argument('-t', '--threads', type=int, default=8,
+                              help='Threads for alignment')
+
+    other_args = group.add_argument_group('Other')
+    other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
+                            help='Show this help message and exit')
+    other_args.add_argument('--version', action='version', version='XXXXXXXXX v' + __version__,
+                            help="Show program's version number and exit")
+
+
 def check_shred_args(args):
     if args.overlap >= args.size:
         sys.exit('\nError: --overlap must be less than --size')
+
+
+def check_align_args(args):
+    pass
 
 
 if __name__ == '__main__':

@@ -13,6 +13,7 @@ If not, see <http://www.gnu.org/licenses/>.
 
 import gzip
 import os
+import subprocess
 import sys
 
 from .log import log, bold_yellow
@@ -49,8 +50,8 @@ def get_open_func(filename):
 
 
 def check_python_version():
-    if sys.version_info.major < 3 or sys.version_info.minor < 6:
-        sys.exit('\nError: XXXXXXXXX requires Python 3.6 or later')
+    if sys.version_info.major < 3 or sys.version_info.minor < 7:
+        sys.exit('\nError: XXXXXXXXX requires Python 3.7 or later')
 
 
 def get_ascii_art():
