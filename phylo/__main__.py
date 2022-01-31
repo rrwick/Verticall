@@ -68,12 +68,14 @@ def shred_subparser(subparsers):
                                   formatter_class=MyHelpFormatter, add_help=False)
 
     required_args = group.add_argument_group('Required arguments')
-    required_args.add_argument('-a', '--assemblies', type=str, required=True, nargs='+',
-                               help='Input assemblies (FASTA or GFA format)')
+    required_args.add_argument('-i', '--in_dir', type=pathlib.Path, required=True,
+                               help='Directory containing input assemblies (FASTA or GFA format)')
     required_args.add_argument('-o', '--out_dir', type=pathlib.Path, required=True,
-                               help='Output directory')
+                               help='Output directory where sequences will be saved')
 
     setting_args = group.add_argument_group('Settings')
+    setting_args.add_argument('--recursive', action='store_true',
+                              help='Search for input assemblies recursively')
     setting_args.add_argument('--size', type=int, default=100,
                               help='Size of assembly pieces in bp')
     setting_args.add_argument('--overlap', type=int, default=50,
@@ -87,7 +89,8 @@ def shred_subparser(subparsers):
 
 
 def check_shred_args(args):
-    pass
+    if args.overlap >= args.size:
+        sys.exit('\nError: --overlap must be less than --size')
 
 
 if __name__ == '__main__':

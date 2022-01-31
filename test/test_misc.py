@@ -122,3 +122,16 @@ def test_iterate_gfa_1():
 def test_iterate_gfa_2():
     gfa = list(phylo.misc.iterate_gfa('test/test_misc/test.gfa.gz'))
     assert gfa == [('1', 'ACGTACGT'), ('2', 'TGCA')]
+
+
+def test_check_assembly_file_type_1():
+    phylo.misc.check_assembly_file_type('test/test_misc/test.fasta')
+    phylo.misc.check_assembly_file_type('test/test_misc/test.fasta.gz')
+    phylo.misc.check_assembly_file_type('test/test_misc/test.gfa')
+    phylo.misc.check_assembly_file_type('test/test_misc/test.gfa.gz')
+
+
+def test_check_assembly_file_type_2():
+    with pytest.raises(SystemExit) as e:
+        phylo.misc.check_assembly_file_type('test/test_misc/test.fastq')
+    assert 'is not in FASTA or GFA format' in str(e.value)

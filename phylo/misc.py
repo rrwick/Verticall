@@ -132,3 +132,9 @@ def get_generator(filename):
         return iterate_fasta
     elif file_type == 'GFA':
         return iterate_gfa
+
+
+def check_assembly_file_type(a):
+    file_type = get_sequence_file_type(a)
+    if file_type != 'FASTA' and file_type != 'GFA':
+        sys.exit(f'\nError: {a} is not in FASTA or GFA format')
