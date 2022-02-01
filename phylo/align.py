@@ -11,7 +11,9 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <http://www.gnu.org/licenses/>.
 """
 
+import collections
 import subprocess
+import statistics
 import sys
 
 from .alignment import Alignment
@@ -23,7 +25,7 @@ def align(args):
     welcome_message()
     samples = find_samples(args.in_dir)
     build_indices(args.in_dir, samples)
-    align_all_samples(args.in_dir, samples, args.threads)
+    align_all_samples(args.in_dir, args.out_file, samples, args.threads)
     finished_message()
 
 
@@ -66,58 +68,86 @@ def build_indices(in_dir, samples):
     log(f'0 / {len(samples)}', end='')
     for i, s in enumerate(samples):
         if not index_exists(in_dir, s):
-            sequence_fasta = in_dir / (s + '_full.fasta')
-            command = ['bwa', 'index', str(sequence_fasta.resolve())]
+            sequence_fasta = (in_dir / (s + '_full.fasta')).resolve()
+            index_file = (in_dir / (s + '_full.mmi')).resolve()
+            # TODO: explore different indexing options (e.g. -k and -w) to see how they affect
+            #       the results.
+            command = ['minimap2', '-k15', '-w10',
+                       '-d', index_file, sequence_fasta]
             p = subprocess.run(command, capture_output=True, text=True)
             if p.returncode != 0:
-                sys.exit(f'\nError: bwa index failed to run on sample {s}:\n{p.stderr}')
+                sys.exit(f'\nError: minimap2 failed to index sample {s}:\n{p.stderr}')
         log(f'\r{i+1} / {len(samples)}', end='')
     log('\n')
 
 
 def index_exists(in_dir, sample):
-    index_1 = in_dir / (sample + '_full.fasta.amb')
-    index_2 = in_dir / (sample + '_full.fasta.ann')
-    index_3 = in_dir / (sample + '_full.fasta.bwt')
-    index_4 = in_dir / (sample + '_full.fasta.pac')
-    index_5 = in_dir / (sample + '_full.fasta.sa')
-    return (index_1.is_file() and index_1.stat().st_size > 0 and
-            index_2.is_file() and index_2.stat().st_size > 0 and
-            index_3.is_file() and index_3.stat().st_size > 0 and
-            index_4.is_file() and index_4.stat().st_size > 0 and
-            index_5.is_file() and index_5.stat().st_size > 0)
+    index = in_dir / (sample + '_full.mmi')
+    return index.is_file() and index.stat().st_size > 0
 
 
-def align_all_samples(in_dir, samples, threads):
+def align_all_samples(in_dir, out_filename, samples, threads):
     section_header('Aligning pairwise combinations')
     explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
                 'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
                 'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
-    for a in samples:
-        for b in samples:
-            if a != b:
-                align_sample_pair(in_dir, a, b, threads)
+    with open(out_filename, 'wt') as out_file:
+        for a in samples:
+            for b in samples:
+                if a != b:
+                    align_sample_pair(in_dir, out_file, a, b, threads)
 
 
-def align_sample_pair(in_dir, a, b, threads):
+def align_sample_pair(in_dir, out_file, a, b, threads):
     pieces_fasta = in_dir / (a + '_pieces.fasta')
-    sequence_fasta = in_dir / (b + '_full.fasta')
+    sequence_index = in_dir / (b + '_full.mmi')
     piece_count = count_seqs_in_fasta(pieces_fasta)
-    assert index_exists(in_dir, b)
     log(f'Aligning {a} pieces to {b} assembly:')
-    command = ['bwa', 'mem', '-t', str(threads),
-               str(sequence_fasta.resolve()), str(pieces_fasta.resolve())]
+    # TODO: explore different alignment options (e.g. the things set by -x sr) to see how they
+    #       affect the results.
+    command = ['minimap2', '-a', '-t', str(threads), '--eqx', '-x', 'sr',
+               str(sequence_index.resolve()), str(pieces_fasta.resolve())]
     p = subprocess.run(command, capture_output=True, text=True)
-    for line in p.stdout.splitlines():
-        print(line)
-    quit()
 
     alignments = [Alignment(line) for line in p.stdout.splitlines() if not line.startswith('@')]
     alignments = [a for a in alignments if a.is_fully_aligned()]
-    log(f'  {len(alignments):,} / {piece_count:,} pieces fully aligned')
-    edit_distances = [a.edit_distance for a in alignments]
+    alignments = get_best_alignment_per_read(alignments)
+    aligned_fraction = len(alignments) / piece_count
+    log(f'  {len(alignments):,} / {piece_count:,} pieces fully aligned '
+        f'({100 * aligned_fraction:.1f}%)')
 
-    log(f'  lowest edit distance:  {min(edit_distances)}')
-    log(f'  highest edit distance: {max(edit_distances)}')
+    match_counts = [a.get_match_count() for a in alignments]
+    piece_len = int(statistics.median(a.read_length for a in alignments))
+    median_identity = 100.0 * statistics.median(match_counts) / piece_len
+    mean_identity = 100.0 * statistics.mean(match_counts) / piece_len
 
+    log(f'  median identity: {median_identity:6.2f}%')
+    log(f'  mean identity:   {mean_identity:6.2f}%')
     log()
+
+    distances = [piece_len - m for m in match_counts]
+    distance_counts = collections.Counter(distances)
+
+    out_file.write(f'{a}\t{b}\t{piece_len}\t{aligned_fraction:.8f}')
+    for i in range(max(distances) + 1):
+        if distance_counts[i] == 0:
+            out_file.write('\t0')
+        else:
+            probability_mass = distance_counts[i] / piece_count
+            out_file.write(f'\t{probability_mass:.8f}')
+    out_file.write('\n')
+
+
+def get_best_alignment_per_read(alignments):
+    """
+    Returns a list of alignments where there is only one alignment per read. 'Best' is defined using
+    the match count.
+    """
+    alignments_by_read = {}
+    for a in alignments:
+        if a.read_name not in alignments_by_read:
+            alignments_by_read[a.read_name] = a
+        elif a.get_match_count() > alignments_by_read[a.read_name].get_match_count():
+            alignments_by_read[a.read_name] = a
+    return list(alignments_by_read.values())
+

@@ -27,15 +27,10 @@ class Alignment(object):
         self.ref_name = parts[2]
         self.ref_start = int(parts[3]) - 1  # switch from SAM's 1-based to Python's 0-based
         self.cigar = parts[5]
-        self.ref_end = get_ref_end(self.ref_start, self.cigar)
-
-        self.edit_distance = -1
-        for p in parts[11:]:
-            if p.startswith('NM:i:'):
-                self.edit_distance = int(p[5:])
+        self.read_length = len(parts[9])
 
     def __repr__(self):
-        return f'{self.read_name}:{self.ref_name}:{self.ref_start}-{self.ref_end}'
+        return f'{self.read_name}:{self.ref_name}:{self.ref_start}'
 
     def is_aligned(self):
         return not self.has_flag(4)
@@ -49,18 +44,17 @@ class Alignment(object):
     def starts_and_ends_with_match(self):
         cigar_parts = re.findall(r'\d+[MIDNSHP=X]', self.cigar)
         first_part, last_part = cigar_parts[0], cigar_parts[-1]
-        return first_part[-1] == 'M' and last_part[-1] == 'M'
+        return first_part[-1] == '=' and last_part[-1] == '='
+
+    def get_match_count(self):
+        match_count = 0
+        cigar_parts = re.findall(r'\d+[MIDNSHP=X]', self.cigar)
+        for p in cigar_parts:
+            size = int(p[:-1])
+            letter = p[-1]
+            if letter == '=':
+                match_count += size
+        return match_count
 
     def is_fully_aligned(self):
         return self.is_aligned() and self.starts_and_ends_with_match()
-
-
-def get_ref_end(ref_start, cigar):
-    ref_end = ref_start
-    cigar_parts = re.findall(r'\d+[MIDNSHP=X]', cigar)
-    for p in cigar_parts:
-        size = int(p[:-1])
-        letter = p[-1]
-        if letter == 'M' or letter == 'D' or letter == 'N' or letter == '=' or letter == 'X':
-            ref_end += size
-    return ref_end
