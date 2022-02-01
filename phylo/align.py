@@ -11,18 +11,19 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <http://www.gnu.org/licenses/>.
 """
 
-import pathlib
 import subprocess
 import sys
 
+from .alignment import Alignment
 from .log import log, section_header, explanation
+from .misc import count_seqs_in_fasta
 
 
 def align(args):
     welcome_message()
     samples = find_samples(args.in_dir)
     build_indices(args.in_dir, samples)
-    align_all_samples(args.in_dir, samples)
+    align_all_samples(args.in_dir, samples, args.threads)
     finished_message()
 
 
@@ -87,18 +88,36 @@ def index_exists(in_dir, sample):
             index_5.is_file() and index_5.stat().st_size > 0)
 
 
-def align_all_samples(in_dir, samples):
+def align_all_samples(in_dir, samples, threads):
     section_header('Aligning pairwise combinations')
     explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
                 'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
                 'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
     for a in samples:
         for b in samples:
-            align_sample_pair(in_dir, a, b)
+            if a != b:
+                align_sample_pair(in_dir, a, b, threads)
 
 
-def align_sample_pair(in_dir, a, b):
+def align_sample_pair(in_dir, a, b, threads):
     pieces_fasta = in_dir / (a + '_pieces.fasta')
     sequence_fasta = in_dir / (b + '_full.fasta')
+    piece_count = count_seqs_in_fasta(pieces_fasta)
     assert index_exists(in_dir, b)
-    log(f'{a} {b}')
+    log(f'Aligning {a} pieces to {b} assembly:')
+    command = ['bwa', 'mem', '-t', str(threads),
+               str(sequence_fasta.resolve()), str(pieces_fasta.resolve())]
+    p = subprocess.run(command, capture_output=True, text=True)
+    for line in p.stdout.splitlines():
+        print(line)
+    quit()
+
+    alignments = [Alignment(line) for line in p.stdout.splitlines() if not line.startswith('@')]
+    alignments = [a for a in alignments if a.is_fully_aligned()]
+    log(f'  {len(alignments):,} / {piece_count:,} pieces fully aligned')
+    edit_distances = [a.edit_distance for a in alignments]
+
+    log(f'  lowest edit distance:  {min(edit_distances)}')
+    log(f'  highest edit distance: {max(edit_distances)}')
+
+    log()

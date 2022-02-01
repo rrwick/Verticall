@@ -13,7 +13,6 @@ If not, see <http://www.gnu.org/licenses/>.
 
 import gzip
 import os
-import subprocess
 import sys
 
 from .log import log, bold_yellow
@@ -108,6 +107,15 @@ def iterate_fasta(filename):
                 sequence.append(line.upper())
         if name:
             yield name.split()[0], ''.join(sequence)
+
+
+def count_seqs_in_fasta(filename):
+    count = 0
+    with get_open_func(filename)(filename, 'rt') as fasta_file:
+        for line in fasta_file:
+            if line.startswith('>'):
+                count += 1
+    return count
 
 
 def iterate_gfa(filename):
