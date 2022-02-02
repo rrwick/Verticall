@@ -12,6 +12,7 @@ If not, see <http://www.gnu.org/licenses/>.
 """
 
 import itertools
+import math
 import numpy as np
 import sys
 
@@ -20,6 +21,7 @@ def distance(args):
     distances, sample_names = load_distances(args.alignment_results, args.method)
     add_self_distances(distances, sample_names)
     check_matrix_size(distances, sample_names, args.alignment_results)
+    correct_distances(distances, sample_names, args.correction)
     if not args.asymmetrical:
         make_symmetrical(distances, sample_names)
     output_phylip_matrix(distances, sample_names)
@@ -45,8 +47,7 @@ def get_distance(masses, piece_size, method):
         return get_median_distance(masses, piece_size)
     elif method == 'median_cont':
         return get_median_cont_distance(masses, piece_size)
-    else:
-        assert False
+    assert False
 
 
 def get_mean_distance(masses, piece_size):
@@ -71,6 +72,23 @@ def check_matrix_size(distances, sample_names, alignment_results):
     if len(distances) != len(sample_names)**2:
         sys.exit(f'\nError: incorrect number of records in {alignment_results}'
                  f' - rerun XXXXXXXXX align')
+
+
+def correct_distances(distances, sample_names, correction):
+    if correction == 'none':
+        return
+    elif correction == 'jukescantor':
+        for a in sample_names:
+            for b in sample_names:
+                distances[(a, b)] = jukes_cantor(distances[(a, b)])
+        return
+    assert False
+
+
+def jukes_cantor(d):
+    if d == 0.0:
+        return 0.0
+    return -0.75 * math.log(1 - 1.33333333333333 * d)
 
 
 def make_symmetrical(distances, sample_names):

@@ -163,6 +163,9 @@ def distance_subparser(subparsers):
     setting_args.add_argument('--method', type=str, choices=['mean', 'median', 'median_cont'],
                               default='median_cont',
                               help='Method for converting distributions into a single distance')
+    setting_args.add_argument('--correction', type=str, choices=['none', 'jukescantor'],
+                              default='jukescantor',
+                              help='Distance correction technique')
     setting_args.add_argument('--asymmetrical', action='store_true',
                               help='Do not average distance pairs to make a symmetrical matrix')
 
