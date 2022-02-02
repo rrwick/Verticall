@@ -133,7 +133,7 @@ def align_sample_pair(in_dir, out_file, a, b, threads):
         if distance_counts[i] == 0:
             out_file.write('\t0')
         else:
-            probability_mass = distance_counts[i] / piece_count
+            probability_mass = distance_counts[i] / len(alignments)
             out_file.write(f'\t{probability_mass:.8f}')
     out_file.write('\n')
 
@@ -150,4 +150,3 @@ def get_best_alignment_per_read(alignments):
         elif a.get_match_count() > alignments_by_read[a.read_name].get_match_count():
             alignments_by_read[a.read_name] = a
     return list(alignments_by_read.values())
-

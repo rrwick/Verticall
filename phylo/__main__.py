@@ -22,6 +22,7 @@ from .help_formatter import MyParser, MyHelpFormatter
 from .misc import check_python_version, get_ascii_art
 from .log import bold
 from .version import __version__
+from .view import view
 
 
 def main():
@@ -36,6 +37,10 @@ def main():
         check_align_args(args)
         align(args)
 
+    if args.subparser_name == 'view':
+        check_view_args(args)
+        view(args)
+
 
 def parse_args(args):
     description = 'R|' + get_ascii_art() + '\n' + \
@@ -45,6 +50,7 @@ def parse_args(args):
     subparsers = parser.add_subparsers(title='Commands', dest='subparser_name')
     shred_subparser(subparsers)
     align_subparser(subparsers)
+    view_subparser(subparsers)
 
     longest_choice_name = max(len(c) for c in subparsers.choices)
     subparsers.help = 'R|'
@@ -82,9 +88,9 @@ def shred_subparser(subparsers):
     setting_args = group.add_argument_group('Settings')
     setting_args.add_argument('--recursive', action='store_true',
                               help='Search for input assemblies recursively')
-    setting_args.add_argument('--size', type=int, default=100,
+    setting_args.add_argument('--size', type=int, default=1000,
                               help='Size of assembly pieces in bp')
-    setting_args.add_argument('--overlap', type=int, default=50,
+    setting_args.add_argument('--overlap', type=int, default=500,
                               help='Overlap between assembly pieces in bp')
 
     other_args = group.add_argument_group('Other')
@@ -115,6 +121,29 @@ def align_subparser(subparsers):
                             help="Show program's version number and exit")
 
 
+def view_subparser(subparsers):
+    group = subparsers.add_parser('view', description='view pairwise distance distribution',
+                                  formatter_class=MyHelpFormatter, add_help=False)
+
+    required_args = group.add_argument_group('Required arguments')
+    required_args.add_argument('alignment_results', type=pathlib.Path,
+                               help='File containing the output of XXXXXXXXX align')
+    required_args.add_argument('assembly_1', type=str,
+                               help='Name of first assembly in pair')
+    required_args.add_argument('assembly_2', type=str,
+                               help='Name of first assembly in pair')
+
+    setting_args = group.add_argument_group('Settings')
+    setting_args.add_argument('--sqrt_y', action='store_true',
+                              help='Use a square-root transform on the y-axis')
+
+    other_args = group.add_argument_group('Other')
+    other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
+                            help='Show this help message and exit')
+    other_args.add_argument('--version', action='version', version='XXXXXXXXX v' + __version__,
+                            help="Show program's version number and exit")
+
+
 def check_shred_args(args):
     if args.overlap >= args.size:
         sys.exit('\nError: --overlap must be less than --size')
@@ -122,6 +151,11 @@ def check_shred_args(args):
 
 def check_align_args(args):
     pass
+
+
+def check_view_args(args):
+    if not args.alignment_results.is_file():
+        sys.exit(f'\nError: {args.alignment_results} could not be found')
 
 
 if __name__ == '__main__':
