@@ -56,7 +56,13 @@ def get_mean_distance(masses, piece_size):
 
 
 def get_median_distance(masses, piece_size):
-    return 0.0
+    distances = [i / piece_size for i in range(len(masses))]
+    total = 0.0
+    for d, m in zip(distances, masses):
+        total += m
+        if total >= 0.5:
+            return d
+    return d
 
 
 def get_median_cont_distance(masses, piece_size):
@@ -88,7 +94,9 @@ def correct_distances(distances, sample_names, correction):
 def jukes_cantor(d):
     if d == 0.0:
         return 0.0
-    return -0.75 * math.log(1 - 1.33333333333333 * d)
+    if d >= 0.75:
+        return 25.0
+    return -0.75 * math.log(1.0 - 1.3333333333333 * d)
 
 
 def make_symmetrical(distances, sample_names):
