@@ -11,11 +11,12 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <http://www.gnu.org/licenses/>.
 """
 
-import numpy as np
 import pandas as pd
 from plotnine import ggplot, aes, geom_point, geom_segment, geom_vline, labs, theme_bw, \
     scale_y_continuous, scale_y_sqrt
 import sys
+
+from .distance import get_mean_distance
 
 
 def view(args):
@@ -25,7 +26,7 @@ def view(args):
     distances = [i / piece_size for i in range(len(masses))]
     df = pd.DataFrame(list(zip(distances, masses)),  columns =['distance', 'mass'])
     title = f'{args.assembly_1} vs {args.assembly_2}'
-    mean = np.average(distances, weights=masses)
+    mean = get_mean_distance(masses, piece_size)
 
     g = (ggplot(df, aes('distance', 'mass')) +
          geom_segment(aes(x='distance', xend='distance', y=0, yend='mass'), colour='#880000') +

@@ -17,6 +17,7 @@ import pathlib
 import sys
 
 from .align import align
+from .distance import distance
 from .shred import shred
 from .help_formatter import MyParser, MyHelpFormatter
 from .misc import check_python_version, get_ascii_art
@@ -41,6 +42,10 @@ def main():
         check_view_args(args)
         view(args)
 
+    if args.subparser_name == 'distance':
+        check_distance_args(args)
+        distance(args)
+
 
 def parse_args(args):
     description = 'R|' + get_ascii_art() + '\n' + \
@@ -51,6 +56,7 @@ def parse_args(args):
     shred_subparser(subparsers)
     align_subparser(subparsers)
     view_subparser(subparsers)
+    distance_subparser(subparsers)
 
     longest_choice_name = max(len(c) for c in subparsers.choices)
     subparsers.help = 'R|'
@@ -144,6 +150,29 @@ def view_subparser(subparsers):
                             help="Show program's version number and exit")
 
 
+def distance_subparser(subparsers):
+    group = subparsers.add_parser('distance', description='create PHYLIP distance matrix from '
+                                                          'alignment results',
+                                  formatter_class=MyHelpFormatter, add_help=False)
+
+    required_args = group.add_argument_group('Required arguments')
+    required_args.add_argument('alignment_results', type=pathlib.Path,
+                               help='File containing the output of XXXXXXXXX align')
+
+    setting_args = group.add_argument_group('Settings')
+    setting_args.add_argument('--method', type=str, choices=['mean', 'median', 'median_cont'],
+                              default='median_cont',
+                              help='Method for converting distributions into a single distance')
+    setting_args.add_argument('--asymmetrical', action='store_true',
+                              help='Do not average distance pairs to make a symmetrical matrix')
+
+    other_args = group.add_argument_group('Other')
+    other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
+                            help='Show this help message and exit')
+    other_args.add_argument('--version', action='version', version='XXXXXXXXX v' + __version__,
+                            help="Show program's version number and exit")
+
+
 def check_shred_args(args):
     if args.overlap >= args.size:
         sys.exit('\nError: --overlap must be less than --size')
@@ -154,6 +183,11 @@ def check_align_args(args):
 
 
 def check_view_args(args):
+    if not args.alignment_results.is_file():
+        sys.exit(f'\nError: {args.alignment_results} could not be found')
+
+
+def check_distance_args(args):
     if not args.alignment_results.is_file():
         sys.exit(f'\nError: {args.alignment_results} could not be found')
 
