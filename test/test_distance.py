@@ -41,3 +41,32 @@ def test_get_median_distance():
     assert phylo.distance.get_median_distance([0.4, 0.0, 0.0, 0.6], 4) == pytest.approx(0.75)
     assert phylo.distance.get_median_distance([0.1, 0.2, 0.3, 0.4], 4) == pytest.approx(0.50)
     assert phylo.distance.get_median_distance([0.4, 0.3, 0.2, 0.1], 4) == pytest.approx(0.25)
+
+
+def test_correct_distances():
+    sample_names = ['a', 'b']
+    distances = {('a', 'a'): 0.0, ('a', 'b'): 0.2,
+                 ('b', 'a'): 0.1, ('b', 'b'): 0.0}
+
+    phylo.distance.correct_distances(distances, sample_names, 'none')
+    assert distances[('a', 'a')] == pytest.approx(0.0)
+    assert distances[('a', 'b')] == pytest.approx(0.2)
+    assert distances[('b', 'a')] == pytest.approx(0.1)
+    assert distances[('b', 'b')] == pytest.approx(0.0)
+
+    phylo.distance.correct_distances(distances, sample_names, 'jukescantor')
+    assert distances[('a', 'a')] == pytest.approx(0.0)
+    assert distances[('a', 'b')] == pytest.approx(0.23261619622788)
+    assert distances[('b', 'a')] == pytest.approx(0.107325632730505)
+    assert distances[('b', 'b')] == pytest.approx(0.0)
+
+
+def test_make_symmetrical():
+    sample_names = ['a', 'b']
+    distances = {('a', 'a'): 0.0, ('a', 'b'): 0.2,
+                 ('b', 'a'): 0.1, ('b', 'b'): 0.0}
+    phylo.distance.make_symmetrical(distances, sample_names)
+    assert distances[('a', 'a')] == pytest.approx(0.0)
+    assert distances[('a', 'b')] == pytest.approx(0.15)
+    assert distances[('b', 'a')] == pytest.approx(0.15)
+    assert distances[('b', 'b')] == pytest.approx(0.0)
