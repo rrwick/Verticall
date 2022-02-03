@@ -113,18 +113,25 @@ def align_all_samples(in_dir, out_filename, assemblies, threads, allowed_overlap
 
     with open(out_filename, 'wt') as out_file:
         out_file.write('#sample_a\tsample_b\twindow_size\talignment_coverage\tprobability_masses\n')
-        with ThreadPool(processes=threads) as pool:
-            for output_line, log_text in pool.imap(align_sample_pair, arg_list):
+
+        # If only using a single thread, do the alignment in a simple loop (easier for debugging).
+        if threads == 1:
+            for a in arg_list:
+                output_line, log_text = align_sample_pair(a)
                 out_file.write(output_line)
-                out_file.write('\n')
-                for line in log_text:
-                    log(line)
-                log()
+                log('\n'.join(log_text), end='\n\n')
+
+        # If only using multiple threads, do the alignments in a thread pool.
+        else:
+            with ThreadPool(processes=threads) as pool:
+                for output_line, log_text in pool.imap(align_sample_pair, arg_list):
+                    out_file.write(output_line)
+                    log('\n'.join(log_text), end='\n\n')
 
 
 def align_sample_pair(all_args):
     """
-    Arguments are passes as a single tuple to make this function easier to call via a thread pool.
+    Arguments are passes as a single tuple to make this function easier to call via pool.imap.
     """
     in_dir, sample_name_a, sample_name_b, assembly_filename_a, allowed_overlap, window_size, \
         window_step, ignore_indels = all_args
@@ -141,18 +148,20 @@ def align_sample_pair(all_args):
     full_alignment_count = len(alignments)
     alignments = [a for a in alignments if a.alignment_length >= window_size]
     alignments = cull_redundant_alignments(alignments, allowed_overlap)
-    log_text.append(f'  {full_alignment_count} alignments ({len(alignments)} after filtering)')
-
-    concatenated_cigar = ''.join(a.expanded_cigar for a in alignments)
     if ignore_indels:
-        concatenated_cigar = remove_indels(concatenated_cigar)
+        all_cigars = [remove_indels(a.expanded_cigar) for a in alignments]
     else:
-        concatenated_cigar = compress_indels(concatenated_cigar)
-    distances, max_difference_count = get_distances(concatenated_cigar, window_size, window_step)
+        all_cigars = [compress_indels(a.expanded_cigar) for a in alignments]
+    all_cigars = [c for c in all_cigars if len(c) >= window_size]
+    log_text.append(f'  {full_alignment_count} alignments ({len(all_cigars)} after filtering)')
+
+    distances, max_difference_count = get_distances(all_cigars, window_size, window_step)
     distance_counts = collections.Counter(distances)
+    log_text.append(f'  distance sampled from {len(distances)} alignment windows')
 
     query_coverage = get_query_coverage(alignments, assembly_filename_a)
-    mean_identity = 1.0 - (get_difference_count(concatenated_cigar) / len(concatenated_cigar))
+    mean_identity = 1.0 - (sum(get_difference_count(c) for c in all_cigars) /
+                           sum(len(c) for c in all_cigars))
 
     log_text.append(f'  aligned fraction: {100.0 * query_coverage:6.2f}%')
     log_text.append(f'  mean identity:    {100.0 * mean_identity:6.2f}%')
@@ -165,7 +174,7 @@ def align_sample_pair(all_args):
         else:
             probability_mass = distance_counts[d] / len(distances)
             output_line.append(f'{probability_mass:.8f}')
-    return '\t'.join(output_line), log_text
+    return '\t'.join(output_line) + '\n', log_text
 
 
 def cull_redundant_alignments(alignments, allowed_overlap):
@@ -191,18 +200,19 @@ def get_query_coverage(alignments, assembly_filename):
     return aligned_bases / assembly_size
 
 
-def get_distances(concatenated_cigar, window_size, window_step):
-    distances = []
-    start, end = 0, window_size
-    max_difference_count = 0
-    while end <= len(concatenated_cigar):
-        cigar_window = concatenated_cigar[start:end]
-        assert len(cigar_window) == window_size
-        difference_count = get_difference_count(cigar_window)
-        distances.append(difference_count / window_size)
-        max_difference_count = max(max_difference_count, difference_count)
-        start += window_step
-        end += window_step
+def get_distances(all_cigars, window_size, window_step):
+    distances, max_difference_count = [], 0
+    for cigar in all_cigars:
+        # TODO: trim CIGAR so windows fit in the middle?
+        start, end = 0, window_size
+        while end <= len(cigar):
+            cigar_window = cigar[start:end]
+            assert len(cigar_window) == window_size
+            difference_count = get_difference_count(cigar_window)
+            distances.append(difference_count / window_size)
+            max_difference_count = max(max_difference_count, difference_count)
+            start += window_step
+            end += window_step
     return distances, max_difference_count
 
 

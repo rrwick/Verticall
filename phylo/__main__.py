@@ -90,7 +90,7 @@ def align_subparser(subparsers):
                               help='Threads for alignment')
     setting_args.add_argument('--window_size', type=int, default=5000,
                               help='Size of the to sliding window over alignments')
-    setting_args.add_argument('--window_step', type=int, default=1000,
+    setting_args.add_argument('--window_step', type=int, default=100,
                               help='Step distance of the sliding window over alignments')
     setting_args.add_argument('--ignore_indels', action='store_true',
                               help='Only use mismatches to determine distance (default: use '
