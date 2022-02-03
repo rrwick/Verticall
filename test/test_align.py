@@ -25,6 +25,14 @@ def test_compress_indels():
     assert phylo.align.compress_indels('==X==II===XXXII=IDD==X==') == '==X==I===XXXI=ID==X=='
 
 
+def test_remove_indels():
+    assert phylo.align.remove_indels('========================') == '========================'
+    assert phylo.align.remove_indels('====X===XXX=====XX=XX===') == '====X===XXX=====XX=XX==='
+    assert phylo.align.remove_indels('=======IIIII====II===I==') == '================'
+    assert phylo.align.remove_indels('===DDD===D====DD===DD===') == '================'
+    assert phylo.align.remove_indels('==X==II===XXXII=IDD==X==') == '==X=====XXX===X=='
+
+
 def test_get_difference_count_1():
     assert phylo.align.get_difference_count('==================================') == 0
     assert phylo.align.get_difference_count('==========X=======================') == 1

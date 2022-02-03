@@ -27,8 +27,8 @@ def align(args):
     welcome_message()
     assemblies = find_assemblies(args.in_dir)
     build_indices(args.in_dir, assemblies)
-    align_all_samples(args.in_dir, args.out_file, assemblies, args.threads, args.min_align_len,
-                      args.allowed_overlap, args.window_size, args.window_step)
+    align_all_samples(args.in_dir, args.out_file, assemblies, args.threads, args.allowed_overlap,
+                      args.window_size, args.window_step, args.ignore_indels)
     finished_message()
 
 
@@ -97,8 +97,8 @@ def index_exists(in_dir, sample_name):
     return index.is_file() and index.stat().st_size > 0
 
 
-def align_all_samples(in_dir, out_filename, assemblies, threads, min_align_len, allowed_overlap,
-                      window_size, window_step):
+def align_all_samples(in_dir, out_filename, assemblies, threads, allowed_overlap, window_size,
+                      window_step, ignore_indels):
     section_header('Aligning pairwise combinations')
     explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
                 'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
@@ -109,7 +109,7 @@ def align_all_samples(in_dir, out_filename, assemblies, threads, min_align_len, 
         for sample_name_b, assembly_filename_b in assemblies:
             if sample_name_a != sample_name_b:
                 arg_list.append((in_dir, sample_name_a, sample_name_b, assembly_filename_a,
-                                 min_align_len, allowed_overlap, window_size, window_step))
+                                 allowed_overlap, window_size, window_step, ignore_indels))
 
     with open(out_filename, 'wt') as out_file:
         out_file.write('#sample_a\tsample_b\twindow_size\talignment_coverage\tprobability_masses\n')
@@ -126,8 +126,8 @@ def align_sample_pair(all_args):
     """
     Arguments are passes as a single tuple to make this function easier to call via a thread pool.
     """
-    in_dir, sample_name_a, sample_name_b, assembly_filename_a, min_align_len, allowed_overlap, \
-        window_size, window_step = all_args
+    in_dir, sample_name_a, sample_name_b, assembly_filename_a, allowed_overlap, window_size, \
+        window_step, ignore_indels = all_args
 
     sequence_index = in_dir / (sample_name_b + '.mmi')
     log_text = [f'Aligning {sample_name_a} to {sample_name_b}:']
@@ -138,12 +138,16 @@ def align_sample_pair(all_args):
     p = subprocess.run(command, capture_output=True, text=True)
 
     alignments = [Alignment(line) for line in p.stdout.splitlines() if not line.startswith('@')]
-
-    alignments = [a for a in alignments if a.alignment_length >= min_align_len]
+    full_alignment_count = len(alignments)
+    alignments = [a for a in alignments if a.alignment_length >= window_size]
     alignments = cull_redundant_alignments(alignments, allowed_overlap)
+    log_text.append(f'  {full_alignment_count} alignments ({len(alignments)} after filtering)')
 
     concatenated_cigar = ''.join(a.expanded_cigar for a in alignments)
-    concatenated_cigar = compress_indels(concatenated_cigar)
+    if ignore_indels:
+        concatenated_cigar = remove_indels(concatenated_cigar)
+    else:
+        concatenated_cigar = compress_indels(concatenated_cigar)
     distances, max_difference_count = get_distances(concatenated_cigar, window_size, window_step)
     distance_counts = collections.Counter(distances)
 
@@ -200,6 +204,15 @@ def get_distances(concatenated_cigar, window_size, window_step):
         start += window_step
         end += window_step
     return distances, max_difference_count
+
+
+def remove_indels(cigar):
+    """
+    Removes all indels from a CIGAR. For example:
+    in:  ===X=IIII==XX==DDDD==
+    out: ===X===XX====
+    """
+    return re.sub(r'I+', '', re.sub(r'D+', '', cigar))
 
 
 def compress_indels(cigar):

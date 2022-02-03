@@ -47,8 +47,8 @@ def get_distance(masses, piece_size, method):
         return get_mean_distance(masses, piece_size)
     elif method == 'median':
         return get_median_distance(masses, piece_size)
-    elif method == 'median_cont':
-        return get_median_cont_distance(masses, piece_size)
+    elif method == 'poisson':
+        return get_poisson_distance(masses, piece_size)
     assert False
 
 
@@ -67,7 +67,7 @@ def get_median_distance(masses, piece_size):
     return d
 
 
-def get_median_cont_distance(masses, piece_size):
+def get_poisson_distance(masses, piece_size):
     return 0.0
 
 

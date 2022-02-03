@@ -92,8 +92,9 @@ def align_subparser(subparsers):
                               help='Size of the to sliding window over alignments')
     setting_args.add_argument('--window_step', type=int, default=1000,
                               help='Step distance of the sliding window over alignments')
-    setting_args.add_argument('--min_align_len', type=int, default=1000,
-                              help='Discard alignments shorter than this length')
+    setting_args.add_argument('--ignore_indels', action='store_true',
+                              help='Only use mismatches to determine distance (default: use '
+                                   'both mismatches and gap-compressed indels)')
     setting_args.add_argument('--allowed_overlap', type=int, default=100,
                               help='Allow this much overlap between alignments')
 
@@ -137,8 +138,8 @@ def distance_subparser(subparsers):
                                help='File containing the output of XXXXXXXXX align')
 
     setting_args = group.add_argument_group('Settings')
-    setting_args.add_argument('--method', type=str, choices=['mean', 'median', 'median_cont'],
-                              default='median_cont',
+    setting_args.add_argument('--method', type=str, choices=['mean', 'median', 'poisson'],
+                              default='poisson',
                               help='Method for converting distributions into a single distance')
     setting_args.add_argument('--correction', type=str, choices=['none', 'jukescantor'],
                               default='jukescantor',
