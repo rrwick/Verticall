@@ -12,6 +12,7 @@ If not, see <http://www.gnu.org/licenses/>.
 """
 
 import collections
+from multiprocessing.pool import ThreadPool
 import re
 import subprocess
 import sys
@@ -102,25 +103,37 @@ def align_all_samples(in_dir, out_filename, assemblies, threads, min_align_len, 
     explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
                 'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
                 'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
+
+    arg_list = []
+    for sample_name_a, assembly_filename_a in assemblies:
+        for sample_name_b, assembly_filename_b in assemblies:
+            if sample_name_a != sample_name_b:
+                arg_list.append((in_dir, sample_name_a, sample_name_b, assembly_filename_a,
+                                 min_align_len, allowed_overlap, window_size, window_step))
+
     with open(out_filename, 'wt') as out_file:
         out_file.write('#sample_a\tsample_b\twindow_size\talignment_coverage\tprobability_masses\n')
-        for sample_name_a, assembly_filename_a in assemblies:
-            for sample_name_b, assembly_filename_b in assemblies:
-                if sample_name_a != sample_name_b:
-                    output_line = align_sample_pair(in_dir, sample_name_a, sample_name_b,
-                                                    assembly_filename_a, threads, min_align_len,
-                                                    allowed_overlap, window_size, window_step)
-                    out_file.write(output_line)
-                    out_file.write('\n')
+        with ThreadPool(processes=threads) as pool:
+            for output_line, log_text in pool.imap(align_sample_pair, arg_list):
+                out_file.write(output_line)
+                out_file.write('\n')
+                for line in log_text:
+                    log(line)
+                log()
 
 
-def align_sample_pair(in_dir, sample_name_a, sample_name_b, assembly_filename_a, threads,
-                      min_align_len, allowed_overlap, window_size, window_step):
+def align_sample_pair(all_args):
+    """
+    Arguments are passes as a single tuple to make this function easier to call via a thread pool.
+    """
+    in_dir, sample_name_a, sample_name_b, assembly_filename_a, min_align_len, allowed_overlap, \
+        window_size, window_step = all_args
+
     sequence_index = in_dir / (sample_name_b + '.mmi')
-    log(f'Aligning {sample_name_a} to {sample_name_b}:')
+    log_text = [f'Aligning {sample_name_a} to {sample_name_b}:']
     # TODO: explore different alignment options (e.g. the things set by -x asm20) to see how they
     #       affect the results.
-    command = ['minimap2', '-c', '-t', str(threads), '--eqx', '-x', 'asm20',
+    command = ['minimap2', '-c', '-t', '1', '--eqx', '-x', 'asm20',
                str(sequence_index.resolve()), str(assembly_filename_a.resolve())]
     p = subprocess.run(command, capture_output=True, text=True)
 
@@ -137,9 +150,8 @@ def align_sample_pair(in_dir, sample_name_a, sample_name_b, assembly_filename_a,
     query_coverage = get_query_coverage(alignments, assembly_filename_a)
     mean_identity = 1.0 - (get_difference_count(concatenated_cigar) / len(concatenated_cigar))
 
-    log(f'  aligned fraction: {100.0 * query_coverage:6.2f}%')
-    log(f'  mean identity:    {100.0 * mean_identity:6.2f}%')
-    log()
+    log_text.append(f'  aligned fraction: {100.0 * query_coverage:6.2f}%')
+    log_text.append(f'  mean identity:    {100.0 * mean_identity:6.2f}%')
 
     output_line = [sample_name_a, sample_name_b, str(window_size), f'{query_coverage:.8f}']
     for i in range(max_difference_count + 1):
@@ -149,7 +161,7 @@ def align_sample_pair(in_dir, sample_name_a, sample_name_b, assembly_filename_a,
         else:
             probability_mass = distance_counts[d] / len(distances)
             output_line.append(f'{probability_mass:.8f}')
-    return '\t'.join(output_line)
+    return '\t'.join(output_line), log_text
 
 
 def cull_redundant_alignments(alignments, allowed_overlap):
