@@ -8,7 +8,7 @@ either version 3 of the License, or (at your option) any later version. XXXXXXXX
 in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
 details. You should have received a copy of the GNU General Public License along with XXXXXXXXX.
-If not, see <http://www.gnu.org/licenses/>.
+If not, see <https://www.gnu.org/licenses/>.
 """
 
 import gzip
@@ -22,7 +22,7 @@ from .log import bold_yellow
 def get_compression_type(filename):
     """
     Attempts to guess the compression (if any) on a file using the first few bytes.
-    http://stackoverflow.com/questions/13044562
+    https://stackoverflow.com/questions/13044562
     """
     magic_dict = {'gz': (b'\x1f', b'\x8b', b'\x08'),
                   'bz2': (b'\x42', b'\x5a', b'\x68'),

@@ -10,7 +10,7 @@ either version 3 of the License, or (at your option) any later version. XXXXXXXX
 in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
 details. You should have received a copy of the GNU General Public License along with XXXXXXXXX.
-If not, see <http://www.gnu.org/licenses/>.
+If not, see <https://www.gnu.org/licenses/>.
 """
 
 import argparse
@@ -43,7 +43,7 @@ class MyHelpFormatter(argparse.HelpFormatter):
     """
     This is a custom formatter class for argparse. It allows for some custom formatting,
     in particular for the help texts with multiple options (like bridging mode and verbosity level).
-    http://stackoverflow.com/questions/3853722
+    https://stackoverflow.com/questions/3853722
     """
     def __init__(self, prog):
         terminal_width = shutil.get_terminal_size().columns
