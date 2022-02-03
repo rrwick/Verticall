@@ -87,7 +87,7 @@ def build_indices(in_dir, assemblies):
             command = ['minimap2', '-k15', '-w10', '-d', index_file, assembly_filename]
             p = subprocess.run(command, capture_output=True, text=True)
             if p.returncode != 0:
-                sys.exit(f'\nError: minimap2 failed to index sample {s}:\n{p.stderr}')
+                sys.exit(f'\nError: minimap2 failed to index sample {sample_name}:\n{p.stderr}')
         log(f'\r{i+1} / {len(assemblies)}', end='')
     log('\n')
 

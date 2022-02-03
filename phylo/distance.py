@@ -64,7 +64,7 @@ def get_median_distance(masses, piece_size):
         total += m
         if total >= 0.5:
             return d
-    return d
+    return 0.0
 
 
 def get_poisson_distance(masses, piece_size):

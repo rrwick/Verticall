@@ -24,7 +24,7 @@ def view(args):
         load_distance_distribution(args.alignment_results, args.assembly_1, args.assembly_2)
 
     distances = [i / piece_size for i in range(len(masses))]
-    df = pd.DataFrame(list(zip(distances, masses)),  columns =['distance', 'mass'])
+    df = pd.DataFrame(list(zip(distances, masses)),  columns=['distance', 'mass'])
     title = f'{args.assembly_1} vs {args.assembly_2}'
     mean = get_mean_distance(masses, piece_size)
     median = get_median_distance(masses, piece_size)

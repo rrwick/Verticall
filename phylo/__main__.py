@@ -19,7 +19,7 @@ import sys
 from .align import align
 from .distance import distance
 from .help_formatter import MyParser, MyHelpFormatter
-from .misc import check_python_version, get_ascii_art
+from .misc import check_python_version, get_ascii_art, get_default_thread_count
 from .log import bold
 from .version import __version__
 from .view import view
@@ -86,17 +86,17 @@ def align_subparser(subparsers):
                                help='Output file where alignment results will be saved')
 
     setting_args = group.add_argument_group('Settings')
-    setting_args.add_argument('-t', '--threads', type=int, default=8,
+    setting_args.add_argument('-t', '--threads', type=int, default=get_default_thread_count(),
                               help='Threads for alignment')
-    setting_args.add_argument('--window_size', type=int, default=5000,
+    setting_args.add_argument('--allowed_overlap', type=int, default=100,
+                              help='Allow this much overlap between alignments')
+    setting_args.add_argument('--window_size', type=int, default=10000,
                               help='Size of the to sliding window over alignments')
     setting_args.add_argument('--window_step', type=int, default=100,
                               help='Step distance of the sliding window over alignments')
     setting_args.add_argument('--ignore_indels', action='store_true',
                               help='Only use mismatches to determine distance (default: use '
                                    'both mismatches and gap-compressed indels)')
-    setting_args.add_argument('--allowed_overlap', type=int, default=100,
-                              help='Allow this much overlap between alignments')
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,

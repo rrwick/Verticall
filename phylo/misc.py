@@ -12,10 +12,11 @@ If not, see <http://www.gnu.org/licenses/>.
 """
 
 import gzip
+import multiprocessing
 import os
 import sys
 
-from .log import log, bold_yellow
+from .log import bold_yellow
 
 
 def get_compression_type(filename):
@@ -120,3 +121,7 @@ def check_assembly_file_type(a):
     file_type = get_sequence_file_type(a)
     if file_type != 'FASTA':
         sys.exit(f'\nError: {a} is not in FASTA format')
+
+
+def get_default_thread_count():
+    return min(multiprocessing.cpu_count(), 16)

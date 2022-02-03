@@ -119,3 +119,7 @@ def test_check_assembly_file_type_3():
     with pytest.raises(SystemExit) as e:
         phylo.misc.check_assembly_file_type('test/test_misc/test.gfa.gz')
     assert 'is not in FASTA format' in str(e.value)
+
+
+def test_get_default_thread_count():
+    assert 1 <= phylo.misc.get_default_thread_count() <= 16
