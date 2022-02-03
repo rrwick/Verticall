@@ -31,6 +31,8 @@ def load_distances(alignment_results, method):
     distances, sample_names = {}, set()
     with open(alignment_results, 'rt') as results:
         for line in results:
+            if line.startswith('#'):
+                continue
             parts = line.strip().split('\t')
             assembly_1, assembly_2 = parts[0], parts[1]
             piece_size = int(parts[2])

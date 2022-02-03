@@ -88,9 +88,9 @@ def align_subparser(subparsers):
     setting_args = group.add_argument_group('Settings')
     setting_args.add_argument('-t', '--threads', type=int, default=8,
                               help='Threads for alignment')
-    setting_args.add_argument('--window_size', type=int, default=1000,
+    setting_args.add_argument('--window_size', type=int, default=5000,
                               help='Size of the to sliding window over alignments')
-    setting_args.add_argument('--window_step', type=int, default=500,
+    setting_args.add_argument('--window_step', type=int, default=1000,
                               help='Step distance of the sliding window over alignments')
     setting_args.add_argument('--min_align_len', type=int, default=1000,
                               help='Discard alignments shorter than this length')

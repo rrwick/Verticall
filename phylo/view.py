@@ -31,7 +31,7 @@ def view(args):
 
     g = (ggplot(df, aes('distance', 'mass')) +
          geom_segment(aes(x='distance', xend='distance', y=0, yend='mass'), colour='#880000') +
-         geom_point(size=0.75, colour='#880000') +
+         # geom_point(size=0.75, colour='#880000') +
          geom_vline(xintercept=mean, colour='#008888', linetype='dotted') +
          geom_vline(xintercept=median, colour='#0000bb', linetype='dotted') +
          theme_bw() +
