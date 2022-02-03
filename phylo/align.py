@@ -12,20 +12,22 @@ If not, see <http://www.gnu.org/licenses/>.
 """
 
 import collections
+import re
 import subprocess
-import statistics
 import sys
 
 from .alignment import Alignment
+from .intrange import IntRange
 from .log import log, section_header, explanation
-from .misc import count_seqs_in_fasta
+from .misc import get_fasta_size
 
 
 def align(args):
     welcome_message()
-    samples = find_samples(args.in_dir)
-    build_indices(args.in_dir, samples)
-    align_all_samples(args.in_dir, args.out_file, samples, args.threads)
+    assemblies = find_assemblies(args.in_dir)
+    build_indices(args.in_dir, assemblies)
+    align_all_samples(args.in_dir, args.out_file, assemblies, args.threads, args.min_align_len,
+                      args.allowed_overlap, args.window_size, args.window_step)
     finished_message()
 
 
@@ -43,110 +45,162 @@ def finished_message():
                 'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
 
 
-def find_samples(in_dir):
-    samples = sorted(f.name[:-13] for f in in_dir.glob('*_pieces.fasta') if f.is_file())
-    if not samples:
-        sys.exit(f'\nError: no *_pieces.fasta files found in {in_dir}')
-    for s in samples:
-        pieces_fasta = in_dir / (s + '_pieces.fasta')
-        sequence_fasta = in_dir / (s + '_full.fasta')
-        if not pieces_fasta.is_file():
-            sys.exit(f'\nError: {pieces_fasta} file not found')
-        if not sequence_fasta.is_file():
-            sys.exit(f'\nError: {sequence_fasta} file not found')
-    log(f'Found {len(samples):,} samples in {in_dir.resolve()}')
+def find_assemblies(in_dir):
+    """
+    Returns assemblies in a (sample_name, filename) tuple.
+    """
+    def find_assemblies_with_extension(extension, all_assemblies):
+        extension_len = len(extension) + 1  # plus one for the dot
+        fasta_assemblies = sorted(f for f in in_dir.glob('*.' + extension) if f.is_file())
+        for a in fasta_assemblies:
+            sample_name = a.name[:-extension_len]
+            if sample_name in all_assemblies:
+                sys.exit(f'\nError: duplicate sample name {sample_name}')
+            all_assemblies[sample_name] = a
+
+    assemblies = {}
+    find_assemblies_with_extension('fasta', assemblies)
+    find_assemblies_with_extension('fasta.gz', assemblies)
+    find_assemblies_with_extension('fna', assemblies)
+    find_assemblies_with_extension('fna.gz', assemblies)
+    assemblies = sorted(assemblies.items())
+
+    log(f'Found {len(assemblies):,} samples in {in_dir.resolve()}')
     log()
-    return samples
+    return assemblies
 
 
-def build_indices(in_dir, samples):
+def build_indices(in_dir, assemblies):
     section_header('Building alignment indices')
     explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
                 'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
                 'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
     # TODO: do this in parallel in a thread pool?
-    log(f'0 / {len(samples)}', end='')
-    for i, s in enumerate(samples):
-        if not index_exists(in_dir, s):
-            sequence_fasta = (in_dir / (s + '_full.fasta')).resolve()
-            index_file = (in_dir / (s + '_full.mmi')).resolve()
+    log(f'0 / {len(assemblies)}', end='')
+    for i, a in enumerate(assemblies):
+        sample_name, assembly_filename = a
+        if not index_exists(in_dir, sample_name):
+            index_file = (in_dir / (sample_name + '.mmi')).resolve()
             # TODO: explore different indexing options (e.g. -k and -w) to see how they affect
             #       the results.
-            command = ['minimap2', '-k15', '-w10',
-                       '-d', index_file, sequence_fasta]
+            command = ['minimap2', '-k15', '-w10', '-d', index_file, assembly_filename]
             p = subprocess.run(command, capture_output=True, text=True)
             if p.returncode != 0:
                 sys.exit(f'\nError: minimap2 failed to index sample {s}:\n{p.stderr}')
-        log(f'\r{i+1} / {len(samples)}', end='')
+        log(f'\r{i+1} / {len(assemblies)}', end='')
     log('\n')
 
 
-def index_exists(in_dir, sample):
-    index = in_dir / (sample + '_full.mmi')
+def index_exists(in_dir, sample_name):
+    index = in_dir / (sample_name + '.mmi')
     return index.is_file() and index.stat().st_size > 0
 
 
-def align_all_samples(in_dir, out_filename, samples, threads):
+def align_all_samples(in_dir, out_filename, assemblies, threads, min_align_len, allowed_overlap,
+                      window_size, window_step):
     section_header('Aligning pairwise combinations')
     explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
                 'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
                 'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
     with open(out_filename, 'wt') as out_file:
-        for a in samples:
-            for b in samples:
-                if a != b:
-                    align_sample_pair(in_dir, out_file, a, b, threads)
+        out_file.write('#sample_a\tsample_b\twindow_size\talignment_coverage\tprobability_masses\n')
+        for sample_name_a, assembly_filename_a in assemblies:
+            for sample_name_b, assembly_filename_b in assemblies:
+                if sample_name_a != sample_name_b:
+                    output_line = align_sample_pair(in_dir, sample_name_a, sample_name_b,
+                                                    assembly_filename_a, threads, min_align_len,
+                                                    allowed_overlap, window_size, window_step)
+                    out_file.write(output_line)
+                    out_file.write('\n')
 
 
-def align_sample_pair(in_dir, out_file, a, b, threads):
-    pieces_fasta = in_dir / (a + '_pieces.fasta')
-    sequence_index = in_dir / (b + '_full.mmi')
-    piece_count = count_seqs_in_fasta(pieces_fasta)
-    log(f'Aligning {a} pieces to {b} assembly:')
-    # TODO: explore different alignment options (e.g. the things set by -x sr) to see how they
+def align_sample_pair(in_dir, sample_name_a, sample_name_b, assembly_filename_a, threads,
+                      min_align_len, allowed_overlap, window_size, window_step):
+    sequence_index = in_dir / (sample_name_b + '.mmi')
+    log(f'Aligning {sample_name_a} to {sample_name_b}:')
+    # TODO: explore different alignment options (e.g. the things set by -x asm20) to see how they
     #       affect the results.
-    command = ['minimap2', '-a', '-t', str(threads), '--eqx', '-x', 'sr',
-               str(sequence_index.resolve()), str(pieces_fasta.resolve())]
+    command = ['minimap2', '-c', '-t', str(threads), '--eqx', '-x', 'asm20',
+               str(sequence_index.resolve()), str(assembly_filename_a.resolve())]
     p = subprocess.run(command, capture_output=True, text=True)
 
     alignments = [Alignment(line) for line in p.stdout.splitlines() if not line.startswith('@')]
-    alignments = [a for a in alignments if a.is_fully_aligned()]
-    alignments = get_best_alignment_per_read(alignments)
-    aligned_fraction = len(alignments) / piece_count
-    log(f'  {len(alignments):,} / {piece_count:,} pieces fully aligned '
-        f'({100 * aligned_fraction:.1f}%)')
 
-    match_counts = [a.get_match_count() for a in alignments]
-    piece_len = int(statistics.median(a.read_length for a in alignments))
-    median_identity = 100.0 * statistics.median(match_counts) / piece_len
-    mean_identity = 100.0 * statistics.mean(match_counts) / piece_len
+    alignments = [a for a in alignments if a.alignment_length >= min_align_len]
+    alignments = cull_redundant_alignments(alignments, allowed_overlap)
 
-    log(f'  median identity: {median_identity:6.2f}%')
-    log(f'  mean identity:   {mean_identity:6.2f}%')
-    log()
-
-    distances = [piece_len - m for m in match_counts]
+    concatenated_cigar = ''.join(a.expanded_cigar for a in alignments)
+    concatenated_cigar = compress_indels(concatenated_cigar)
+    distances, max_difference_count = get_distances(concatenated_cigar, window_size, window_step)
     distance_counts = collections.Counter(distances)
 
-    out_file.write(f'{a}\t{b}\t{piece_len}\t{aligned_fraction:.8f}')
-    for i in range(max(distances) + 1):
-        if distance_counts[i] == 0:
-            out_file.write('\t0')
+    query_coverage = get_query_coverage(alignments, assembly_filename_a)
+    mean_identity = 1.0 - (get_difference_count(concatenated_cigar) / len(concatenated_cigar))
+
+    log(f'  aligned fraction: {100.0 * query_coverage:6.2f}%')
+    log(f'  mean identity:    {100.0 * mean_identity:6.2f}%')
+    log()
+
+    output_line = [sample_name_a, sample_name_b, str(window_size), f'{query_coverage:.8f}']
+    for i in range(max_difference_count + 1):
+        d = i / window_size
+        if distance_counts[d] == 0:
+            output_line.append('0')
         else:
-            probability_mass = distance_counts[i] / len(alignments)
-            out_file.write(f'\t{probability_mass:.8f}')
-    out_file.write('\n')
+            probability_mass = distance_counts[d] / len(distances)
+            output_line.append(f'{probability_mass:.8f}')
+    return '\t'.join(output_line)
 
 
-def get_best_alignment_per_read(alignments):
-    """
-    Returns a list of alignments where there is only one alignment per read. 'Best' is defined using
-    the match count.
-    """
-    alignments_by_read = {}
+def cull_redundant_alignments(alignments, allowed_overlap):
+    alignments = sorted(alignments, key=lambda x: x.alignment_score, reverse=True)
+    alignments_by_contig = collections.defaultdict(list)
+    alignments_no_redundancy = []
     for a in alignments:
-        if a.read_name not in alignments_by_read:
-            alignments_by_read[a.read_name] = a
-        elif a.get_match_count() > alignments_by_read[a.read_name].get_match_count():
-            alignments_by_read[a.read_name] = a
-    return list(alignments_by_read.values())
+        if not any(a.overlaps(b, allowed_overlap) for b in alignments_by_contig[a.query_name]):
+            alignments_no_redundancy.append(a)
+        alignments_by_contig[a.query_name].append(a)
+    return alignments_no_redundancy
+
+
+def get_query_coverage(alignments, assembly_filename):
+    assembly_size = get_fasta_size(assembly_filename)
+    ranges_by_contig = {}
+    for a in alignments:
+        if a.query_name not in ranges_by_contig:
+            ranges_by_contig[a.query_name] = IntRange()
+        ranges_by_contig[a.query_name].add_range(a.query_start, a.query_end)
+    aligned_bases = sum(r.total_length() for r in ranges_by_contig.values())
+    assert aligned_bases <= assembly_size
+    return aligned_bases / assembly_size
+
+
+def get_distances(concatenated_cigar, window_size, window_step):
+    distances = []
+    start, end = 0, window_size
+    max_difference_count = 0
+    while end <= len(concatenated_cigar):
+        cigar_window = concatenated_cigar[start:end]
+        assert len(cigar_window) == window_size
+        difference_count = get_difference_count(cigar_window)
+        distances.append(difference_count / window_size)
+        max_difference_count = max(max_difference_count, difference_count)
+        start += window_step
+        end += window_step
+    return distances, max_difference_count
+
+
+def compress_indels(cigar):
+    """
+    Compresses runs of indels into size-1 indels. For example:
+    in:  ===X=IIII==XX==DDDD==
+    out: ===X=I==XX==D==
+    """
+    return re.sub(r'I+', 'I', re.sub(r'D+', 'D', cigar))
+
+
+def get_difference_count(cigar):
+    """
+    Returns the number of mismatches and indels in the CIGAR.
+    """
+    return cigar.count('X') + cigar.count('I') + cigar.count('D')

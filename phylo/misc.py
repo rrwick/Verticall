@@ -109,41 +109,14 @@ def iterate_fasta(filename):
             yield name.split()[0], ''.join(sequence)
 
 
-def count_seqs_in_fasta(filename):
-    count = 0
-    with get_open_func(filename)(filename, 'rt') as fasta_file:
-        for line in fasta_file:
-            if line.startswith('>'):
-                count += 1
-    return count
-
-
-def iterate_gfa(filename):
-    """
-    Takes a GFA file as input and yields the contents as (name, seq) tuples. Only 'S' lines are
-    used - everything else in the GFA file is ignored.
-    """
-    with get_open_func(filename)(filename, 'rt') as gfa_file:
-        for line in gfa_file:
-            if not line.startswith('S\t'):
-                continue
-            parts = line.strip().split('\t')
-            yield parts[1], parts[2]
-
-
-def get_generator(filename):
-    """
-    Returns either the iterate_fasta generator or the iterate_gfa generator, as appropriate for the
-    file type.
-    """
-    file_type = get_sequence_file_type(filename)
-    if file_type == 'FASTA':
-        return iterate_fasta
-    elif file_type == 'GFA':
-        return iterate_gfa
+def get_fasta_size(filename):
+    total_size = 0
+    for _, seq in iterate_fasta(filename):
+        total_size += len(seq)
+    return total_size
 
 
 def check_assembly_file_type(a):
     file_type = get_sequence_file_type(a)
-    if file_type != 'FASTA' and file_type != 'GFA':
-        sys.exit(f'\nError: {a} is not in FASTA or GFA format')
+    if file_type != 'FASTA':
+        sys.exit(f'\nError: {a} is not in FASTA format')

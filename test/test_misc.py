@@ -88,22 +88,6 @@ def test_get_sequence_file_type_10():
     assert phylo.misc.get_sequence_file_type('test/test_misc/not_unicode') == 'unknown'
 
 
-def test_get_generator_1():
-    assert phylo.misc.get_generator('test/test_misc/test.fasta') == phylo.misc.iterate_fasta
-
-
-def test_get_generator_2():
-    assert phylo.misc.get_generator('test/test_misc/test.gfa') == phylo.misc.iterate_gfa
-
-
-def test_get_generator_3():
-    assert phylo.misc.get_generator('test/test_misc/test.fasta.gz') == phylo.misc.iterate_fasta
-
-
-def test_get_generator_4():
-    assert phylo.misc.get_generator('test/test_misc/test.gfa.gz') == phylo.misc.iterate_gfa
-
-
 def test_iterate_fasta_1():
     fasta = list(phylo.misc.iterate_fasta('test/test_misc/test.fasta'))
     assert fasta == [('A', 'TTGCCTGTAGTCGGGACCCC'), ('B', 'ATTCTCAGAATGGCGTAGTA')]
@@ -114,24 +98,24 @@ def test_iterate_fasta_2():
     assert fasta == [('A', 'TTGCCTGTAGTCGGGACCCC'), ('B', 'ATTCTCAGAATGGCGTAGTA')]
 
 
-def test_iterate_gfa_1():
-    gfa = list(phylo.misc.iterate_gfa('test/test_misc/test.gfa'))
-    assert gfa == [('1', 'ACGTACGT'), ('2', 'TGCA')]
-
-
-def test_iterate_gfa_2():
-    gfa = list(phylo.misc.iterate_gfa('test/test_misc/test.gfa.gz'))
-    assert gfa == [('1', 'ACGTACGT'), ('2', 'TGCA')]
-
-
 def test_check_assembly_file_type_1():
     phylo.misc.check_assembly_file_type('test/test_misc/test.fasta')
     phylo.misc.check_assembly_file_type('test/test_misc/test.fasta.gz')
-    phylo.misc.check_assembly_file_type('test/test_misc/test.gfa')
-    phylo.misc.check_assembly_file_type('test/test_misc/test.gfa.gz')
 
 
 def test_check_assembly_file_type_2():
     with pytest.raises(SystemExit) as e:
         phylo.misc.check_assembly_file_type('test/test_misc/test.fastq')
-    assert 'is not in FASTA or GFA format' in str(e.value)
+    assert 'is not in FASTA format' in str(e.value)
+    with pytest.raises(SystemExit) as e:
+        phylo.misc.check_assembly_file_type('test/test_misc/test.fastq.gz')
+    assert 'is not in FASTA format' in str(e.value)
+
+
+def test_check_assembly_file_type_3():
+    with pytest.raises(SystemExit) as e:
+        phylo.misc.check_assembly_file_type('test/test_misc/test.gfa')
+    assert 'is not in FASTA format' in str(e.value)
+    with pytest.raises(SystemExit) as e:
+        phylo.misc.check_assembly_file_type('test/test_misc/test.gfa.gz')
+    assert 'is not in FASTA format' in str(e.value)

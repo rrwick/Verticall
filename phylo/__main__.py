@@ -18,7 +18,6 @@ import sys
 
 from .align import align
 from .distance import distance
-from .shred import shred
 from .help_formatter import MyParser, MyHelpFormatter
 from .misc import check_python_version, get_ascii_art
 from .log import bold
@@ -29,10 +28,6 @@ from .view import view
 def main():
     check_python_version()
     args = parse_args(sys.argv[1:])
-
-    if args.subparser_name == 'shred':
-        check_shred_args(args)
-        shred(args)
 
     if args.subparser_name == 'align':
         check_align_args(args)
@@ -53,7 +48,6 @@ def parse_args(args):
     parser = MyParser(description=description, formatter_class=MyHelpFormatter, add_help=False)
 
     subparsers = parser.add_subparsers(title='Commands', dest='subparser_name')
-    shred_subparser(subparsers)
     align_subparser(subparsers)
     view_subparser(subparsers)
     distance_subparser(subparsers)
@@ -81,44 +75,27 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
-def shred_subparser(subparsers):
-    group = subparsers.add_parser('shred', description='break assemblies into pieces',
-                                  formatter_class=MyHelpFormatter, add_help=False)
-
-    required_args = group.add_argument_group('Required arguments')
-    required_args.add_argument('-i', '--in_dir', type=pathlib.Path, required=True,
-                               help='Directory containing input assemblies (FASTA or GFA format)')
-    required_args.add_argument('-o', '--out_dir', type=pathlib.Path, required=True,
-                               help='Output directory where sequences will be saved')
-
-    setting_args = group.add_argument_group('Settings')
-    setting_args.add_argument('--recursive', action='store_true',
-                              help='Search for input assemblies recursively')
-    setting_args.add_argument('--size', type=int, default=1000,
-                              help='Size of assembly pieces in bp')
-    setting_args.add_argument('--overlap', type=int, default=500,
-                              help='Overlap between assembly pieces in bp')
-
-    other_args = group.add_argument_group('Other')
-    other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
-                            help='Show this help message and exit')
-    other_args.add_argument('--version', action='version', version='XXXXXXXXX v' + __version__,
-                            help="Show program's version number and exit")
-
-
 def align_subparser(subparsers):
     group = subparsers.add_parser('align', description='align pieces to assemblies',
                                   formatter_class=MyHelpFormatter, add_help=False)
 
     required_args = group.add_argument_group('Required arguments')
     required_args.add_argument('-i', '--in_dir', type=pathlib.Path, required=True,
-                               help='Directory containing sequences and pieces')
+                               help='Directory containing assemblies in FASTA format')
     required_args.add_argument('-o', '--out_file', type=pathlib.Path, required=True,
                                help='Output file where alignment results will be saved')
 
     setting_args = group.add_argument_group('Settings')
     setting_args.add_argument('-t', '--threads', type=int, default=8,
                               help='Threads for alignment')
+    setting_args.add_argument('--window_size', type=int, default=1000,
+                              help='Size of the to sliding window over alignments')
+    setting_args.add_argument('--window_step', type=int, default=500,
+                              help='Step distance of the sliding window over alignments')
+    setting_args.add_argument('--min_align_len', type=int, default=1000,
+                              help='Discard alignments shorter than this length')
+    setting_args.add_argument('--allowed_overlap', type=int, default=100,
+                              help='Allow this much overlap between alignments')
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
@@ -174,11 +151,6 @@ def distance_subparser(subparsers):
                             help='Show this help message and exit')
     other_args.add_argument('--version', action='version', version='XXXXXXXXX v' + __version__,
                             help="Show program's version number and exit")
-
-
-def check_shred_args(args):
-    if args.overlap >= args.size:
-        sys.exit('\nError: --overlap must be less than --size')
 
 
 def check_align_args(args):
