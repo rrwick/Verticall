@@ -163,16 +163,16 @@ def align_sample_pair(all_args):
     all_cigars = [c for c in all_cigars if len(c) >= window_size]
     log_text.append(f'  {full_alignment_count} alignments ({len(all_cigars)} after filtering)')
 
-    distances, max_difference_count = get_distances(all_cigars, window_size, window_step)
-    distance_counts = collections.Counter(distances)
-    log_text.append(f'  distance sampled from {len(distances)} {window_size} bp alignment windows')
-
     query_coverage = get_query_coverage(alignments, assembly_filename_a)
     mean_identity = 1.0 - (sum(get_difference_count(c) for c in all_cigars) /
                            sum(len(c) for c in all_cigars))
 
     log_text.append(f'  aligned fraction: {100.0 * query_coverage:6.2f}%')
     log_text.append(f'  mean identity:    {100.0 * mean_identity:6.2f}%')
+
+    distances, max_difference_count = get_distances(all_cigars, window_size, window_step)
+    distance_counts = collections.Counter(distances)
+    log_text.append(f'  distances sampled from {len(distances)} x {window_size} bp windows')
 
     output_line = [sample_name_a, sample_name_b, str(window_size), f'{query_coverage:.8f}']
     for i in range(max_difference_count + 1):
