@@ -28,7 +28,7 @@ def align(args):
     assemblies = find_assemblies(args.in_dir)
     build_indices(args.in_dir, assemblies)
     align_all_samples(args.in_dir, args.out_file, assemblies, args.threads, args.allowed_overlap,
-                      args.window_size, args.window_step, args.ignore_indels)
+                      args.ignore_indels, args.target_window_count)
     finished_message()
 
 
@@ -94,11 +94,12 @@ def build_indices(in_dir, assemblies):
 
 def index_exists(in_dir, sample_name):
     index = in_dir / (sample_name + '.mmi')
+    # TODO: is there a way to check for malformed indices?
     return index.is_file() and index.stat().st_size > 0
 
 
-def align_all_samples(in_dir, out_filename, assemblies, threads, allowed_overlap, window_size,
-                      window_step, ignore_indels):
+def align_all_samples(in_dir, out_filename, assemblies, threads, allowed_overlap, ignore_indels,
+                      target_window_count):
     section_header('Aligning pairwise combinations')
     explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
                 'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
@@ -109,7 +110,7 @@ def align_all_samples(in_dir, out_filename, assemblies, threads, allowed_overlap
         for sample_name_b, assembly_filename_b in assemblies:
             if sample_name_a != sample_name_b:
                 arg_list.append((in_dir, sample_name_a, sample_name_b, assembly_filename_a,
-                                 allowed_overlap, window_size, window_step, ignore_indels))
+                                 allowed_overlap, ignore_indels, target_window_count))
 
     with open(out_filename, 'wt') as out_file:
         out_file.write('#sample_a\tsample_b\twindow_size\talignment_coverage\tprobability_masses\n')
@@ -118,14 +119,16 @@ def align_all_samples(in_dir, out_filename, assemblies, threads, allowed_overlap
         if threads == 1:
             for a in arg_list:
                 output_line, log_text = align_sample_pair(a)
-                out_file.write(output_line)
+                if output_line:
+                    out_file.write(output_line)
                 log('\n'.join(log_text), end='\n\n')
 
         # If only using multiple threads, do the alignments in a thread pool.
         else:
             with ThreadPool(processes=threads) as pool:
                 for output_line, log_text in pool.imap(align_sample_pair, arg_list):
-                    out_file.write(output_line)
+                    if output_line:
+                        out_file.write(output_line)
                     log('\n'.join(log_text), end='\n\n')
 
 
@@ -133,8 +136,8 @@ def align_sample_pair(all_args):
     """
     Arguments are passes as a single tuple to make this function easier to call via pool.imap.
     """
-    in_dir, sample_name_a, sample_name_b, assembly_filename_a, allowed_overlap, window_size, \
-        window_step, ignore_indels = all_args
+    in_dir, sample_name_a, sample_name_b, assembly_filename_a, allowed_overlap, ignore_indels, \
+        target_window_count = all_args
 
     sequence_index = in_dir / (sample_name_b + '.mmi')
     log_text = [f'Aligning {sample_name_a} to {sample_name_b}:']
@@ -146,18 +149,23 @@ def align_sample_pair(all_args):
 
     alignments = [Alignment(line) for line in p.stdout.splitlines() if not line.startswith('@')]
     full_alignment_count = len(alignments)
-    alignments = [a for a in alignments if a.alignment_length >= window_size]
     alignments = cull_redundant_alignments(alignments, allowed_overlap)
     if ignore_indels:
         all_cigars = [remove_indels(a.expanded_cigar) for a in alignments]
     else:
         all_cigars = [compress_indels(a.expanded_cigar) for a in alignments]
+
+    if not alignments:
+        log_text.append(f'  no alignments found')
+        return '', log_text
+
+    window_size, window_step = choose_window_size_and_step(all_cigars, target_window_count)
     all_cigars = [c for c in all_cigars if len(c) >= window_size]
     log_text.append(f'  {full_alignment_count} alignments ({len(all_cigars)} after filtering)')
 
     distances, max_difference_count = get_distances(all_cigars, window_size, window_step)
     distance_counts = collections.Counter(distances)
-    log_text.append(f'  distance sampled from {len(distances)} alignment windows')
+    log_text.append(f'  distance sampled from {len(distances)} {window_size} bp alignment windows')
 
     query_coverage = get_query_coverage(alignments, assembly_filename_a)
     mean_identity = 1.0 - (sum(get_difference_count(c) for c in all_cigars) /
@@ -239,3 +247,34 @@ def get_difference_count(cigar):
     Returns the number of mismatches and indels in the CIGAR.
     """
     return cigar.count('X') + cigar.count('I') + cigar.count('D')
+
+
+def choose_window_size_and_step(cigars, target_window_count):
+    """
+    This function chooses an appropriate window size and step for the given CIGARs. It tries to
+    balance larger windows, which give higher-resolution identity samples, especially with
+    closely-related assemblies, and smaller windows, which allow for more identity samples.
+    """
+    window_step = 1000
+    while window_step > 1:
+        window_size = window_step * 100
+        if get_window_count(cigars, window_size, window_step) > target_window_count:
+            return window_size, window_step
+        window_step -= 1
+    return window_step * 100, window_step
+
+
+def get_window_count(cigars, window_size, window_step):
+    """
+    For a given window size, window step and set of CIGARs, this function returns how many windows
+    there will be in total.
+    """
+    count = 0
+    for cigar in cigars:
+        cigar_len = len(cigar)
+        if cigar_len < window_size:
+            continue
+        cigar_len -= window_size
+        count += 1
+        count += cigar_len // window_step
+    return count
