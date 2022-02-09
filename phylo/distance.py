@@ -45,25 +45,26 @@ def load_distances(alignment_results, method):
 
 def get_distance(masses, piece_size, method):
     if method == 'mean':
-        return get_mean_distance(masses, piece_size)
+        d = get_mean_distance(masses)
     elif method == 'median':
-        return get_median_distance(masses, piece_size)
+        d = get_median_distance(masses)
     elif method == 'median_int':
-        return get_median_int_distance(masses, piece_size)
+        d = get_median_int_distance(masses)
     elif method == 'mode':
-        return get_mode_distance(masses, piece_size)
-    assert False
+        d = get_mode_distance(masses)
+    else:
+        assert False
+    return d / piece_size
 
 
-def get_mean_distance(masses, piece_size):
+def get_mean_distance(masses):
     """
     Returns the mean of the distance distribution.
     """
-    distances = [i / piece_size for i in range(len(masses))]
-    return np.average(distances, weights=masses)
+    return np.average(range(len(masses)), weights=masses)
 
 
-def get_median_distance(masses, piece_size):
+def get_median_distance(masses):
     """
     Returns the median of the distance distribution. This median is not interpolated, i.e. it will
     be equal to one of the distances in the distribution.
@@ -73,17 +74,17 @@ def get_median_distance(masses, piece_size):
     for i, m in enumerate(masses):
         total += m
         if total >= half_total_mass:
-            return i / piece_size
-    return 0.0
+            return i
+    return 0
 
 
-def get_median_int_distance(masses, piece_size):
+def get_median_int_distance(masses):
     """
     Returns the interpolated median of the distance distribution:
     https://en.wikipedia.org/wiki/Median#Interpolated_median
     https://aec.umich.edu/median.php
     """
-    median = get_median_distance(masses, 1)
+    median = get_median_distance(masses)
     below, equal, above = 0.0, 0.0, 0.0
     for i, m in enumerate(masses):
         if i < median:
@@ -96,10 +97,10 @@ def get_median_int_distance(masses, piece_size):
         interpolated_median = median
     else:
         interpolated_median = median + ((above - below) / (2.0 * equal))
-    return interpolated_median / piece_size
+    return interpolated_median
 
 
-def get_mode_distance(masses, piece_size):
+def get_mode_distance(masses):
     """
     Returns the mode of the distance distribution (the distance with the highest mass). If multiple
     distances tie for the highest mass (the distribution is multimodal), it returns the mean of
@@ -109,8 +110,11 @@ def get_mode_distance(masses, piece_size):
     distances_with_max_mass = []
     for i, m in enumerate(masses):
         if m == max_mass:
-            distances_with_max_mass.append(i / piece_size)
-    return statistics.mean(distances_with_max_mass)
+            distances_with_max_mass.append(i)
+    if len(distances_with_max_mass) == 1:
+        return distances_with_max_mass[0]
+    else:
+        return statistics.mean(distances_with_max_mass)
 
 
 def add_self_distances(distances, sample_names):
