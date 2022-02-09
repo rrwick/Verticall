@@ -16,7 +16,7 @@ from plotnine import ggplot, aes, geom_segment, geom_vline, labs, theme_bw, \
     scale_y_continuous, scale_y_sqrt
 import sys
 
-from .distance import get_mean_distance, get_median_distance, get_poisson_distance
+from .distance import get_mean_distance, get_median_distance, get_median_int_distance
 
 
 def view(args):
@@ -28,13 +28,13 @@ def view(args):
     title = f'{args.assembly_1} vs {args.assembly_2}'
     mean = get_mean_distance(masses, piece_size)
     median = get_median_distance(masses, piece_size)
-    poisson = get_poisson_distance(masses, piece_size)
+    median_int = get_median_int_distance(masses, piece_size)
 
     g = (ggplot(df, aes('distance', 'mass')) +
          geom_segment(aes(x='distance', xend='distance', y=0, yend='mass'), colour='#880000') +
          geom_vline(xintercept=mean, colour='#008888', linetype='dotted') +
          geom_vline(xintercept=median, colour='#0000bb', linetype='dotted') +
-         geom_vline(xintercept=poisson, colour='#00bb00', linetype='dotted') +
+         geom_vline(xintercept=median_int, colour='#00bb00', linetype='dotted') +
          theme_bw() +
          labs(title=title))
 

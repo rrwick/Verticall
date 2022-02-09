@@ -43,6 +43,31 @@ def test_get_median_distance():
     assert phylo.distance.get_median_distance([0.4, 0.3, 0.2, 0.1], 4) == pytest.approx(0.25)
 
 
+def test_get_median_int_distance():
+    assert phylo.distance.get_median_int_distance([1.0, 0.0, 0.0, 0.0], 4) == pytest.approx(0.000)
+    assert phylo.distance.get_median_int_distance([0.0, 1.0, 0.0, 0.0], 4) == pytest.approx(0.250)
+    assert phylo.distance.get_median_int_distance([0.0, 0.0, 1.0, 0.0], 4) == pytest.approx(0.500)
+    assert phylo.distance.get_median_int_distance([0.0, 0.0, 0.0, 1.0], 4) == pytest.approx(0.750)
+    assert phylo.distance.get_median_int_distance([0.5, 0.5, 0.0, 0.0], 4) == pytest.approx(0.125)
+    assert phylo.distance.get_median_int_distance([0.0, 0.5, 0.5, 0.0], 4) == pytest.approx(0.375)
+    assert phylo.distance.get_median_int_distance([0.0, 0.0, 0.5, 0.5], 4) == pytest.approx(0.625)
+    assert 0.000 < phylo.distance.get_median_int_distance([0.7, 0.3, 0.0, 0.0], 4) < 0.125
+    assert 0.125 < phylo.distance.get_median_int_distance([0.3, 0.7, 0.0, 0.0], 4) < 0.250
+    assert 0.250 < phylo.distance.get_median_int_distance([0.0, 0.7, 0.3, 0.0], 4) < 0.375
+    assert 0.375 < phylo.distance.get_median_int_distance([0.0, 0.3, 0.7, 0.0], 4) < 0.500
+    assert 0.500 < phylo.distance.get_median_int_distance([0.0, 0.0, 0.7, 0.3], 4) < 0.625
+    assert 0.625 < phylo.distance.get_median_int_distance([0.0, 0.0, 0.3, 0.7], 4) < 0.750
+    assert (phylo.distance.get_median_int_distance([0.0, 1.000, 0.000, 0.0], 4)
+            < phylo.distance.get_median_int_distance([0.0, 0.999, 0.001, 0.0], 4)
+            < phylo.distance.get_median_int_distance([0.0, 0.501, 0.499, 0.0], 4)
+            < phylo.distance.get_median_int_distance([0.0, 0.500, 0.500, 0.0], 4)
+            < phylo.distance.get_median_int_distance([0.0, 0.499, 0.501, 0.0], 4)
+            < phylo.distance.get_median_int_distance([0.0, 0.001, 0.990, 0.0], 4)
+            < phylo.distance.get_median_int_distance([0.0, 0.000, 1.000, 0.0], 4))
+    assert phylo.distance.get_median_int_distance([0, 0, 1, 0, 10, 9], 1) == pytest.approx(4.4)
+    assert phylo.distance.get_median_int_distance([0, 2, 1, 6, 10, 1], 1) == pytest.approx(3.6)
+
+
 def test_get_mode_distance():
     assert phylo.distance.get_mode_distance([1.00, 0.00, 0.00, 0.00], 4) == pytest.approx(0.000)
     assert phylo.distance.get_mode_distance([0.00, 1.00, 0.00, 0.00], 4) == pytest.approx(0.250)
@@ -59,7 +84,6 @@ def test_get_mode_distance():
     assert phylo.distance.get_mode_distance([0.40, 0.40, 0.00, 0.20], 4) == pytest.approx(0.125)
     assert phylo.distance.get_mode_distance([0.26, 0.24, 0.26, 0.24], 4) == pytest.approx(0.250)
     assert phylo.distance.get_mode_distance([0.24, 0.26, 0.24, 0.26], 4) == pytest.approx(0.500)
-
 
 
 def test_correct_distances():

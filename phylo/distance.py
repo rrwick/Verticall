@@ -48,6 +48,8 @@ def get_distance(masses, piece_size, method):
         return get_mean_distance(masses, piece_size)
     elif method == 'median':
         return get_median_distance(masses, piece_size)
+    elif method == 'median_int':
+        return get_median_int_distance(masses, piece_size)
     elif method == 'mode':
         return get_mode_distance(masses, piece_size)
     assert False
@@ -66,13 +68,35 @@ def get_median_distance(masses, piece_size):
     Returns the median of the distance distribution. This median is not interpolated, i.e. it will
     be equal to one of the distances in the distribution.
     """
-    distances = [i / piece_size for i in range(len(masses))]
+    half_total_mass = sum(masses) / 2.0
     total = 0.0
-    for d, m in zip(distances, masses):
+    for i, m in enumerate(masses):
         total += m
-        if total >= 0.5:
-            return d
+        if total >= half_total_mass:
+            return i / piece_size
     return 0.0
+
+
+def get_median_int_distance(masses, piece_size):
+    """
+    Returns the interpolated median of the distance distribution:
+    https://en.wikipedia.org/wiki/Median#Interpolated_median
+    https://aec.umich.edu/median.php
+    """
+    median = get_median_distance(masses, 1)
+    below, equal, above = 0.0, 0.0, 0.0
+    for i, m in enumerate(masses):
+        if i < median:
+            below += m
+        elif i > median:
+            above += m
+        else:  # i == median
+            equal += m
+    if equal == 0.0:
+        interpolated_median = median
+    else:
+        interpolated_median = median + ((above - below) / (2.0 * equal))
+    return interpolated_median / piece_size
 
 
 def get_mode_distance(masses, piece_size):
@@ -81,12 +105,11 @@ def get_mode_distance(masses, piece_size):
     distances tie for the highest mass (the distribution is multimodal), it returns the mean of
     those distances.
     """
-    distances = [i / piece_size for i in range(len(masses))]
     max_mass = max(masses)
     distances_with_max_mass = []
-    for d, m in zip(distances, masses):
+    for i, m in enumerate(masses):
         if m == max_mass:
-            distances_with_max_mass.append(d)
+            distances_with_max_mass.append(i / piece_size)
     return statistics.mean(distances_with_max_mass)
 
 

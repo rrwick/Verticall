@@ -137,8 +137,9 @@ def distance_subparser(subparsers):
                                help='File containing the output of XXXXXXXXX align')
 
     setting_args = group.add_argument_group('Settings')
-    setting_args.add_argument('--method', type=str, choices=['mean', 'median', 'poisson'],
-                              default='median',
+    setting_args.add_argument('--method', type=str,
+                              choices=['mean', 'median', 'median_int', 'mode'],
+                              default='median_int',
                               help='Method for converting distributions into a single distance')
     setting_args.add_argument('--correction', type=str, choices=['none', 'jukescantor'],
                               default='jukescantor',
