@@ -14,6 +14,7 @@ If not, see <https://www.gnu.org/licenses/>.
 import itertools
 import math
 import numpy as np
+import statistics
 import sys
 
 
@@ -47,17 +48,24 @@ def get_distance(masses, piece_size, method):
         return get_mean_distance(masses, piece_size)
     elif method == 'median':
         return get_median_distance(masses, piece_size)
-    elif method == 'poisson':
-        return get_poisson_distance(masses, piece_size)
+    elif method == 'mode':
+        return get_mode_distance(masses, piece_size)
     assert False
 
 
 def get_mean_distance(masses, piece_size):
+    """
+    Returns the mean of the distance distribution.
+    """
     distances = [i / piece_size for i in range(len(masses))]
     return np.average(distances, weights=masses)
 
 
 def get_median_distance(masses, piece_size):
+    """
+    Returns the median of the distance distribution. This median is not interpolated, i.e. it will
+    be equal to one of the distances in the distribution.
+    """
     distances = [i / piece_size for i in range(len(masses))]
     total = 0.0
     for d, m in zip(distances, masses):
@@ -67,8 +75,19 @@ def get_median_distance(masses, piece_size):
     return 0.0
 
 
-def get_poisson_distance(masses, piece_size):
-    return 0.0
+def get_mode_distance(masses, piece_size):
+    """
+    Returns the mode of the distance distribution (the distance with the highest mass). If multiple
+    distances tie for the highest mass (the distribution is multimodal), it returns the mean of
+    those distances.
+    """
+    distances = [i / piece_size for i in range(len(masses))]
+    max_mass = max(masses)
+    distances_with_max_mass = []
+    for d, m in zip(distances, masses):
+        if m == max_mass:
+            distances_with_max_mass.append(d)
+    return statistics.mean(distances_with_max_mass)
 
 
 def add_self_distances(distances, sample_names):
