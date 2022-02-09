@@ -17,6 +17,8 @@ import numpy as np
 import statistics
 import sys
 
+from .log import log
+
 
 def distance(args):
     distances, sample_names = load_distances(args.alignment_results, args.method)
@@ -29,6 +31,7 @@ def distance(args):
 
 
 def load_distances(alignment_results, method):
+    log('Loading distances: 0', end='')
     distances, sample_names = {}, set()
     with open(alignment_results, 'rt') as results:
         for line in results:
@@ -40,6 +43,8 @@ def load_distances(alignment_results, method):
             masses = [float(p) for p in parts[4:]]
             sample_names.update([assembly_1, assembly_2])
             distances[(assembly_1, assembly_2)] = get_distance(masses, piece_size, method)
+            log(f'\rLoading distances: {len(distances)}', end='')
+    log()
     return distances, sorted(sample_names)
 
 
@@ -52,6 +57,9 @@ def get_distance(masses, piece_size, method):
         d = get_median_int_distance(masses)
     elif method == 'mode':
         d = get_mode_distance(masses)
+    elif method == 'tightest_half':
+        low, high = get_tightest_half(masses)
+        d = statistics.mean([low, high])
     else:
         assert False
     return d / piece_size
@@ -115,6 +123,30 @@ def get_mode_distance(masses):
         return distances_with_max_mass[0]
     else:
         return statistics.mean(distances_with_max_mass)
+
+
+def get_tightest_half(masses):
+    """
+    Returns the low and high bounds which capture half (or more) of the total mass with the
+    smallest difference between low and high.
+    Results are zero-based and inclusive, e.g. (1, 2) means that the 2nd and 3rd positions together
+    contain at least half of the mass.
+    """
+    half_total_mass = sum(masses) / 2.0
+    best_low, best_high, best_range_size, best_total_in_range = None, None, None, None
+    for low in range(0, get_median_distance(masses) + 1):
+        for high in range(low, len(masses)):
+            total_in_range = sum(m for m in masses[low:high+1])
+            if total_in_range >= half_total_mass:
+                break
+        range_size = high - low
+        if ((best_range_size is None) or (range_size < best_range_size) or
+                (range_size == best_range_size and total_in_range > best_total_in_range)):
+            best_range_size = range_size
+            best_total_in_range = total_in_range
+            best_low = low
+            best_high = high
+    return best_low, best_high
 
 
 def add_self_distances(distances, sample_names):

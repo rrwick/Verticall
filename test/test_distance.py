@@ -86,6 +86,19 @@ def test_get_mode_distance():
     assert phylo.distance.get_mode_distance([0.24, 0.26, 0.24, 0.26]) == pytest.approx(2.0)
 
 
+def test_get_tightest_half():
+    assert phylo.distance.get_tightest_half([1.0, 0.0, 0.0, 0.0]) == (0, 0)
+    assert phylo.distance.get_tightest_half([0.0, 1.0, 0.0, 0.0]) == (1, 1)
+    assert phylo.distance.get_tightest_half([0.0, 0.0, 1.0, 0.0]) == (2, 2)
+    assert phylo.distance.get_tightest_half([0.1, 0.7, 0.1, 0.1]) == (1, 1)
+    assert phylo.distance.get_tightest_half([0.4, 0.2, 0.2, 0.2]) == (0, 1)
+    assert phylo.distance.get_tightest_half([0.4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.3, 0.3]) == (6, 7)
+    assert phylo.distance.get_tightest_half([0.4, 0.0, 0.0, 0.0, 0.0, 0.2, 0.2, 0.2]) == (5, 7)
+    assert phylo.distance.get_tightest_half([0.0, 0.4, 0.1, 0.0, 0.0, 0.1, 0.2, 0.2]) == (1, 2)
+    assert phylo.distance.get_tightest_half([0.0, 0.0, 0.35, 0.4, 0.25, 0.0, 0.0]) == (2, 3)
+    assert phylo.distance.get_tightest_half([0.0, 0.0, 0.25, 0.4, 0.35, 0.0, 0.0]) == (3, 4)
+
+
 def test_correct_distances():
     sample_names = ['a', 'b']
     distances = {('a', 'a'): 0.0, ('a', 'b'): 0.2,
