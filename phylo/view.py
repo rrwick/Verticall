@@ -11,16 +11,12 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 
-import numpy as np
 import pandas as pd
-from plotnine import ggplot, aes, geom_segment, geom_vline, geom_line, labs, theme_bw, \
-    scale_y_continuous, scale_y_sqrt
-from scipy.stats import gamma, nbinom
+from plotnine import ggplot, aes, geom_segment, geom_vline, labs, theme_bw, \
+    scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt
 import sys
 
-from .distance import get_distance, get_tightest_half
-from .gamma import fit_gamma_to_distribution
-from .negbin import fit_negbin_to_distribution
+from .distance import get_distance
 
 
 def view(args):
@@ -29,41 +25,23 @@ def view(args):
 
     distances = [i / piece_size for i in range(len(masses))]
     df = pd.DataFrame(list(zip(distances, masses)),  columns=['distance', 'mass'])
-    title = f'{args.assembly_1} vs {args.assembly_2}'
+    title = f'{args.assembly_1} vs {args.assembly_2} ({piece_size} bp windows)'
     mean = get_distance(masses, piece_size, 'mean')
-    median = get_distance(masses, piece_size, 'median')
     median_int = get_distance(masses, piece_size, 'median_int')
-
-    low, high = get_tightest_half(masses)
-    low /= piece_size
-    high /= piece_size
-
-    shape, scale, vert = fit_gamma_to_distribution(masses)
-    gamma_x = np.arange(len(masses))
-    gamma_y = gamma.pdf(gamma_x, shape, scale=scale)
-    gamma_x = gamma_x / piece_size
-    gamma_y = gamma_y * vert
-    gamma_df = pd.DataFrame({'x': gamma_x, 'y': gamma_y})
-
-    # n, p, vert = fit_negbin_to_distribution(masses)
-    # negbin_x = np.arange(len(masses))
-    # negbin_y = nbinom.pmf(negbin_x, n, p)
-    # negbin_x = negbin_x / piece_size
-    # negbin_y = negbin_y * vert
-    # negbin_df = pd.DataFrame({'x': negbin_x, 'y': negbin_y})
 
     g = (ggplot(df, aes('distance', 'mass')) +
          geom_segment(aes(x='distance', xend='distance', y=0, yend='mass'),
-                      colour='#880000', size=1) +
-         geom_line(data=gamma_df, mapping=aes(x='x', y='y')) +
-         # geom_line(data=negbin_df, mapping=aes(x='x', y='y')) +
-         geom_vline(xintercept=mean, colour='#008888', linetype='dotted') +
-         geom_vline(xintercept=median, colour='#0000bb', linetype='dotted') +
-         geom_vline(xintercept=median_int, colour='#00bb00', linetype='dotted') +
-         geom_vline(xintercept=low, colour='#aaaaaa', linetype='dashed') +
-         geom_vline(xintercept=high, colour='#aaaaaa', linetype='dashed') +
+                      colour='#8da0cb', size=1) +
+         geom_vline(xintercept=mean, colour='#d95f02', linetype='dashed', size=0.5) +
+         geom_vline(xintercept=median_int, colour='#d95f02', linetype='dotted', size=0.5) +
          theme_bw() +
          labs(title=title))
+
+    x_max = len(masses) / piece_size
+    if args.sqrt_x:
+        g += scale_x_sqrt(limits=(0, x_max))
+    else:
+        g += scale_x_continuous(limits=(0, x_max))
 
     y_max = 1.05 * max(masses)
     if args.sqrt_y:
@@ -71,7 +49,7 @@ def view(args):
     else:
         g += scale_y_continuous(expand=(0, 0), limits=(0, y_max))
 
-    print(g)
+    g.draw(show=True)
 
 
 def load_distance_distribution(alignment_results, assembly_1, assembly_2):

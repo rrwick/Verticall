@@ -117,6 +117,8 @@ def view_subparser(subparsers):
                                help='Name of first assembly in pair')
 
     setting_args = group.add_argument_group('Settings')
+    setting_args.add_argument('--sqrt_x', action='store_true',
+                              help='Use a square-root transform on the x-axis')
     setting_args.add_argument('--sqrt_y', action='store_true',
                               help='Use a square-root transform on the y-axis')
 
