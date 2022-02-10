@@ -50,13 +50,13 @@ def load_distances(alignment_results, method):
 
 def get_distance(masses, piece_size, method):
     if method == 'mean':
-        d = get_mean_distance(masses)
+        d = get_mean(masses)
     elif method == 'median':
-        d = get_median_distance(masses)
+        d = get_median(masses)
     elif method == 'median_int':
-        d = get_median_int_distance(masses)
+        d = get_median_int(masses)
     elif method == 'mode':
-        d = get_mode_distance(masses)
+        d = get_mode(masses)
     elif method == 'tightest_half':
         low, high = get_tightest_half(masses)
         d = statistics.mean([low, high])
@@ -65,14 +65,23 @@ def get_distance(masses, piece_size, method):
     return d / piece_size
 
 
-def get_mean_distance(masses):
+def get_mean(masses):
     """
     Returns the mean of the distance distribution.
     """
     return np.average(range(len(masses)), weights=masses)
 
 
-def get_median_distance(masses):
+def get_variance(masses):
+    """
+    Returns the variance of the distance distribution.
+    """
+    mean = get_mean(masses)
+    values = np.arange(len(masses))
+    return np.average((values - mean)**2, weights=masses)
+
+
+def get_median(masses):
     """
     Returns the median of the distance distribution. This median is not interpolated, i.e. it will
     be equal to one of the distances in the distribution.
@@ -86,13 +95,13 @@ def get_median_distance(masses):
     return 0
 
 
-def get_median_int_distance(masses):
+def get_median_int(masses):
     """
     Returns the interpolated median of the distance distribution:
     https://en.wikipedia.org/wiki/Median#Interpolated_median
     https://aec.umich.edu/median.php
     """
-    median = get_median_distance(masses)
+    median = get_median(masses)
     below, equal, above = 0.0, 0.0, 0.0
     for i, m in enumerate(masses):
         if i < median:
@@ -108,7 +117,7 @@ def get_median_int_distance(masses):
     return interpolated_median
 
 
-def get_mode_distance(masses):
+def get_mode(masses):
     """
     Returns the mode of the distance distribution (the distance with the highest mass). If multiple
     distances tie for the highest mass (the distribution is multimodal), it returns the mean of
@@ -134,7 +143,7 @@ def get_tightest_half(masses):
     """
     half_total_mass = sum(masses) / 2.0
     best_low, best_high, best_range_size, best_total_in_range = None, None, None, None
-    for low in range(0, get_median_distance(masses) + 1):
+    for low in range(0, get_median(masses) + 1):
         for high in range(low, len(masses)):
             total_in_range = sum(m for m in masses[low:high+1])
             if total_in_range >= half_total_mass:
