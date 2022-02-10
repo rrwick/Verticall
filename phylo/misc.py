@@ -13,6 +13,7 @@ If not, see <https://www.gnu.org/licenses/>.
 
 import gzip
 import multiprocessing
+import numpy as np
 import os
 import sys
 
@@ -125,3 +126,13 @@ def check_assembly_file_type(a):
 
 def get_default_thread_count():
     return min(multiprocessing.cpu_count(), 16)
+
+
+def get_mean(masses):
+    return np.average(range(len(masses)), weights=masses)
+
+
+def get_variance(masses):
+    mean = get_mean(masses)
+    values = np.arange(len(masses))
+    return np.average((values - mean)**2, weights=masses)

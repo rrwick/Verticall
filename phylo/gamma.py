@@ -14,15 +14,7 @@ If not, see <https://www.gnu.org/licenses/>.
 import numpy as np
 from scipy.stats import gamma
 
-
-def get_mean(masses):
-    return np.average(range(len(masses)), weights=masses)
-
-
-def get_variance(masses):
-    mean = get_mean(masses)
-    values = np.arange(len(masses))
-    return np.average((values - mean)**2, weights=masses)
+from .misc import get_mean, get_variance
 
 
 def get_shape_and_scale(mean, variance):

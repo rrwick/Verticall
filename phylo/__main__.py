@@ -139,8 +139,8 @@ def distance_subparser(subparsers):
     setting_args = group.add_argument_group('Settings')
     setting_args.add_argument('--method', type=str,
                               choices=['mean', 'median', 'median_int', 'mode', 'tightest_half',
-                                       'gamma'],
-                              default='gamma',
+                                       'gamma', 'negbin'],
+                              default='negbin',
                               help='Method for converting distributions into a single distance')
     setting_args.add_argument('--correction', type=str, choices=['none', 'jukescantor'],
                               default='jukescantor',

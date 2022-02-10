@@ -13,10 +13,13 @@ If not, see <https://www.gnu.org/licenses/>.
 
 import itertools
 import math
+from scipy.stats import nbinom
 import statistics
 import sys
 
-from .gamma import get_mean, fit_gamma_to_distribution
+from .gamma import fit_gamma_to_distribution
+from .misc import get_mean
+from .negbin import fit_negbin_to_distribution
 from .log import log
 
 
@@ -64,6 +67,8 @@ def get_distance(masses, piece_size, method):
         d = statistics.mean([low, high])
     elif method == 'gamma':
         d = get_gamma_fit_distance(masses)
+    elif method == 'negbin':
+        d = get_negbin_fit_distance(masses)
     else:
         assert False
     return d / piece_size
@@ -153,6 +158,14 @@ def get_gamma_fit_distance(masses):
     shape, scale, _ = fit_gamma_to_distribution(masses)
     gamma_mean = shape * scale
     return gamma_mean
+
+
+def get_negbin_fit_distance(masses):
+    """
+    Fits a negative binomial distribution to the empirical distribution and returns the mean.
+    """
+    n, p, _ = fit_negbin_to_distribution(masses)
+    return nbinom.mean(n, p)
 
 
 def add_self_distances(distances, sample_names):

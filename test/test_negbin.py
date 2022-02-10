@@ -15,13 +15,13 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 import pytest
-from scipy.stats import gamma
+from scipy.stats import nbinom
 
-import phylo.gamma
+import phylo.negbin
 
 
 def test_get_shape_and_scale():
-    for mean, variance in [(5.0, 5.0), (1.0, 5.0), (5.0, 1.0), (5.0, 10.0), (10.0, 5.0)]:
-        shape, scale = phylo.gamma.get_shape_and_scale(mean, variance)
-        assert gamma.mean(shape, scale=scale) == pytest.approx(mean)
-        assert gamma.var(shape, scale=scale) == pytest.approx(variance)
+    for mean, variance in [(5.0, 10.0), (5.0, 15.0), (5.0, 25.0)]:
+        n, p = phylo.negbin.get_n_and_p(mean, variance)
+        assert nbinom.mean(n, p) == pytest.approx(mean)
+        assert nbinom.var(n, p) == pytest.approx(variance)
