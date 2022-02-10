@@ -19,30 +19,6 @@ import pytest
 import phylo.distance
 
 
-def test_get_mean():
-    assert phylo.distance.get_mean([1.00, 0.00, 0.00, 0.00]) == pytest.approx(0.0)
-    assert phylo.distance.get_mean([0.00, 1.00, 0.00, 0.00]) == pytest.approx(1.0)
-    assert phylo.distance.get_mean([0.00, 0.00, 1.00, 0.00]) == pytest.approx(2.0)
-    assert phylo.distance.get_mean([0.00, 0.00, 0.00, 1.00]) == pytest.approx(3.0)
-    assert phylo.distance.get_mean([0.50, 0.50, 0.00, 0.00]) == pytest.approx(0.5)
-    assert phylo.distance.get_mean([0.00, 0.50, 0.50, 0.00]) == pytest.approx(1.5)
-    assert phylo.distance.get_mean([0.00, 0.00, 0.50, 0.50]) == pytest.approx(2.5)
-    assert phylo.distance.get_mean([0.25, 0.25, 0.25, 0.25]) == pytest.approx(1.5)
-    assert phylo.distance.get_mean([0.10, 0.20, 0.30, 0.40]) == pytest.approx(2.0)
-    assert phylo.distance.get_mean([0.40, 0.30, 0.20, 0.10]) == pytest.approx(1.0)
-
-
-def test_get_variance():
-    assert phylo.distance.get_variance([1.0, 0.0, 0.0, 0.0]) == pytest.approx(0.0)
-    assert phylo.distance.get_variance([0.0, 1.0, 0.0, 0.0]) == pytest.approx(0.0)
-    assert phylo.distance.get_variance([0.0, 0.0, 1.0, 0.0]) == pytest.approx(0.0)
-    assert phylo.distance.get_variance([0.0, 0.0, 0.0, 1.0]) == pytest.approx(0.0)
-    assert phylo.distance.get_variance([0.2, 0.2, 0.2, 0.2, 0.2]) == pytest.approx(2.0)
-    assert phylo.distance.get_variance([0.1, 0.2, 0.4, 0.3]) == pytest.approx(0.89)
-    assert phylo.distance.get_variance([0.16, 0.53, 0.2, 0.08, 0.03]) == pytest.approx(0.8659)
-    assert phylo.distance.get_variance([0, 1, 1, 1, 1, 1, 1]) == pytest.approx(35.0 / 12.0)
-
-
 def test_get_median():
     assert phylo.distance.get_median([1.0, 0.0, 0.0, 0.0]) == 0
     assert phylo.distance.get_median([0.0, 1.0, 0.0, 0.0]) == 1

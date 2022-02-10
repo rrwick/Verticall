@@ -13,10 +13,10 @@ If not, see <https://www.gnu.org/licenses/>.
 
 import itertools
 import math
-import numpy as np
 import statistics
 import sys
 
+from .gamma import get_mean, fit_gamma_to_distribution
 from .log import log
 
 
@@ -31,7 +31,6 @@ def distance(args):
 
 
 def load_distances(alignment_results, method):
-    log('Loading distances: 0', end='')
     distances, sample_names = {}, set()
     with open(alignment_results, 'rt') as results:
         for line in results:
@@ -39,11 +38,14 @@ def load_distances(alignment_results, method):
                 continue
             parts = line.strip().split('\t')
             assembly_1, assembly_2 = parts[0], parts[1]
+            count = len(distances) + 1
+            log(f'{count}: {assembly_1} vs {assembly_2}: ', end='')
             piece_size = int(parts[2])
             masses = [float(p) for p in parts[4:]]
             sample_names.update([assembly_1, assembly_2])
-            distances[(assembly_1, assembly_2)] = get_distance(masses, piece_size, method)
-            log(f'\rLoading distances: {len(distances)}', end='')
+            d = get_distance(masses, piece_size, method)
+            log(d)
+            distances[(assembly_1, assembly_2)] = d
     log()
     return distances, sorted(sample_names)
 
@@ -60,25 +62,11 @@ def get_distance(masses, piece_size, method):
     elif method == 'tightest_half':
         low, high = get_tightest_half(masses)
         d = statistics.mean([low, high])
+    elif method == 'gamma':
+        d = get_gamma_fit_distance(masses)
     else:
         assert False
     return d / piece_size
-
-
-def get_mean(masses):
-    """
-    Returns the mean of the distance distribution.
-    """
-    return np.average(range(len(masses)), weights=masses)
-
-
-def get_variance(masses):
-    """
-    Returns the variance of the distance distribution.
-    """
-    mean = get_mean(masses)
-    values = np.arange(len(masses))
-    return np.average((values - mean)**2, weights=masses)
 
 
 def get_median(masses):
@@ -156,6 +144,15 @@ def get_tightest_half(masses):
             best_low = low
             best_high = high
     return best_low, best_high
+
+
+def get_gamma_fit_distance(masses):
+    """
+    Fits a gamma distribution to the empirical distribution and returns the mean.
+    """
+    shape, scale, _ = fit_gamma_to_distribution(masses)
+    gamma_mean = shape * scale
+    return gamma_mean
 
 
 def add_self_distances(distances, sample_names):

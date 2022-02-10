@@ -11,12 +11,15 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 
+import numpy as np
 import pandas as pd
-from plotnine import ggplot, aes, geom_segment, geom_vline, labs, theme_bw, \
+from plotnine import ggplot, aes, geom_segment, geom_vline, geom_line, labs, theme_bw, \
     scale_y_continuous, scale_y_sqrt
+from scipy.stats import gamma
 import sys
 
 from .distance import get_distance, get_tightest_half
+from .gamma import fit_gamma_to_distribution
 
 
 def view(args):
@@ -34,9 +37,17 @@ def view(args):
     low /= piece_size
     high /= piece_size
 
+    shape, scale, vertical_scale = fit_gamma_to_distribution(masses)
+    gamma_x = np.arange(len(masses))
+    gamma_y = gamma.pdf(gamma_x, shape, scale=scale)
+    gamma_x = gamma_x / piece_size
+    gamma_y = gamma_y * vertical_scale
+    gamma_df = pd.DataFrame({'x': gamma_x, 'y': gamma_y})
+
     g = (ggplot(df, aes('distance', 'mass')) +
          geom_segment(aes(x='distance', xend='distance', y=0, yend='mass'),
                       colour='#880000', size=1) +
+         geom_line(data=gamma_df, mapping=aes(x='x', y='y')) +
          geom_vline(xintercept=mean, colour='#008888', linetype='dotted') +
          geom_vline(xintercept=median, colour='#0000bb', linetype='dotted') +
          geom_vline(xintercept=median_int, colour='#00bb00', linetype='dotted') +
