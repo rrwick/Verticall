@@ -39,12 +39,11 @@ def load_distances(alignment_results, method):
             parts = line.strip().split('\t')
             assembly_1, assembly_2 = parts[0], parts[1]
             count = len(distances) + 1
-            log(f'{count}: {assembly_1} vs {assembly_2}: ', end='')
             piece_size = int(parts[2])
             masses = [float(p) for p in parts[4:]]
             sample_names.update([assembly_1, assembly_2])
             d = get_distance(masses, piece_size, method)
-            log(d)
+            log(f'{count}: {assembly_1} vs {assembly_2}: {d:.9f}')
             distances[(assembly_1, assembly_2)] = d
     log()
     return distances, sorted(sample_names)
@@ -154,19 +153,42 @@ def get_mode(masses):
         return statistics.mean(distances_with_max_mass)
 
 
-def get_top_half(masses):
+def get_top_half(masses, min_samples=5):
     """
-    Returns the low and high bounds which capture half (or more) of the total mass with the
-    smallest difference between low and high while also containing the median. It works by starting
-    with the median and then greedily expanding until 50% of the mass is reached.
+    Returns low and high bounds which capture half (or more) of the total mass. The range starts
+    with the median and climbs the distribution (shifting left or right to get a larger mass) and
+    greedily expands the range.
+
+    Since these results can be used for a mean, there is a minimum number of samples in the range
+    (defined by min_samples) to ensure that a very low distribution (with >50% in the 0 bin)
+    doesn't end up with a mean of 0.
     """
     half_total_mass = sum(masses) / 2.0
     median = get_median(masses)
 
     low, high = median, median
-    while (high - low) < 4 or sum(m for m in masses[low:high + 1]) < half_total_mass:
+    while (high - low) < min_samples-1 or sum(masses[low:high+1]) < half_total_mass:
 
-        # If we've reached the limit on either end, then we can only expand in one way.
+        # If we've reached the limits on both ends (probably due to the min_samples values and a
+        # small distribution), we're done.
+        if low == 0 and high == len(masses)-1:
+            break
+
+        # We first check to see if shifting the range up or down by one can increase the total.
+        current_total = sum(masses[low:high+1])
+        shift_down_total = sum(masses[low-1:high]) if low > 1 else float('-inf')
+        shift_up_total = sum(masses[low+1:high+2]) if high < len(masses)-1 else float('-inf')
+        if shift_down_total > current_total and shift_down_total > shift_up_total:
+            low -= 1
+            high -= 1
+            continue
+        if shift_up_total > current_total and shift_up_total > shift_down_total:
+            low += 1
+            high += 1
+            continue
+
+        # If we got here, then shifting failed to increase the total, so we need to expand the
+        # range. If we've reached the limit on either end, then we can only expand in one way.
         if low == 0:
             high += 1
             continue
@@ -183,17 +205,7 @@ def get_top_half(masses):
             low -= 1
             continue
 
-        # If we got here, then the new low and new high tied. We break the tie by expanding in the
-        # direction with more mass overall.
-        if masses[new_high:] > masses[:new_low]:
-            high += 1
-            continue
-        if masses[:new_low] > masses[new_high:]:
-            low -= 1
-            continue
-
-        # If we got here (should be rare), then we've got a really nasty tie and expand in both
-        # directions.
+        # If we got here, then the new low and new high are tied, so we expand in both directions.
         high += 1
         low -= 1
 

@@ -97,6 +97,43 @@ def test_get_mode():
     assert phylo.distance.get_mode([0.24, 0.26, 0.24, 0.26]) == pytest.approx(2.0)
 
 
+def test_get_top_half_1():
+    # Simple cases with all mass in one point and min_samples=1.
+    assert phylo.distance.get_top_half([1.00, 0.00, 0.00, 0.00], 1) == (0, 0)
+    assert phylo.distance.get_top_half([0.00, 1.00, 0.00, 0.00], 1) == (1, 1)
+    assert phylo.distance.get_top_half([0.00, 0.00, 1.00, 0.00], 1) == (2, 2)
+    assert phylo.distance.get_top_half([0.00, 0.00, 0.00, 1.00], 1) == (3, 3)
+
+
+def test_get_top_half_2():
+    # Increasing the min_samples will expand the range.
+    assert phylo.distance.get_top_half([0.60, 0.25, 0.10, 0.03, 0.02], 1) == (0, 0)
+    assert phylo.distance.get_top_half([0.60, 0.25, 0.10, 0.03, 0.02], 2) == (0, 1)
+    assert phylo.distance.get_top_half([0.60, 0.25, 0.10, 0.03, 0.02], 3) == (0, 2)
+    assert phylo.distance.get_top_half([0.60, 0.25, 0.10, 0.03, 0.02], 4) == (0, 3)
+    assert phylo.distance.get_top_half([0.60, 0.25, 0.10, 0.03, 0.02], 5) == (0, 4)
+    assert phylo.distance.get_top_half([0.60, 0.25, 0.10, 0.03, 0.02], 9) == (0, 4)
+
+    assert phylo.distance.get_top_half([0.02, 0.03, 0.10, 0.25, 0.60], 1) == (4, 4)
+    assert phylo.distance.get_top_half([0.02, 0.03, 0.10, 0.25, 0.60], 2) == (3, 4)
+    assert phylo.distance.get_top_half([0.02, 0.03, 0.10, 0.25, 0.60], 3) == (2, 4)
+    assert phylo.distance.get_top_half([0.02, 0.03, 0.10, 0.25, 0.60], 4) == (1, 4)
+    assert phylo.distance.get_top_half([0.02, 0.03, 0.10, 0.25, 0.60], 5) == (0, 4)
+    assert phylo.distance.get_top_half([0.02, 0.03, 0.10, 0.25, 0.60], 9) == (0, 4)
+
+    assert phylo.distance.get_top_half([0.03, 0.25, 0.60, 0.10, 0.02], 1) == (2, 2)
+    assert phylo.distance.get_top_half([0.03, 0.25, 0.60, 0.10, 0.02], 2) == (1, 2)
+    assert phylo.distance.get_top_half([0.03, 0.25, 0.60, 0.10, 0.02], 3) == (1, 3)
+    assert phylo.distance.get_top_half([0.03, 0.25, 0.60, 0.10, 0.02], 4) == (0, 3)
+    assert phylo.distance.get_top_half([0.03, 0.25, 0.60, 0.10, 0.02], 5) == (0, 4)
+    assert phylo.distance.get_top_half([0.03, 0.25, 0.60, 0.10, 0.02], 9) == (0, 4)
+
+
+def test_get_top_half_3():
+    # A tie will expand in both directions.
+    assert phylo.distance.get_top_half([0.00, 0.30, 0.40, 0.30, 0.00], 1) == (1, 3)
+
+
 def test_correct_distances():
     sample_names = ['a', 'b']
     distances = {('a', 'a'): 0.0, ('a', 'b'): 0.2,
