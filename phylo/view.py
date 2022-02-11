@@ -41,7 +41,7 @@ def view(args):
     g = (ggplot(df) +
          geom_segment(aes(x='distance', xend='distance', y=0, yend='mass', colour='in_50'),
                       size=1) +
-         scale_colour_manual(values=['#7570b3', '#1b9e77']) +
+         scale_colour_manual(values={False: '#7570b3', True: '#1b9e77'}, guide=False) +
          geom_vline(xintercept=mean, colour='#d95f02', linetype='dotted', size=0.5) +
          geom_vline(xintercept=top_half_mean, colour='#d95f02', linetype='dashed', size=0.5) +
          theme_bw() +

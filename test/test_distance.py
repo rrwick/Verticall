@@ -131,7 +131,21 @@ def test_get_top_half_2():
 
 def test_get_top_half_3():
     # A tie will expand in both directions.
+    assert phylo.distance.get_top_half([0.30, 0.40, 0.30, 0.00, 0.00], 1) == (0, 3)
     assert phylo.distance.get_top_half([0.00, 0.30, 0.40, 0.30, 0.00], 1) == (1, 4)
+    assert phylo.distance.get_top_half([0.00, 0.00, 0.30, 0.40, 0.30], 1) == (2, 5)
+    assert phylo.distance.get_top_half([0.15, 0.20, 0.20, 0.15, 0.10, 0.10, 0.10], 1) == (0, 4)
+    assert phylo.distance.get_top_half([0.10, 0.15, 0.20, 0.20, 0.15, 0.10, 0.10], 1) == (1, 5)
+    assert phylo.distance.get_top_half([0.10, 0.10, 0.15, 0.20, 0.20, 0.15, 0.10], 1) == (2, 6)
+    assert phylo.distance.get_top_half([0.10, 0.10, 0.10, 0.15, 0.20, 0.20, 0.15], 1) == (3, 7)
+
+
+def test_get_top_half_4():
+    # Testing right-skewed and left-skewed distributions
+    left_skewed = [0.00, 0.20, 0.18, 0.16, 0.14, 0.12, 0.10, 0.06, 0.04, 0.00, 0.00, 0.00]
+    right_skewed = [0.00, 0.00, 0.00, 0.04, 0.06, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20, 0.00]
+    assert phylo.distance.get_top_half(left_skewed, 2) == (1, 4)
+    assert phylo.distance.get_top_half(right_skewed, 2) == (8, 11)
 
 
 def test_correct_distances():
