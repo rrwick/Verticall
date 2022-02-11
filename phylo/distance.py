@@ -13,13 +13,10 @@ If not, see <https://www.gnu.org/licenses/>.
 
 import itertools
 import math
-from scipy.stats import nbinom
+import numpy as np
 import statistics
 import sys
 
-from .gamma import fit_gamma_to_distribution
-from .misc import get_mean
-from .negbin import fit_negbin_to_distribution
 from .log import log
 
 
@@ -64,13 +61,6 @@ def get_distance(masses, piece_size, method):
         d = get_median_climb(masses)
     elif method == 'mode':
         d = get_mode(masses)
-    elif method == 'tightest_half':
-        low, high = get_tightest_half(masses)
-        d = statistics.mean([low, high])
-    elif method == 'gamma':
-        d = get_gamma_fit_distance(masses)
-    elif method == 'negbin':
-        d = get_negbin_fit_distance(masses)
     elif method == 'top_half_mean':
         d = get_top_half_mean_distance(masses)
     elif method == 'top_half_median_int':
@@ -78,6 +68,16 @@ def get_distance(masses, piece_size, method):
     else:
         assert False
     return d / piece_size
+
+
+def get_mean(masses):
+    return np.average(range(len(masses)), weights=masses)
+
+
+def get_variance(masses):
+    mean = get_mean(masses)
+    values = np.arange(len(masses))
+    return np.average((values - mean)**2, weights=masses)
 
 
 def get_median(masses):
@@ -154,30 +154,6 @@ def get_mode(masses):
         return statistics.mean(distances_with_max_mass)
 
 
-def get_tightest_half(masses):
-    """
-    Returns the low and high bounds which capture half (or more) of the total mass with the
-    smallest difference between low and high.
-    Results are zero-based and inclusive, e.g. (1, 2) means that the 2nd and 3rd positions together
-    contain at least half of the mass.
-    """
-    half_total_mass = sum(masses) / 2.0
-    best_low, best_high, best_range_size, best_total_in_range = None, None, None, None
-    for low in range(0, get_median(masses) + 1):
-        for high in range(low, len(masses)):
-            total_in_range = sum(m for m in masses[low:high+1])
-            if total_in_range >= half_total_mass:
-                break
-        range_size = high - low
-        if ((best_range_size is None) or (range_size < best_range_size) or
-                (range_size == best_range_size and total_in_range > best_total_in_range)):
-            best_range_size = range_size
-            best_total_in_range = total_in_range
-            best_low = low
-            best_high = high
-    return best_low, best_high
-
-
 def get_top_half(masses):
     """
     Returns the low and high bounds which capture half (or more) of the total mass with the
@@ -234,23 +210,6 @@ def get_top_half_median_int_distance(masses):
     low, high = get_top_half(masses)
     masked_masses = [m if low <= i <= high else 0.0 for i, m in enumerate(masses)]
     return get_median_int(masked_masses)
-
-
-def get_gamma_fit_distance(masses):
-    """
-    Fits a gamma distribution to the empirical distribution and returns the mean.
-    """
-    shape, scale, _ = fit_gamma_to_distribution(masses)
-    gamma_mean = shape * scale
-    return gamma_mean
-
-
-def get_negbin_fit_distance(masses):
-    """
-    Fits a negative binomial distribution to the empirical distribution and returns the mean.
-    """
-    n, p, _ = fit_negbin_to_distribution(masses)
-    return nbinom.mean(n, p)
 
 
 def add_self_distances(distances, sample_names):

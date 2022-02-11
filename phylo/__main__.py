@@ -144,7 +144,6 @@ def distance_subparser(subparsers):
     setting_args = group.add_argument_group('Settings')
     setting_args.add_argument('--method', type=str,
                               choices=['mean', 'median', 'median_int', 'median_climb', 'mode',
-                                       'tightest_half', 'gamma', 'negbin',
                                        'top_half_mean', 'top_half_median_int'],
                               default='top_half_mean',
                               help='Method for converting distributions into a single distance')
