@@ -71,6 +71,10 @@ def get_distance(masses, piece_size, method):
         d = get_gamma_fit_distance(masses)
     elif method == 'negbin':
         d = get_negbin_fit_distance(masses)
+    elif method == 'top_half_mean':
+        d = get_top_half_mean_distance(masses)
+    elif method == 'top_half_median_int':
+        d = get_top_half_median_int_distance(masses)
     else:
         assert False
     return d / piece_size
@@ -172,6 +176,64 @@ def get_tightest_half(masses):
             best_low = low
             best_high = high
     return best_low, best_high
+
+
+def get_top_half(masses):
+    """
+    Returns the low and high bounds which capture half (or more) of the total mass with the
+    smallest difference between low and high while also containing the median. It works by starting
+    with the median and then greedily expanding until 50% of the mass is reached.
+    """
+    half_total_mass = sum(masses) / 2.0
+    median = get_median(masses)
+
+    low, high = median, median
+    while (high - low) < 4 or sum(m for m in masses[low:high + 1]) < half_total_mass:
+
+        # If we've reached the limit on either end, then we can only expand in one way.
+        if low == 0:
+            high += 1
+            continue
+        if high == len(masses) - 1:
+            low -= 1
+            continue
+
+        # If we can potentially expand in either way, we need to decide which way to expand.
+        new_low, new_high = low - 1, high + 1
+        if masses[new_high] > masses[new_low]:
+            high += 1
+            continue
+        if masses[new_low] > masses[new_high]:
+            low -= 1
+            continue
+
+        # If we got here, then the new low and new high tied. We break the tie by expanding in the
+        # direction with more mass overall.
+        if masses[new_high:] > masses[:new_low]:
+            high += 1
+            continue
+        if masses[:new_low] > masses[new_high:]:
+            low -= 1
+            continue
+
+        # If we got here (should be rare), then we've got a really nasty tie and expand in both
+        # directions.
+        high += 1
+        low -= 1
+
+    return low, high
+
+
+def get_top_half_mean_distance(masses):
+    low, high = get_top_half(masses)
+    masked_masses = [m if low <= i <= high else 0.0 for i, m in enumerate(masses)]
+    return get_mean(masked_masses)
+
+
+def get_top_half_median_int_distance(masses):
+    low, high = get_top_half(masses)
+    masked_masses = [m if low <= i <= high else 0.0 for i, m in enumerate(masses)]
+    return get_median_int(masked_masses)
 
 
 def get_gamma_fit_distance(masses):

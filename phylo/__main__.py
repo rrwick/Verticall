@@ -117,6 +117,9 @@ def view_subparser(subparsers):
                                help='Name of first assembly in pair')
 
     setting_args = group.add_argument_group('Settings')
+    setting_args.add_argument('--smooth', type=int, default=0,
+                              help='Display a smoothed version of the distribution with this '
+                                   'many iterations of smoothing (default: no smoothing)')
     setting_args.add_argument('--sqrt_x', action='store_true',
                               help='Use a square-root transform on the x-axis')
     setting_args.add_argument('--sqrt_y', action='store_true',
@@ -141,8 +144,9 @@ def distance_subparser(subparsers):
     setting_args = group.add_argument_group('Settings')
     setting_args.add_argument('--method', type=str,
                               choices=['mean', 'median', 'median_int', 'median_climb', 'mode',
-                                       'tightest_half', 'gamma', 'negbin'],
-                              default='median_climb',
+                                       'tightest_half', 'gamma', 'negbin',
+                                       'top_half_mean', 'top_half_median_int'],
+                              default='top_half_mean',
                               help='Method for converting distributions into a single distance')
     setting_args.add_argument('--correction', type=str, choices=['none', 'jukescantor'],
                               default='jukescantor',

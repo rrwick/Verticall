@@ -13,39 +13,48 @@ If not, see <https://www.gnu.org/licenses/>.
 
 import pandas as pd
 from plotnine import ggplot, aes, geom_segment, geom_vline, labs, theme_bw, \
-    scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt
+    scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt, scale_colour_manual
 import sys
 
-from .distance import get_distance, smooth_distribution
+from .distance import get_distance, get_top_half, smooth_distribution
 
 
 def view(args):
     piece_size, aligned_frac, masses = \
         load_distance_distribution(args.alignment_results, args.assembly_1, args.assembly_2)
 
-    distances = [i / piece_size for i in range(len(masses))]
-    df = pd.DataFrame(list(zip(distances, masses)),  columns=['distance', 'mass'])
     title = f'{args.assembly_1} vs {args.assembly_2} ({piece_size} bp windows)'
     mean = get_distance(masses, piece_size, 'mean')
     median_int = get_distance(masses, piece_size, 'median_int')
     median_climb = get_distance(masses, piece_size, 'median_climb')
+    top_half_mean = get_distance(masses, piece_size, 'top_half_mean')
+    top_half_median_int = get_distance(masses, piece_size, 'top_half_median_int')
 
-    g = (ggplot(df, aes('distance', 'mass')) +
-         geom_segment(aes(x='distance', xend='distance', y=0, yend='mass'),
-                      colour='#8da0cb', size=1) +
+    low, high = get_top_half(masses)
+
+    x_max = len(masses) / piece_size
+    y_max = 1.05 * max(masses)
+
+    if args.smooth > 0:
+        masses = smooth_distribution(masses, args.smooth)
+    distances = [i / piece_size for i in range(len(masses))]
+    in_50 = [True if low <= i <= high else False for i in range(len(masses))]
+    df = pd.DataFrame(list(zip(distances, masses, in_50)),  columns=['distance', 'mass', 'in_50'])
+
+    g = (ggplot(df) +
+         geom_segment(aes(x='distance', xend='distance', y=0, yend='mass', colour='in_50'),
+                      size=1) +
+         scale_colour_manual(values=['#7570b3', '#1b9e77']) +
          geom_vline(xintercept=mean, colour='#d95f02', linetype='dotted', size=0.5) +
-         geom_vline(xintercept=median_int, colour='#d95f02', linetype='dashed', size=0.5) +
-         geom_vline(xintercept=median_climb, colour='#d95f02', linetype='dashdot', size=0.5) +
+         geom_vline(xintercept=top_half_mean, colour='#d95f02', linetype='dashed', size=0.5) +
          theme_bw() +
          labs(title=title))
 
-    x_max = len(masses) / piece_size
     if args.sqrt_x:
         g += scale_x_sqrt(limits=(0, x_max))
     else:
         g += scale_x_continuous(limits=(0, x_max))
 
-    y_max = 1.05 * max(masses)
     if args.sqrt_y:
         g += scale_y_sqrt(expand=(0, 0), limits=(0, y_max))
     else:
