@@ -60,6 +60,8 @@ def get_distance(masses, piece_size, method):
         d = get_median(masses)
     elif method == 'median_int':
         d = get_median_int(masses)
+    elif method == 'median_climb':
+        d = get_median_climb(masses)
     elif method == 'mode':
         d = get_mode(masses)
     elif method == 'tightest_half':
@@ -108,6 +110,27 @@ def get_median_int(masses):
     else:
         interpolated_median = median + ((above - below) / (2.0 * equal))
     return interpolated_median
+
+
+def get_median_climb(masses):
+    """
+    Starting with the median, this function then 'climbs' higher into the smoothed distribution. So
+    while the median may be on the slope of a peak, this function should return a point near the
+    middle of a peak.
+    """
+    masses = smooth_distribution(masses, 1000)
+    i = get_median(masses)
+    while True:
+        left = masses[i-1]
+        middle = masses[i]
+        right = masses[i+1]
+        if left > middle and left > right:
+            i -= 1
+        elif right > middle and right > left:
+            i += 1
+        else:
+            break
+    return i
 
 
 def get_mode(masses):
@@ -214,3 +237,29 @@ def output_phylip_matrix(distances, sample_names):
         for b in sample_names:
             print(f'\t{distances[(a, b)]:.8f}', end='')
         print()
+
+
+def smooth_distribution(masses, iterations):
+    """
+    Smooths the distribution by redistributing mass between neighbouring points. Equal amounts of
+    mass are moved up and down the distribution, so this smoothing doesn't change the mean. More
+    smoothing is applied to higher masses, so the very low end of the distribution should remain
+    relatively unchanged.
+    """
+    for i in range(iterations):
+        masses = smooth_distribution_one_iteration(masses, 0.5)
+    return masses
+
+
+def smooth_distribution_one_iteration(masses, max_share):
+    masses.append(0.0)
+    changes = [0.0] * (len(masses))
+    for i, m in enumerate(masses):
+        if i == 0 or i == len(masses)-1:
+            continue
+        share_fraction = max_share * i / len(masses)
+        share_amount = masses[i] * share_fraction
+        changes[i-1] += share_amount / 2.0
+        changes[i] -= share_amount
+        changes[i+1] += share_amount / 2.0
+    return [m+c for m, c in zip(masses, changes)]

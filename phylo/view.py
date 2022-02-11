@@ -16,7 +16,7 @@ from plotnine import ggplot, aes, geom_segment, geom_vline, labs, theme_bw, \
     scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt
 import sys
 
-from .distance import get_distance
+from .distance import get_distance, smooth_distribution
 
 
 def view(args):
@@ -28,12 +28,14 @@ def view(args):
     title = f'{args.assembly_1} vs {args.assembly_2} ({piece_size} bp windows)'
     mean = get_distance(masses, piece_size, 'mean')
     median_int = get_distance(masses, piece_size, 'median_int')
+    median_climb = get_distance(masses, piece_size, 'median_climb')
 
     g = (ggplot(df, aes('distance', 'mass')) +
          geom_segment(aes(x='distance', xend='distance', y=0, yend='mass'),
                       colour='#8da0cb', size=1) +
-         geom_vline(xintercept=mean, colour='#d95f02', linetype='dashed', size=0.5) +
-         geom_vline(xintercept=median_int, colour='#d95f02', linetype='dotted', size=0.5) +
+         geom_vline(xintercept=mean, colour='#d95f02', linetype='dotted', size=0.5) +
+         geom_vline(xintercept=median_int, colour='#d95f02', linetype='dashed', size=0.5) +
+         geom_vline(xintercept=median_climb, colour='#d95f02', linetype='dashdot', size=0.5) +
          theme_bw() +
          labs(title=title))
 
