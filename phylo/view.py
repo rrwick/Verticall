@@ -25,10 +25,7 @@ def view(args):
 
     title = f'{args.assembly_1} vs {args.assembly_2} ({piece_size} bp windows)'
     mean = get_distance(masses, piece_size, 'mean')
-    median_int = get_distance(masses, piece_size, 'median_int')
-    median_climb = get_distance(masses, piece_size, 'median_climb')
     top_half_mean = get_distance(masses, piece_size, 'top_half_mean')
-    top_half_median_int = get_distance(masses, piece_size, 'top_half_median_int')
 
     low, high = get_top_half(masses)
 
@@ -38,7 +35,7 @@ def view(args):
     if args.smooth > 0:
         masses = smooth_distribution(masses, args.smooth)
     distances = [i / piece_size for i in range(len(masses))]
-    in_50 = [True if low <= i <= high else False for i in range(len(masses))]
+    in_50 = [True if low <= i < high else False for i in range(len(masses))]
     df = pd.DataFrame(list(zip(distances, masses, in_50)),  columns=['distance', 'mass', 'in_50'])
 
     g = (ggplot(df) +

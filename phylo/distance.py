@@ -157,7 +157,7 @@ def get_top_half(masses, min_samples=5):
     """
     Returns low and high bounds which capture half (or more) of the total mass. The range starts
     with the median and climbs the distribution (shifting left or right to get a larger mass) and
-    greedily expands the range.
+    greedily expands the range. The range is returned in a Pythonic manner (0-based, exclusive-end).
 
     Since these results can be used for a mean, there is a minimum number of samples in the range
     (defined by min_samples) to ensure that a very low distribution (with >50% in the 0 bin)
@@ -166,18 +166,18 @@ def get_top_half(masses, min_samples=5):
     half_total_mass = sum(masses) / 2.0
     median = get_median(masses)
 
-    low, high = median, median
-    while (high - low) < min_samples-1 or sum(masses[low:high+1]) < half_total_mass:
+    low, high = median, median+1
+    while (high - low) < min_samples or sum(masses[low:high]) < half_total_mass:
 
         # If we've reached the limits on both ends (probably due to the min_samples values and a
         # small distribution), we're done.
-        if low == 0 and high == len(masses)-1:
+        if low == 0 and high == len(masses):
             break
 
         # We first check to see if shifting the range up or down by one can increase the total.
-        current_total = sum(masses[low:high+1])
-        shift_down_total = sum(masses[low-1:high]) if low > 1 else float('-inf')
-        shift_up_total = sum(masses[low+1:high+2]) if high < len(masses)-1 else float('-inf')
+        current_total = sum(masses[low:high])
+        shift_down_total = sum(masses[low-1:high-1]) if low > 0 else float('-inf')
+        shift_up_total = sum(masses[low+1:high+1]) if high < len(masses) else float('-inf')
         if shift_down_total > current_total and shift_down_total > shift_up_total:
             low -= 1
             high -= 1
@@ -192,16 +192,15 @@ def get_top_half(masses, min_samples=5):
         if low == 0:
             high += 1
             continue
-        if high == len(masses) - 1:
+        if high == len(masses):
             low -= 1
             continue
 
         # If we can potentially expand in either way, we need to decide which way to expand.
-        new_low, new_high = low - 1, high + 1
-        if masses[new_high] > masses[new_low]:
+        if masses[high] > masses[low-1]:
             high += 1
             continue
-        if masses[new_low] > masses[new_high]:
+        if masses[low-1] > masses[high]:
             low -= 1
             continue
 
@@ -214,13 +213,13 @@ def get_top_half(masses, min_samples=5):
 
 def get_top_half_mean_distance(masses):
     low, high = get_top_half(masses)
-    masked_masses = [m if low <= i <= high else 0.0 for i, m in enumerate(masses)]
+    masked_masses = [m if low <= i < high else 0.0 for i, m in enumerate(masses)]
     return get_mean(masked_masses)
 
 
 def get_top_half_median_int_distance(masses):
     low, high = get_top_half(masses)
-    masked_masses = [m if low <= i <= high else 0.0 for i, m in enumerate(masses)]
+    masked_masses = [m if low <= i < high else 0.0 for i, m in enumerate(masses)]
     return get_median_int(masked_masses)
 
 
