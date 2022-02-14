@@ -126,3 +126,15 @@ def check_assembly_file_type(a):
 
 def get_default_thread_count():
     return min(multiprocessing.cpu_count(), 16)
+
+
+def get_n50(lengths):
+    lengths = sorted(lengths, reverse=True)
+    total_bases = sum(lengths)
+    target_bases = total_bases * 0.5
+    total_so_far = 0
+    for length in lengths:
+        total_so_far += length
+        if total_so_far >= target_bases:
+            return length
+    return 0

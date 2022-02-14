@@ -32,17 +32,6 @@ def test_get_mean():
     assert phylo.distance.get_mean([0.40, 0.30, 0.20, 0.10]) == pytest.approx(1.0)
 
 
-def test_get_variance():
-    assert phylo.distance.get_variance([1.0, 0.0, 0.0, 0.0]) == pytest.approx(0.0)
-    assert phylo.distance.get_variance([0.0, 1.0, 0.0, 0.0]) == pytest.approx(0.0)
-    assert phylo.distance.get_variance([0.0, 0.0, 1.0, 0.0]) == pytest.approx(0.0)
-    assert phylo.distance.get_variance([0.0, 0.0, 0.0, 1.0]) == pytest.approx(0.0)
-    assert phylo.distance.get_variance([0.2, 0.2, 0.2, 0.2, 0.2]) == pytest.approx(2.0)
-    assert phylo.distance.get_variance([0.1, 0.2, 0.4, 0.3]) == pytest.approx(0.89)
-    assert phylo.distance.get_variance([0.16, 0.53, 0.2, 0.08, 0.03]) == pytest.approx(0.8659)
-    assert phylo.distance.get_variance([0, 1, 1, 1, 1, 1, 1]) == pytest.approx(35.0 / 12.0)
-
-
 def test_get_median():
     assert phylo.distance.get_median([1.0, 0.0, 0.0, 0.0]) == 0
     assert phylo.distance.get_median([0.0, 1.0, 0.0, 0.0]) == 1
@@ -54,29 +43,29 @@ def test_get_median():
     assert phylo.distance.get_median([0.4, 0.3, 0.2, 0.1]) == 1
 
 
-def test_get_median_int():
-    assert phylo.distance.get_median_int([1.0, 0.0, 0.0, 0.0]) == pytest.approx(0.0)
-    assert phylo.distance.get_median_int([0.0, 1.0, 0.0, 0.0]) == pytest.approx(1.0)
-    assert phylo.distance.get_median_int([0.0, 0.0, 1.0, 0.0]) == pytest.approx(2.0)
-    assert phylo.distance.get_median_int([0.0, 0.0, 0.0, 1.0]) == pytest.approx(3.0)
-    assert phylo.distance.get_median_int([0.5, 0.5, 0.0, 0.0]) == pytest.approx(0.5)
-    assert phylo.distance.get_median_int([0.0, 0.5, 0.5, 0.0]) == pytest.approx(1.5)
-    assert phylo.distance.get_median_int([0.0, 0.0, 0.5, 0.5]) == pytest.approx(2.5)
-    assert 0.000 < phylo.distance.get_median_int([0.7, 0.3, 0.0, 0.0]) < 0.5
-    assert 0.125 < phylo.distance.get_median_int([0.3, 0.7, 0.0, 0.0]) < 1.0
-    assert 0.250 < phylo.distance.get_median_int([0.0, 0.7, 0.3, 0.0]) < 1.5
-    assert 0.375 < phylo.distance.get_median_int([0.0, 0.3, 0.7, 0.0]) < 2.0
-    assert 0.500 < phylo.distance.get_median_int([0.0, 0.0, 0.7, 0.3]) < 2.5
-    assert 0.625 < phylo.distance.get_median_int([0.0, 0.0, 0.3, 0.7]) < 3.0
-    assert (phylo.distance.get_median_int([0.0, 1.000, 0.000, 0.0])
-            < phylo.distance.get_median_int([0.0, 0.999, 0.001, 0.0])
-            < phylo.distance.get_median_int([0.0, 0.501, 0.499, 0.0])
-            < phylo.distance.get_median_int([0.0, 0.500, 0.500, 0.0])
-            < phylo.distance.get_median_int([0.0, 0.499, 0.501, 0.0])
-            < phylo.distance.get_median_int([0.0, 0.001, 0.990, 0.0])
-            < phylo.distance.get_median_int([0.0, 0.000, 1.000, 0.0]))
-    assert phylo.distance.get_median_int([0, 0, 1, 0, 10, 9]) == pytest.approx(4.4)
-    assert phylo.distance.get_median_int([0, 2, 1, 6, 10, 1]) == pytest.approx(3.6)
+def test_get_interpolated_median():
+    assert phylo.distance.get_interpolated_median([1.0, 0.0, 0.0, 0.0]) == pytest.approx(0.0)
+    assert phylo.distance.get_interpolated_median([0.0, 1.0, 0.0, 0.0]) == pytest.approx(1.0)
+    assert phylo.distance.get_interpolated_median([0.0, 0.0, 1.0, 0.0]) == pytest.approx(2.0)
+    assert phylo.distance.get_interpolated_median([0.0, 0.0, 0.0, 1.0]) == pytest.approx(3.0)
+    assert phylo.distance.get_interpolated_median([0.5, 0.5, 0.0, 0.0]) == pytest.approx(0.5)
+    assert phylo.distance.get_interpolated_median([0.0, 0.5, 0.5, 0.0]) == pytest.approx(1.5)
+    assert phylo.distance.get_interpolated_median([0.0, 0.0, 0.5, 0.5]) == pytest.approx(2.5)
+    assert 0.000 < phylo.distance.get_interpolated_median([0.7, 0.3, 0.0, 0.0]) < 0.5
+    assert 0.125 < phylo.distance.get_interpolated_median([0.3, 0.7, 0.0, 0.0]) < 1.0
+    assert 0.250 < phylo.distance.get_interpolated_median([0.0, 0.7, 0.3, 0.0]) < 1.5
+    assert 0.375 < phylo.distance.get_interpolated_median([0.0, 0.3, 0.7, 0.0]) < 2.0
+    assert 0.500 < phylo.distance.get_interpolated_median([0.0, 0.0, 0.7, 0.3]) < 2.5
+    assert 0.625 < phylo.distance.get_interpolated_median([0.0, 0.0, 0.3, 0.7]) < 3.0
+    assert (phylo.distance.get_interpolated_median([0.0, 1.000, 0.000, 0.0])
+            < phylo.distance.get_interpolated_median([0.0, 0.999, 0.001, 0.0])
+            < phylo.distance.get_interpolated_median([0.0, 0.501, 0.499, 0.0])
+            < phylo.distance.get_interpolated_median([0.0, 0.500, 0.500, 0.0])
+            < phylo.distance.get_interpolated_median([0.0, 0.499, 0.501, 0.0])
+            < phylo.distance.get_interpolated_median([0.0, 0.001, 0.990, 0.0])
+            < phylo.distance.get_interpolated_median([0.0, 0.000, 1.000, 0.0]))
+    assert phylo.distance.get_interpolated_median([0, 0, 1, 0, 10, 9]) == pytest.approx(4.4)
+    assert phylo.distance.get_interpolated_median([0, 2, 1, 6, 10, 1]) == pytest.approx(3.6)
 
 
 def test_get_mode():
@@ -148,21 +137,56 @@ def test_get_top_half_4():
     assert phylo.distance.get_top_half(right_skewed, 2) == (8, 11)
 
 
-def test_correct_distances():
+def test_correct_distances_1():
     sample_names = ['a', 'b']
     distances = {('a', 'a'): 0.0, ('a', 'b'): 0.2,
                  ('b', 'a'): 0.1, ('b', 'b'): 0.0}
-
-    phylo.distance.correct_distances(distances, sample_names, 'none')
+    aligned_fractions = {('a', 'a'): 1.0, ('a', 'b'): 0.8,
+                         ('b', 'a'): 0.9, ('b', 'b'): 1.0}
+    phylo.distance.correct_distances(distances, aligned_fractions, sample_names, {'none'})
     assert distances[('a', 'a')] == pytest.approx(0.0)
     assert distances[('a', 'b')] == pytest.approx(0.2)
     assert distances[('b', 'a')] == pytest.approx(0.1)
     assert distances[('b', 'b')] == pytest.approx(0.0)
 
-    phylo.distance.correct_distances(distances, sample_names, 'jukescantor')
+
+def test_correct_distances_2():
+    sample_names = ['a', 'b']
+    distances = {('a', 'a'): 0.0, ('a', 'b'): 0.2,
+                 ('b', 'a'): 0.1, ('b', 'b'): 0.0}
+    aligned_fractions = {('a', 'a'): 1.0, ('a', 'b'): 0.8,
+                         ('b', 'a'): 0.9, ('b', 'b'): 1.0}
+    phylo.distance.correct_distances(distances, aligned_fractions, sample_names, {'jukescantor'})
     assert distances[('a', 'a')] == pytest.approx(0.0)
     assert distances[('a', 'b')] == pytest.approx(0.23261619622788)
     assert distances[('b', 'a')] == pytest.approx(0.107325632730505)
+    assert distances[('b', 'b')] == pytest.approx(0.0)
+
+
+def test_correct_distances_3():
+    sample_names = ['a', 'b']
+    distances = {('a', 'a'): 0.0, ('a', 'b'): 0.2,
+                 ('b', 'a'): 0.1, ('b', 'b'): 0.0}
+    aligned_fractions = {('a', 'a'): 1.0, ('a', 'b'): 0.8,
+                         ('b', 'a'): 0.9, ('b', 'b'): 1.0}
+    phylo.distance.correct_distances(distances, aligned_fractions, sample_names, {'alignedfrac'})
+    assert distances[('a', 'a')] == pytest.approx(0.0)
+    assert distances[('a', 'b')] == pytest.approx(0.2 / 0.8)
+    assert distances[('b', 'a')] == pytest.approx(0.1 / 0.9)
+    assert distances[('b', 'b')] == pytest.approx(0.0)
+
+
+def test_correct_distances_4():
+    sample_names = ['a', 'b']
+    distances = {('a', 'a'): 0.0, ('a', 'b'): 0.2,
+                 ('b', 'a'): 0.1, ('b', 'b'): 0.0}
+    aligned_fractions = {('a', 'a'): 1.0, ('a', 'b'): 0.8,
+                         ('b', 'a'): 0.9, ('b', 'b'): 1.0}
+    phylo.distance.correct_distances(distances, aligned_fractions, sample_names,
+                                     {'jukescantor', 'alignedfrac'})
+    assert distances[('a', 'a')] == pytest.approx(0.0)
+    assert distances[('a', 'b')] == pytest.approx(0.23261619622788 / 0.8)
+    assert distances[('b', 'a')] == pytest.approx(0.107325632730505 / 0.9)
     assert distances[('b', 'b')] == pytest.approx(0.0)
 
 

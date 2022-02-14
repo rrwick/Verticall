@@ -21,17 +21,17 @@ from .log import log
 
 
 def distance(args):
-    distances, sample_names = load_distances(args.alignment_results, args.method)
-    add_self_distances(distances, sample_names)
+    distances, aligned_fractions, sample_names = load_distances(args.alignment_results, args.method)
+    add_self_distances(distances, aligned_fractions, sample_names)
     check_matrix_size(distances, sample_names, args.alignment_results)
-    correct_distances(distances, sample_names, args.correction)
+    correct_distances(distances, aligned_fractions, sample_names, args.correction)
     if not args.asymmetrical:
         make_symmetrical(distances, sample_names)
     output_phylip_matrix(distances, sample_names)
 
 
 def load_distances(alignment_results, method):
-    distances, sample_names = {}, set()
+    distances, aligned_fractions, sample_names = {}, {}, set()
     with open(alignment_results, 'rt') as results:
         for line in results:
             if line.startswith('#'):
@@ -40,30 +40,30 @@ def load_distances(alignment_results, method):
             assembly_1, assembly_2 = parts[0], parts[1]
             count = len(distances) + 1
             piece_size = int(parts[2])
+            assert piece_size > 0
+            aligned_fraction = float(parts[3])
+            assert 0.0 <= aligned_fraction <= 1.0
             masses = [float(p) for p in parts[4:]]
             sample_names.update([assembly_1, assembly_2])
             d = get_distance(masses, piece_size, method)
             log(f'{count}: {assembly_1} vs {assembly_2}: {d:.9f}')
             distances[(assembly_1, assembly_2)] = d
+            aligned_fractions[(assembly_1, assembly_2)] = aligned_fraction
     log()
-    return distances, sorted(sample_names)
+    return distances, aligned_fractions, sorted(sample_names)
 
 
 def get_distance(masses, piece_size, method):
     if method == 'mean':
         d = get_mean(masses)
     elif method == 'median':
-        d = get_median(masses)
-    elif method == 'median_int':
-        d = get_median_int(masses)
-    elif method == 'median_climb':
-        d = get_median_climb(masses)
+        d = get_interpolated_median(masses)
     elif method == 'mode':
         d = get_mode(masses)
-    elif method == 'top_half_mean':
+    elif method == 'top_half':
         d = get_top_half_mean_distance(masses)
-    elif method == 'top_half_median_int':
-        d = get_top_half_median_int_distance(masses)
+    elif method == 'top_quarter':
+        d = get_top_quarter_mean_distance(masses)
     else:
         assert False
     return d / piece_size
@@ -71,12 +71,6 @@ def get_distance(masses, piece_size, method):
 
 def get_mean(masses):
     return np.average(range(len(masses)), weights=masses)
-
-
-def get_variance(masses):
-    mean = get_mean(masses)
-    values = np.arange(len(masses))
-    return np.average((values - mean)**2, weights=masses)
 
 
 def get_median(masses):
@@ -93,7 +87,7 @@ def get_median(masses):
     return 0
 
 
-def get_median_int(masses):
+def get_interpolated_median(masses):
     """
     Returns the interpolated median of the distance distribution:
     https://en.wikipedia.org/wiki/Median#Interpolated_median
@@ -113,27 +107,6 @@ def get_median_int(masses):
     else:
         interpolated_median = median + ((above - below) / (2.0 * equal))
     return interpolated_median
-
-
-def get_median_climb(masses):
-    """
-    Starting with the median, this function then 'climbs' higher into the smoothed distribution. So
-    while the median may be on the slope of a peak, this function should return a point near the
-    middle of a peak.
-    """
-    masses = smooth_distribution(masses, 1000)
-    i = get_median(masses)
-    while True:
-        left = masses[i-1]
-        middle = masses[i]
-        right = masses[i+1]
-        if left > middle and left > right:
-            i -= 1
-        elif right > middle and right > left:
-            i += 1
-        else:
-            break
-    return i
 
 
 def get_mode(masses):
@@ -217,15 +190,18 @@ def get_top_half_mean_distance(masses):
     return get_mean(masked_masses)
 
 
-def get_top_half_median_int_distance(masses):
+def get_top_quarter_mean_distance(masses):
     low, high = get_top_half(masses)
     masked_masses = [m if low <= i < high else 0.0 for i, m in enumerate(masses)]
-    return get_median_int(masked_masses)
+    low, high = get_top_half(masked_masses)
+    masked_masses = [m if low <= i < high else 0.0 for i, m in enumerate(masses)]
+    return get_mean(masked_masses)
 
 
-def add_self_distances(distances, sample_names):
+def add_self_distances(distances, aligned_fractions, sample_names):
     for n in sample_names:
         distances[(n, n)] = 0.0
+        aligned_fractions[(n, n)] = 1.0
 
 
 def check_matrix_size(distances, sample_names, alignment_results):
@@ -234,15 +210,15 @@ def check_matrix_size(distances, sample_names, alignment_results):
                  f' - rerun XXXXXXXXX align')
 
 
-def correct_distances(distances, sample_names, correction):
-    if correction == 'none':
-        return
-    elif correction == 'jukescantor':
+def correct_distances(distances, aligned_fractions, sample_names, correction):
+    if 'jukescantor' in correction:
         for a in sample_names:
             for b in sample_names:
                 distances[(a, b)] = jukes_cantor(distances[(a, b)])
-        return
-    assert False
+    if 'alignedfrac' in correction:
+        for a in sample_names:
+            for b in sample_names:
+                distances[(a, b)] = distances[(a, b)] / aligned_fractions[(a, b)]
 
 
 def jukes_cantor(d):
@@ -269,29 +245,3 @@ def output_phylip_matrix(distances, sample_names):
         for b in sample_names:
             print(f'\t{distances[(a, b)]:.8f}', end='')
         print()
-
-
-def smooth_distribution(masses, iterations):
-    """
-    Smooths the distribution by redistributing mass between neighbouring points. Equal amounts of
-    mass are moved up and down the distribution, so this smoothing doesn't change the mean. More
-    smoothing is applied to higher masses, so the very low end of the distribution should remain
-    relatively unchanged.
-    """
-    for i in range(iterations):
-        masses = smooth_distribution_one_iteration(masses, 0.5)
-    return masses
-
-
-def smooth_distribution_one_iteration(masses, max_share):
-    masses.append(0.0)
-    changes = [0.0] * (len(masses))
-    for i, m in enumerate(masses):
-        if i == 0 or i == len(masses)-1:
-            continue
-        share_fraction = max_share * i / len(masses)
-        share_amount = masses[i] * share_fraction
-        changes[i-1] += share_amount / 2.0
-        changes[i] -= share_amount
-        changes[i+1] += share_amount / 2.0
-    return [m+c for m, c in zip(masses, changes)]

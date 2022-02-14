@@ -90,7 +90,7 @@ def align_subparser(subparsers):
                               help='Threads for alignment')
     setting_args.add_argument('--allowed_overlap', type=int, default=100,
                               help='Allow this much overlap between alignments')
-    setting_args.add_argument('--target_window_count', type=int, default=100000,
+    setting_args.add_argument('--target_window_count', type=int, default=50000,
                               help='Aim to have at least this many comparison windows between '
                                    'assemblies')
     setting_args.add_argument('--ignore_indels', action='store_true',
@@ -117,9 +117,6 @@ def view_subparser(subparsers):
                                help='Name of first assembly in pair')
 
     setting_args = group.add_argument_group('Settings')
-    setting_args.add_argument('--smooth', type=int, default=0,
-                              help='Display a smoothed version of the distribution with this '
-                                   'many iterations of smoothing (default: no smoothing)')
     setting_args.add_argument('--sqrt_x', action='store_true',
                               help='Use a square-root transform on the x-axis')
     setting_args.add_argument('--sqrt_y', action='store_true',
@@ -143,13 +140,12 @@ def distance_subparser(subparsers):
 
     setting_args = group.add_argument_group('Settings')
     setting_args.add_argument('--method', type=str,
-                              choices=['mean', 'median', 'median_int', 'median_climb', 'mode',
-                                       'top_half_mean', 'top_half_median_int'],
-                              default='top_half_mean',
+                              choices=['mean', 'median', 'mode', 'top_half', 'top_quarter'],
+                              default='top_half',
                               help='Method for converting distributions into a single distance')
-    setting_args.add_argument('--correction', type=str, choices=['none', 'jukescantor'],
-                              default='jukescantor',
-                              help='Distance correction technique')
+    setting_args.add_argument('--correction', type=str, default='jukescantor,alignedfrac',
+                              help='Distance correction technique(s) from "none", "jukescantor" '
+                                   'and "alignedfrac"')
     setting_args.add_argument('--asymmetrical', action='store_true',
                               help='Do not average distance pairs to make a symmetrical matrix')
 
@@ -172,6 +168,17 @@ def check_view_args(args):
 def check_distance_args(args):
     if not args.alignment_results.is_file():
         sys.exit(f'\nError: {args.alignment_results} could not be found')
+    args.correction = set(args.correction.split(','))
+
+    if 'none' in args.correction and len(args.correction) > 1:
+        sys.exit('Error: --correction cannot contain "none" and additional values')
+
+    valid_removed = set(args.correction)
+    for c in ["none", "jukescantor", "alignedfrac"]:
+        valid_removed.discard(c)
+    if len(valid_removed) > 0:
+        sys.exit('Error: only "none", "jukescantor" and "alignedfrac" can be used in '
+                 '--correction')
 
 
 if __name__ == '__main__':

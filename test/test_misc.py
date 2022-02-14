@@ -123,3 +123,9 @@ def test_check_assembly_file_type_3():
 
 def test_get_default_thread_count():
     assert 1 <= phylo.misc.get_default_thread_count() <= 16
+
+
+def test_get_n50():
+    assert phylo.misc.get_n50([1, 2, 3, 4, 1000]) == 1000
+    assert phylo.misc.get_n50([12, 23455, 15, 12433, 15343, 9, 10]) == 15343
+    assert phylo.misc.get_n50([]) == 0

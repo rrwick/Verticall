@@ -16,7 +16,7 @@ from plotnine import ggplot, aes, geom_segment, geom_vline, labs, theme_bw, \
     scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt, scale_colour_manual
 import sys
 
-from .distance import get_distance, get_top_half, smooth_distribution
+from .distance import get_distance, get_top_half
 
 
 def view(args):
@@ -25,15 +25,14 @@ def view(args):
 
     title = f'{args.assembly_1} vs {args.assembly_2} ({piece_size} bp windows)'
     mean = get_distance(masses, piece_size, 'mean')
-    top_half_mean = get_distance(masses, piece_size, 'top_half_mean')
+    median = get_distance(masses, piece_size, 'median')
+    top_half_mean = get_distance(masses, piece_size, 'top_half')
 
     low, high = get_top_half(masses)
 
     x_max = len(masses) / piece_size
     y_max = 1.05 * max(masses)
 
-    if args.smooth > 0:
-        masses = smooth_distribution(masses, args.smooth)
     distances = [i / piece_size for i in range(len(masses))]
     in_50 = [True if low <= i < high else False for i in range(len(masses))]
     df = pd.DataFrame(list(zip(distances, masses, in_50)),  columns=['distance', 'mass', 'in_50'])
@@ -43,7 +42,8 @@ def view(args):
                       size=1) +
          scale_colour_manual(values={False: '#7570b3', True: '#1b9e77'}, guide=False) +
          geom_vline(xintercept=mean, colour='#d95f02', linetype='dotted', size=0.5) +
-         geom_vline(xintercept=top_half_mean, colour='#d95f02', linetype='dashed', size=0.5) +
+         geom_vline(xintercept=median, colour='#d95f02', linetype='dashed', size=0.5) +
+         geom_vline(xintercept=top_half_mean, colour='#d95f02', linetype='dashdot', size=0.5) +
          theme_bw() +
          labs(title=title))
 

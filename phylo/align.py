@@ -20,7 +20,7 @@ import sys
 from .alignment import Alignment
 from .intrange import IntRange
 from .log import log, section_header, explanation
-from .misc import get_fasta_size
+from .misc import get_fasta_size, get_n50
 
 
 def align(args):
@@ -162,6 +162,9 @@ def align_sample_pair(all_args):
     window_size, window_step = choose_window_size_and_step(all_cigars, target_window_count)
     all_cigars = [c for c in all_cigars if len(c) >= window_size]
     log_text.append(f'  {full_alignment_count} alignments ({len(all_cigars)} after filtering)')
+
+    n50_alignment_length = get_n50(len(c) for c in all_cigars)
+    log_text.append(f'  N50 alignment length: {n50_alignment_length}')
 
     query_coverage = get_query_coverage(alignments, assembly_filename_a)
     mean_identity = 1.0 - (sum(get_difference_count(c) for c in all_cigars) /
