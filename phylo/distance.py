@@ -61,9 +61,7 @@ def get_distance(masses, piece_size, method):
     elif method == 'mode':
         d = get_mode(masses)
     elif method == 'top_half':
-        d = get_top_half_mean_distance(masses)
-    elif method == 'top_quarter':
-        d = get_top_quarter_mean_distance(masses)
+        d = get_top_half_median_distance(masses)
     else:
         assert False
     return d / piece_size
@@ -126,21 +124,23 @@ def get_mode(masses):
         return statistics.mean(distances_with_max_mass)
 
 
-def get_top_half(masses, min_samples=5):
+def get_top_half(masses):
     """
     Returns low and high bounds which capture half (or more) of the total mass. The range starts
     with the median and climbs the distribution (shifting left or right to get a larger mass) and
     greedily expands the range. The range is returned in a Pythonic manner (0-based, exclusive-end).
 
-    Since these results can be used for a mean, there is a minimum number of samples in the range
-    (defined by min_samples) to ensure that a very low distribution (with >50% in the 0 bin)
-    doesn't end up with a mean of 0.
+
+    Since these results can be used for a mean/median, we don't want to return a result of (0, 1),
+    i.e. a single value at the zero point of the distribution (will be common with very closely
+    related genomes), as this will lead to a distance of zero. So in this situation we extend the
+    high end of the distribution as long as it drops.
     """
     half_total_mass = sum(masses) / 2.0
     median = get_median(masses)
 
     low, high = median, median+1
-    while (high - low) < min_samples or sum(masses[low:high]) < half_total_mass:
+    while sum(masses[low:high]) < half_total_mass:
 
         # If we've reached the limits on both ends (probably due to the min_samples values and a
         # small distribution), we're done.
@@ -181,6 +181,12 @@ def get_top_half(masses, min_samples=5):
         high += 1
         low -= 1
 
+    # If the range starts at the bottom of the distribution, extend the top end until it either
+    # hits zero or starts to rise.
+    if low == 0:
+        while high < len(masses) and 0.0 < masses[high] < masses[high-1]:
+            high += 1
+
     return low, high
 
 
@@ -190,12 +196,10 @@ def get_top_half_mean_distance(masses):
     return get_mean(masked_masses)
 
 
-def get_top_quarter_mean_distance(masses):
+def get_top_half_median_distance(masses):
     low, high = get_top_half(masses)
     masked_masses = [m if low <= i < high else 0.0 for i, m in enumerate(masses)]
-    low, high = get_top_half(masked_masses)
-    masked_masses = [m if low <= i < high else 0.0 for i, m in enumerate(masses)]
-    return get_mean(masked_masses)
+    return get_interpolated_median(masked_masses)
 
 
 def add_self_distances(distances, aligned_fractions, sample_names):
