@@ -62,6 +62,10 @@ def get_distance(masses, piece_size, method):
         d = get_mode(masses)
     elif method == 'top_half':
         d = get_top_half_median_distance(masses)
+    elif method == 'top_quarter':
+        d = get_top_quarter_median_distance(masses)
+    elif method == 'peak':
+        d, _ = get_peak_distance(masses)
     else:
         assert False
     return d / piece_size
@@ -124,7 +128,7 @@ def get_mode(masses):
         return statistics.mean(distances_with_max_mass)
 
 
-def get_top_half(masses):
+def get_top_fraction(masses, fraction):
     """
     Returns low and high bounds which capture half (or more) of the total mass. The range starts
     with the median and climbs the distribution (shifting left or right to get a larger mass) and
@@ -136,11 +140,11 @@ def get_top_half(masses):
     related genomes), as this will lead to a distance of zero. So in this situation we extend the
     high end of the distribution as long as it drops.
     """
-    half_total_mass = sum(masses) / 2.0
+    target_mass = sum(masses) * fraction
     median = get_median(masses)
 
     low, high = median, median+1
-    while sum(masses[low:high]) < half_total_mass:
+    while sum(masses[low:high]) < target_mass:
 
         # If we've reached the limits on both ends (probably due to the min_samples values and a
         # small distribution), we're done.
@@ -191,13 +195,25 @@ def get_top_half(masses):
 
 
 def get_top_half_mean_distance(masses):
-    low, high = get_top_half(masses)
+    low, high = get_top_fraction(masses, 0.5)
     masked_masses = [m if low <= i < high else 0.0 for i, m in enumerate(masses)]
     return get_mean(masked_masses)
 
 
 def get_top_half_median_distance(masses):
-    low, high = get_top_half(masses)
+    low, high = get_top_fraction(masses, 0.5)
+    masked_masses = [m if low <= i < high else 0.0 for i, m in enumerate(masses)]
+    return get_interpolated_median(masked_masses)
+
+
+def get_top_quarter_mean_distance(masses):
+    low, high = get_top_fraction(masses, 0.25)
+    masked_masses = [m if low <= i < high else 0.0 for i, m in enumerate(masses)]
+    return get_mean(masked_masses)
+
+
+def get_top_quarter_median_distance(masses):
+    low, high = get_top_fraction(masses, 0.25)
     masked_masses = [m if low <= i < high else 0.0 for i, m in enumerate(masses)]
     return get_interpolated_median(masked_masses)
 
@@ -249,3 +265,68 @@ def output_phylip_matrix(distances, sample_names):
         for b in sample_names:
             print(f'\t{distances[(a, b)]:.8f}', end='')
         print()
+
+
+def smooth_distribution(masses, iterations):
+    """
+    Smooths the distribution by redistributing mass between neighbouring points. Equal amounts of
+    mass are moved up and down the distribution, so this smoothing doesn't change the mean. More
+    smoothing is applied to higher masses, so the very low end of the distribution should remain
+    relatively unchanged.
+    """
+    for i in range(iterations):
+        masses = smooth_distribution_one_iteration(masses, 0.5)
+    return masses
+
+
+def smooth_distribution_one_iteration(masses, max_share):
+    masses.append(0.0)
+    changes = [0.0] * (len(masses))
+    for i, m in enumerate(masses):
+        if i == 0 or i == len(masses)-1:
+            continue
+        share_fraction = max_share * i / len(masses)
+        share_amount = masses[i] * share_fraction
+        changes[i-1] += share_amount / 2.0
+        changes[i] -= share_amount
+        changes[i+1] += share_amount / 2.0
+    return [m+c for m, c in zip(masses, changes)]
+
+
+def get_peak_distance(masses):
+    # Start with the median and climb upwards.
+    median = get_median(masses)
+    peak = climb_to_peak(masses, median)
+
+    # If the peak is at zero, then we're done.
+    if peak == 0:
+        return peak, masses
+
+    smoothed_masses = masses[:]
+    tries, max_tries = 0, 1000
+    while True:
+        peak_before_smooth = peak
+        smoothed_masses = smooth_distribution(smoothed_masses, 1)
+        peak = climb_to_peak(smoothed_masses, peak)
+        if peak == peak_before_smooth:  # if the smoothing didn't change the peak
+            tries += 1
+        else:  # if we got a new peak
+            tries = 0
+        if tries == max_tries:
+            break
+
+    return peak, smoothed_masses
+
+
+def climb_to_peak(masses, starting_point):
+    peak = starting_point
+    while True:
+        lower_mass = masses[peak-1] if peak > 0 else float('-inf')
+        higher_mass = masses[peak+1] if peak < len(masses) else float('-inf')
+        if lower_mass > masses[peak] and lower_mass > higher_mass:
+            peak -= 1
+        elif higher_mass > masses[peak] and higher_mass > lower_mass:
+            peak += 1
+        else:
+            break
+    return peak

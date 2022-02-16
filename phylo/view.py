@@ -12,11 +12,11 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 import pandas as pd
-from plotnine import ggplot, aes, geom_segment, geom_vline, labs, theme_bw, \
+from plotnine import ggplot, aes, geom_segment, geom_line, geom_vline, labs, theme_bw, \
     scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt, scale_colour_manual
 import sys
 
-from .distance import get_distance, get_top_half
+from .distance import get_distance, get_top_fraction, get_peak_distance
 
 
 def view(args):
@@ -25,25 +25,23 @@ def view(args):
 
     title = f'{args.assembly_1} vs {args.assembly_2} ({piece_size} bp windows)'
     mean = get_distance(masses, piece_size, 'mean')
-    median = get_distance(masses, piece_size, 'median')
-    top_half_mean = get_distance(masses, piece_size, 'top_half')
-
-    low, high = get_top_half(masses)
+    peak, smoothed_masses = get_peak_distance(masses)
+    peak /= piece_size
 
     x_max = len(masses) / piece_size
-    y_max = 1.05 * max(masses)
+    y_max = 1.05 * max(max(masses), max(smoothed_masses))
 
     distances = [i / piece_size for i in range(len(masses))]
-    in_50 = [True if low <= i < high else False for i in range(len(masses))]
-    df = pd.DataFrame(list(zip(distances, masses, in_50)),  columns=['distance', 'mass', 'in_50'])
+    # in_50 = [True if low <= i < high else False for i in range(len(masses))]
+    df = pd.DataFrame(list(zip(distances, masses, smoothed_masses)),
+                      columns=['distance', 'mass', 'smoothed_mass'])
 
     g = (ggplot(df) +
-         geom_segment(aes(x='distance', xend='distance', y=0, yend='mass', colour='in_50'),
-                      size=1) +
-         scale_colour_manual(values={False: '#7570b3', True: '#1b9e77'}, guide=False) +
+         geom_segment(aes(x='distance', xend='distance', y=0, yend='mass'),
+                      size=1, colour='#7570b3') +
+         geom_line(aes(x='distance', y='smoothed_mass'), size=0.5) +
          geom_vline(xintercept=mean, colour='#d95f02', linetype='dotted', size=0.5) +
-         geom_vline(xintercept=median, colour='#d95f02', linetype='dashed', size=0.5) +
-         geom_vline(xintercept=top_half_mean, colour='#d95f02', linetype='dashdot', size=0.5) +
+         geom_vline(xintercept=peak, colour='#d95f02', linetype='dashed', size=0.5) +
          theme_bw() +
          labs(title=title))
 

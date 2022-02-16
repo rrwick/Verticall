@@ -88,38 +88,38 @@ def test_get_mode():
 
 def test_get_top_half_1():
     # Simple cases with all mass in one point.
-    assert phylo.distance.get_top_half([1.00, 0.00, 0.00, 0.00]) == (0, 1)
-    assert phylo.distance.get_top_half([0.00, 1.00, 0.00, 0.00]) == (1, 2)
-    assert phylo.distance.get_top_half([0.00, 0.00, 1.00, 0.00]) == (2, 3)
-    assert phylo.distance.get_top_half([0.00, 0.00, 0.00, 1.00]) == (3, 4)
+    assert phylo.distance.get_top_fraction([1.00, 0.00, 0.00, 0.00], 0.5) == (0, 1)
+    assert phylo.distance.get_top_fraction([0.00, 1.00, 0.00, 0.00], 0.5) == (1, 2)
+    assert phylo.distance.get_top_fraction([0.00, 0.00, 1.00, 0.00], 0.5) == (2, 3)
+    assert phylo.distance.get_top_fraction([0.00, 0.00, 0.00, 1.00], 0.5) == (3, 4)
 
 
 def test_get_top_half_2():
     # Ranges which start on zero will be extended to the right as long as they
-    assert phylo.distance.get_top_half([0.60, 0.00, 0.00, 0.00, 0.00]) == (0, 1)
-    assert phylo.distance.get_top_half([0.60, 0.10, 0.00, 0.00, 0.00]) == (0, 2)
-    assert phylo.distance.get_top_half([0.60, 0.10, 0.05, 0.00, 0.00]) == (0, 3)
-    assert phylo.distance.get_top_half([0.60, 0.10, 0.10, 0.00, 0.00]) == (0, 2)
-    assert phylo.distance.get_top_half([0.60, 0.10, 0.15, 0.00, 0.00]) == (0, 2)
-    assert phylo.distance.get_top_half([0.60, 0.10, 0.09, 0.08, 0.07]) == (0, 5)
+    assert phylo.distance.get_top_fraction([0.60, 0.00, 0.00, 0.00, 0.00], 0.5) == (0, 1)
+    assert phylo.distance.get_top_fraction([0.60, 0.10, 0.00, 0.00, 0.00], 0.5) == (0, 2)
+    assert phylo.distance.get_top_fraction([0.60, 0.10, 0.05, 0.00, 0.00], 0.5) == (0, 3)
+    assert phylo.distance.get_top_fraction([0.60, 0.10, 0.10, 0.00, 0.00], 0.5) == (0, 2)
+    assert phylo.distance.get_top_fraction([0.60, 0.10, 0.15, 0.00, 0.00], 0.5) == (0, 2)
+    assert phylo.distance.get_top_fraction([0.60, 0.10, 0.09, 0.08, 0.07], 0.5) == (0, 5)
 
 
 def test_get_top_half_3():
     # A tie will expand in both directions.
-    assert phylo.distance.get_top_half([0.30, 0.40, 0.30, 0.00, 0.00]) == (0, 3)
-    assert phylo.distance.get_top_half([0.00, 0.30, 0.40, 0.30, 0.00]) == (1, 4)
-    assert phylo.distance.get_top_half([0.00, 0.00, 0.30, 0.40, 0.30]) == (2, 5)
-    assert phylo.distance.get_top_half([0.10, 0.15, 0.20, 0.20, 0.15, 0.10, 0.10]) == (1, 5)
-    assert phylo.distance.get_top_half([0.10, 0.10, 0.15, 0.20, 0.20, 0.15, 0.10]) == (2, 6)
-    assert phylo.distance.get_top_half([0.10, 0.10, 0.10, 0.15, 0.20, 0.20, 0.15]) == (3, 7)
+    assert phylo.distance.get_top_fraction([0.30, 0.40, 0.30, 0.00, 0.00], 0.5) == (0, 3)
+    assert phylo.distance.get_top_fraction([0.00, 0.30, 0.40, 0.30, 0.00], 0.5) == (1, 4)
+    assert phylo.distance.get_top_fraction([0.00, 0.00, 0.30, 0.40, 0.30], 0.5) == (2, 5)
+    assert phylo.distance.get_top_fraction([0.1, 0.15, 0.2, 0.2, 0.15, 0.1, 0.1], 0.5) == (1, 5)
+    assert phylo.distance.get_top_fraction([0.1, 0.1, 0.15, 0.2, 0.2, 0.15, 0.1], 0.5) == (2, 6)
+    assert phylo.distance.get_top_fraction([0.1, 0.1, 0.1, 0.15, 0.2, 0.2, 0.15], 0.5) == (3, 7)
 
 
 def test_get_top_half_4():
     # Testing right-skewed and left-skewed distributions
     left_skewed = [0.00, 0.20, 0.18, 0.16, 0.14, 0.12, 0.10, 0.06, 0.04, 0.00, 0.00, 0.00]
     right_skewed = [0.00, 0.00, 0.00, 0.04, 0.06, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20, 0.00]
-    assert phylo.distance.get_top_half(left_skewed) == (1, 4)
-    assert phylo.distance.get_top_half(right_skewed) == (8, 11)
+    assert phylo.distance.get_top_fraction(left_skewed, 0.5) == (1, 4)
+    assert phylo.distance.get_top_fraction(right_skewed, 0.5) == (8, 11)
 
 
 def test_correct_distances_1():
