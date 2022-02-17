@@ -86,8 +86,6 @@ def align_subparser(subparsers):
                                help='Output file where alignment results will be saved')
 
     setting_args = group.add_argument_group('Settings')
-    setting_args.add_argument('-t', '--threads', type=int, default=get_default_thread_count(),
-                              help='Threads for alignment')
     setting_args.add_argument('--allowed_overlap', type=int, default=100,
                               help='Allow this much overlap between alignments')
     setting_args.add_argument('--target_window_count', type=int, default=50000,
@@ -96,6 +94,8 @@ def align_subparser(subparsers):
     setting_args.add_argument('--ignore_indels', action='store_true',
                               help='Only use mismatches to determine distance (default: use '
                                    'both mismatches and gap-compressed indels)')
+    setting_args.add_argument('-t', '--threads', type=int, default=get_default_thread_count(),
+                              help='CPU threads for parallel processing')
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
@@ -146,7 +146,9 @@ def distance_subparser(subparsers):
                               help='Distance correction technique(s) from "none", "jukescantor" '
                                    'and "alignedfrac"')
     setting_args.add_argument('--asymmetrical', action='store_true',
-                              help='Do not average distance pairs to make a symmetrical matrix')
+                              help='Do not average pairs to make a symmetrical matrix')
+    setting_args.add_argument('-t', '--threads', type=int, default=get_default_thread_count(),
+                              help='CPU threads for parallel processing')
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,

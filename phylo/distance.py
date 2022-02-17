@@ -13,15 +13,17 @@ If not, see <https://www.gnu.org/licenses/>.
 
 import itertools
 import math
+from multiprocessing import Pool
 import numpy as np
 import statistics
 import sys
 
-from .log import log
+from .log import log, section_header, explanation
 
 
 def distance(args):
-    distances, aligned_fractions, sample_names = load_distances(args.alignment_results, args.method)
+    distances, aligned_fractions, sample_names = \
+        load_distances(args.alignment_results, args.method, args.threads)
     add_self_distances(distances, aligned_fractions, sample_names)
     check_matrix_size(distances, sample_names, args.alignment_results)
     correct_distances(distances, aligned_fractions, sample_names, args.correction)
@@ -30,27 +32,53 @@ def distance(args):
     output_phylip_matrix(distances, sample_names)
 
 
-def load_distances(alignment_results, method):
+def load_distances(alignment_results, method, threads):
+    section_header('Finding distances from distributions')
+    explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
+                'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
+                'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
     distances, aligned_fractions, sample_names = {}, {}, set()
+
+    arg_list = []
     with open(alignment_results, 'rt') as results:
         for line in results:
-            if line.startswith('#'):
-                continue
-            parts = line.strip().split('\t')
-            assembly_1, assembly_2 = parts[0], parts[1]
-            count = len(distances) + 1
-            piece_size = int(parts[2])
-            assert piece_size > 0
-            aligned_fraction = float(parts[3])
-            assert 0.0 <= aligned_fraction <= 1.0
-            masses = [float(p) for p in parts[4:]]
-            sample_names.update([assembly_1, assembly_2])
-            d = get_distance(masses, piece_size, method)
-            log(f'{count}: {assembly_1} vs {assembly_2}: {d:.9f}')
-            distances[(assembly_1, assembly_2)] = d
-            aligned_fractions[(assembly_1, assembly_2)] = aligned_fraction
+            if not line.startswith('#'):
+                arg_list.append((line, method))
+    count = len(arg_list)
+
+    # If only using a single thread, do the alignment in a simple loop (easier for debugging).
+    if threads == 1:
+        for a in arg_list:
+            a_1, a_2, d, aligned_fraction = load_one_distance(a)
+            sample_names.update([a_1, a_2])
+            distances[(a_1, a_2)] = d
+            aligned_fractions[(a_1, a_2)] = aligned_fraction
+            log(f'({len(distances)}/{count}) {a_1} vs {a_2}: {d:.9f}')
+
+    # If using multiple threads, do the alignments in a process pool.
+    else:
+        with Pool(processes=threads) as pool:
+            for a_1, a_2, d, aligned_fraction in pool.imap(load_one_distance, arg_list):
+                sample_names.update([a_1, a_2])
+                distances[(a_1, a_2)] = d
+                aligned_fractions[(a_1, a_2)] = aligned_fraction
+                log(f'({len(distances)}/{count}) {a_1} vs {a_2}: {d:.9f}')
+
     log()
     return distances, aligned_fractions, sorted(sample_names)
+
+
+def load_one_distance(all_args):
+    line, method = all_args
+    parts = line.strip().split('\t')
+    assembly_1, assembly_2 = parts[0], parts[1]
+    piece_size = int(parts[2])
+    assert piece_size > 0
+    aligned_fraction = float(parts[3])
+    assert 0.0 <= aligned_fraction <= 1.0
+    masses = [float(p) for p in parts[4:]]
+    d = get_distance(masses, piece_size, method)
+    return assembly_1, assembly_2, d, aligned_fraction
 
 
 def get_distance(masses, piece_size, method):

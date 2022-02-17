@@ -123,7 +123,7 @@ def align_all_samples(in_dir, out_filename, assemblies, threads, allowed_overlap
                     out_file.write(output_line)
                 log('\n'.join(log_text), end='\n\n')
 
-        # If only using multiple threads, do the alignments in a thread pool.
+        # If using multiple threads, do the alignments in a thread pool.
         else:
             with ThreadPool(processes=threads) as pool:
                 for output_line, log_text in pool.imap(align_sample_pair, arg_list):
