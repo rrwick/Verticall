@@ -184,3 +184,16 @@ def test_make_symmetrical():
     assert distances[('a', 'b')] == pytest.approx(0.15)
     assert distances[('b', 'a')] == pytest.approx(0.15)
     assert distances[('b', 'b')] == pytest.approx(0.0)
+
+
+def test_interpolate():
+    assert phylo.distance.interpolate(0.0, 0.1, 0.0) == pytest.approx(0.0)
+    assert phylo.distance.interpolate(0.0, 0.5, 0.0) == pytest.approx(0.0)
+    assert phylo.distance.interpolate(0.1, 0.5, 0.1) == pytest.approx(0.0)
+    assert phylo.distance.interpolate(0.2, 0.5, 0.2) == pytest.approx(0.0)
+    assert phylo.distance.interpolate(0.0, 0.1, 0.1) == pytest.approx(0.5)
+    assert phylo.distance.interpolate(0.1, 0.4, 0.4) == pytest.approx(0.5)
+    assert phylo.distance.interpolate(0.1, 0.1, 0.0) == pytest.approx(-0.5)
+    assert phylo.distance.interpolate(0.4, 0.4, 0.1) == pytest.approx(-0.5)
+    assert phylo.distance.interpolate(0.2, 0.4, 0.3) == pytest.approx(0.25)
+    assert phylo.distance.interpolate(0.3, 0.4, 0.2) == pytest.approx(-0.25)

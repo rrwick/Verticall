@@ -293,29 +293,32 @@ def smooth_distribution_one_iteration(masses, max_share):
     return [m+c for m, c in zip(masses, changes)]
 
 
-def get_peak_distance(masses):
-    # Start with the median and climb upwards.
+def get_peak_distance(masses, max_tries=1000):
+    """
+    Starts with the median and climb upwards, smoothing when a peak is reached. If a lot of
+    smoothing doesn't change the peak, the process stops.
+
+    The final returned value is interpolated from the peak and its neighbours.
+    """
     median = get_median(masses)
     peak = climb_to_peak(masses, median)
-
-    # If the peak is at zero, then we're done.
-    if peak == 0:
-        return peak, masses
-
-    smoothed_masses = masses[:]
-    tries, max_tries = 0, 1000
+    tries = 0
     while True:
-        peak_before_smooth = peak
-        smoothed_masses = smooth_distribution(smoothed_masses, 1)
-        peak = climb_to_peak(smoothed_masses, peak)
-        if peak == peak_before_smooth:  # if the smoothing didn't change the peak
+        if peak == 0:
+            break
+        peak_before_smoothing = peak
+        masses = smooth_distribution(masses, 1)
+        peak = climb_to_peak(masses, peak)
+        if peak == peak_before_smoothing:  # if the smoothing didn't change the peak
             tries += 1
-        else:  # if we got a new peak
+        else:  # if we got a new peak after smoothing
             tries = 0
         if tries == max_tries:
             break
-
-    return peak, smoothed_masses
+    adjustment = interpolate(masses[peak-1] if peak > 0 else 0.0,
+                             masses[peak],
+                             masses[peak+1] if peak < len(masses) else 0.0)
+    return peak + adjustment, masses
 
 
 def climb_to_peak(masses, starting_point):
@@ -330,3 +333,20 @@ def climb_to_peak(masses, starting_point):
         else:
             break
     return peak
+
+
+def interpolate(low, peak, high):
+    """
+    This function takes three masses as input: the mass below the peak, the mass at the peak and
+    the mass above the peak (i.e. it assumes that the below/above masses are no larger than the
+    peak mass). It then returns an interpolation adjustment that varies from -0.5 to 0.5, similar
+    to how interpolated medians work.
+    """
+    min_mass = min(low, peak, high)
+    low -= min_mass
+    peak -= min_mass
+    high -= min_mass
+    try:
+        return (high - low) / (2.0 * peak)
+    except ZeroDivisionError:
+        return 0.0

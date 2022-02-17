@@ -32,7 +32,6 @@ def view(args):
     y_max = 1.05 * max(max(masses), max(smoothed_masses))
 
     distances = [i / piece_size for i in range(len(masses))]
-    # in_50 = [True if low <= i < high else False for i in range(len(masses))]
     df = pd.DataFrame(list(zip(distances, masses, smoothed_masses)),
                       columns=['distance', 'mass', 'smoothed_mass'])
 
