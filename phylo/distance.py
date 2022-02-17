@@ -201,13 +201,41 @@ def output_phylip_matrix(distances, sample_names):
         print()
 
 
+def initial_smoothing(masses):
+    """
+    This function does a quick single-pass smoothing of the masses, where mass 'falls' into
+    valleys in the distribution. E.g. when a point has lower mass than both of its immediate
+    neighbours, some of the neighbours' mass is moved onto that point.
+
+    This isn't particularly effective at making a nice smooth distribution, but it's 'safe' (e.g.
+    it doesn't mess up the shape of low distributions), so it makes for a good first pass.
+    """
+    changes = [0.0] * (len(masses))
+    for i, m in enumerate(masses):
+        if i == 0 or i == len(masses)-1:
+            continue
+        a, b, c = masses[i-1], masses[i], masses[i+1]
+        if a > b < c:
+            a_diff = a - b
+            c_diff = c - b
+            change = min(a_diff, c_diff)
+            a_change = change * a_diff / (a_diff + c_diff)
+            c_change = change * c_diff / (a_diff + c_diff)
+            changes[i-1] -= a_change
+            changes[i] += a_change
+            changes[i] += c_change
+            changes[i+1] -= c_change
+    return [m+c for m, c in zip(masses, changes)]
+
+
 def smooth_distribution(masses):
     """
     Smooths the distribution by redistributing mass between neighbouring points. Equal amounts of
     mass are moved up and down the distribution, so this smoothing doesn't change the mean.
 
     More smoothing is applied to higher masses, so the very low end of the distribution should
-    remain relatively unchanged.
+    remain relatively unchanged, using this bespoke function: (2^(-100/i))/2
+    https://www.desmos.com/calculator/olsensfzcq
     """
     masses.append(0.0)
     changes = [0.0] * (len(masses))
@@ -222,13 +250,14 @@ def smooth_distribution(masses):
     return [m+c for m, c in zip(masses, changes)]
 
 
-def get_peak_distance(masses, max_tries=250):
+def get_peak_distance(masses, max_tries=100):
     """
     Starts with the median and climb upwards, smoothing when a peak is reached. If a lot of
     smoothing doesn't change the peak, the process stops.
 
     The final returned value is interpolated from the peak and its neighbours.
     """
+    masses = initial_smoothing(masses)
     median = get_median(masses)
     peak = climb_to_peak(masses, median)
     tries = 0
@@ -240,12 +269,14 @@ def get_peak_distance(masses, max_tries=250):
         peak_before_smoothing = peak
         masses = smooth_distribution(masses)
         peak = climb_to_peak(masses, peak)
+
         if peak == peak_before_smoothing:  # if the smoothing didn't change the peak
             tries += 1
         else:  # if we got a new peak after smoothing
             tries = 0
         if tries == max_tries:
             break
+
     adjustment = interpolate(masses[peak-1] if peak > 0 else 0.0,
                              masses[peak],
                              masses[peak+1] if peak < len(masses)-1 else 0.0)

@@ -205,11 +205,11 @@ def test_climb_to_peak_4():
 
 
 def test_get_peak_distance_1():
-    assert phylo.distance.get_peak_distance([1.0, 0.0, 0.0, 0.0, 0.0])[0] == 0
-    assert phylo.distance.get_peak_distance([0.0, 1.0, 0.0, 0.0, 0.0])[0] == 1
-    assert phylo.distance.get_peak_distance([0.0, 0.0, 1.0, 0.0, 0.0])[0] == 2
-    assert phylo.distance.get_peak_distance([0.0, 0.0, 0.0, 1.0, 0.0])[0] == 3
-    assert phylo.distance.get_peak_distance([0.0, 0.0, 0.0, 0.0, 1.0])[0] == 4
+    assert phylo.distance.get_peak_distance([1.0, 0.0, 0.0, 0.0, 0.0])[0] == pytest.approx(0)
+    assert phylo.distance.get_peak_distance([0.0, 1.0, 0.0, 0.0, 0.0])[0] == pytest.approx(1)
+    assert phylo.distance.get_peak_distance([0.0, 0.0, 1.0, 0.0, 0.0])[0] == pytest.approx(2)
+    assert phylo.distance.get_peak_distance([0.0, 0.0, 0.0, 1.0, 0.0])[0] == pytest.approx(3)
+    assert phylo.distance.get_peak_distance([0.0, 0.0, 0.0, 0.0, 1.0])[0] == pytest.approx(4)
 
 
 def test_get_peak_distance_2():
