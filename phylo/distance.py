@@ -201,26 +201,20 @@ def output_phylip_matrix(distances, sample_names):
         print()
 
 
-def smooth_distribution(masses, iterations):
+def smooth_distribution(masses):
     """
     Smooths the distribution by redistributing mass between neighbouring points. Equal amounts of
-    mass are moved up and down the distribution, so this smoothing doesn't change the mean. More
-    smoothing is applied to higher masses, so the very low end of the distribution should remain
-    relatively unchanged.
+    mass are moved up and down the distribution, so this smoothing doesn't change the mean.
+
+    More smoothing is applied to higher masses, so the very low end of the distribution should
+    remain relatively unchanged.
     """
-    for i in range(iterations):
-        masses = smooth_distribution_one_iteration(masses, 0.5)
-    return masses
-
-
-def smooth_distribution_one_iteration(masses, max_share):
     masses.append(0.0)
     changes = [0.0] * (len(masses))
-    mass_count = max(len(masses), 10)
     for i, m in enumerate(masses):
         if i == 0 or i == len(masses)-1:
             continue
-        share_fraction = max_share * i / mass_count
+        share_fraction = (2 ** (-100/i)) / 2
         share_amount = masses[i] * share_fraction
         changes[i-1] += share_amount / 2.0
         changes[i] -= share_amount
@@ -228,7 +222,7 @@ def smooth_distribution_one_iteration(masses, max_share):
     return [m+c for m, c in zip(masses, changes)]
 
 
-def get_peak_distance(masses, max_tries=1000):
+def get_peak_distance(masses, max_tries=250):
     """
     Starts with the median and climb upwards, smoothing when a peak is reached. If a lot of
     smoothing doesn't change the peak, the process stops.
@@ -239,12 +233,12 @@ def get_peak_distance(masses, max_tries=1000):
     peak = climb_to_peak(masses, median)
     tries = 0
     while True:
-        # If our peak is the global maximum, then there's no need to look further.
-        if masses[peak] == max(masses):
+        # If our peak is at zero, then no further smoothing is needed, so we can stop to save time.
+        if peak == 0:
             break
 
         peak_before_smoothing = peak
-        masses = smooth_distribution(masses, 1)
+        masses = smooth_distribution(masses)
         peak = climb_to_peak(masses, peak)
         if peak == peak_before_smoothing:  # if the smoothing didn't change the peak
             tries += 1
