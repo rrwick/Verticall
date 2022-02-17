@@ -13,7 +13,6 @@ If not, see <https://www.gnu.org/licenses/>.
 
 import gzip
 import multiprocessing
-import numpy as np
 import os
 import sys
 

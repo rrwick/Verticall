@@ -13,10 +13,10 @@ If not, see <https://www.gnu.org/licenses/>.
 
 import pandas as pd
 from plotnine import ggplot, aes, geom_segment, geom_line, geom_vline, labs, theme_bw, \
-    scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt, scale_colour_manual
+    scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt
 import sys
 
-from .distance import get_distance, get_top_fraction, get_peak_distance
+from .distance import get_distance, get_peak_distance
 
 
 def view(args):

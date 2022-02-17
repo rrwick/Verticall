@@ -60,10 +60,6 @@ def get_distance(masses, piece_size, method):
         d = get_interpolated_median(masses)
     elif method == 'mode':
         d = get_mode(masses)
-    elif method == 'top_half':
-        d = get_top_half_median_distance(masses)
-    elif method == 'top_quarter':
-        d = get_top_quarter_median_distance(masses)
     elif method == 'peak':
         d, _ = get_peak_distance(masses)
     else:
@@ -126,96 +122,6 @@ def get_mode(masses):
         return distances_with_max_mass[0]
     else:
         return statistics.mean(distances_with_max_mass)
-
-
-def get_top_fraction(masses, fraction):
-    """
-    Returns low and high bounds which capture half (or more) of the total mass. The range starts
-    with the median and climbs the distribution (shifting left or right to get a larger mass) and
-    greedily expands the range. The range is returned in a Pythonic manner (0-based, exclusive-end).
-
-
-    Since these results can be used for a mean/median, we don't want to return a result of (0, 1),
-    i.e. a single value at the zero point of the distribution (will be common with very closely
-    related genomes), as this will lead to a distance of zero. So in this situation we extend the
-    high end of the distribution as long as it drops.
-    """
-    target_mass = sum(masses) * fraction
-    median = get_median(masses)
-
-    low, high = median, median+1
-    while sum(masses[low:high]) < target_mass:
-
-        # If we've reached the limits on both ends (probably due to the min_samples values and a
-        # small distribution), we're done.
-        if low == 0 and high == len(masses):
-            break
-
-        # We first check to see if shifting the range up or down by one can increase the total.
-        current_total = sum(masses[low:high])
-        shift_down_total = sum(masses[low-1:high-1]) if low > 0 else float('-inf')
-        shift_up_total = sum(masses[low+1:high+1]) if high < len(masses) else float('-inf')
-        if shift_down_total > current_total and shift_down_total > shift_up_total:
-            low -= 1
-            high -= 1
-            continue
-        if shift_up_total > current_total and shift_up_total > shift_down_total:
-            low += 1
-            high += 1
-            continue
-
-        # If we got here, then shifting failed to increase the total, so we need to expand the
-        # range. If we've reached the limit on either end, then we can only expand in one way.
-        if low == 0:
-            high += 1
-            continue
-        if high == len(masses):
-            low -= 1
-            continue
-
-        # If we can potentially expand in either way, we need to decide which way to expand.
-        if masses[high] > masses[low-1]:
-            high += 1
-            continue
-        if masses[low-1] > masses[high]:
-            low -= 1
-            continue
-
-        # If we got here, then the new low and new high are tied, so we expand in both directions.
-        high += 1
-        low -= 1
-
-    # If the range starts at the bottom of the distribution, extend the top end until it either
-    # hits zero or starts to rise.
-    if low == 0:
-        while high < len(masses) and 0.0 < masses[high] < masses[high-1]:
-            high += 1
-
-    return low, high
-
-
-def get_top_half_mean_distance(masses):
-    low, high = get_top_fraction(masses, 0.5)
-    masked_masses = [m if low <= i < high else 0.0 for i, m in enumerate(masses)]
-    return get_mean(masked_masses)
-
-
-def get_top_half_median_distance(masses):
-    low, high = get_top_fraction(masses, 0.5)
-    masked_masses = [m if low <= i < high else 0.0 for i, m in enumerate(masses)]
-    return get_interpolated_median(masked_masses)
-
-
-def get_top_quarter_mean_distance(masses):
-    low, high = get_top_fraction(masses, 0.25)
-    masked_masses = [m if low <= i < high else 0.0 for i, m in enumerate(masses)]
-    return get_mean(masked_masses)
-
-
-def get_top_quarter_median_distance(masses):
-    low, high = get_top_fraction(masses, 0.25)
-    masked_masses = [m if low <= i < high else 0.0 for i, m in enumerate(masses)]
-    return get_interpolated_median(masked_masses)
 
 
 def add_self_distances(distances, aligned_fractions, sample_names):
