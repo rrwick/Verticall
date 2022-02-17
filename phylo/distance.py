@@ -282,10 +282,11 @@ def smooth_distribution(masses, iterations):
 def smooth_distribution_one_iteration(masses, max_share):
     masses.append(0.0)
     changes = [0.0] * (len(masses))
+    mass_count = max(len(masses), 10)
     for i, m in enumerate(masses):
         if i == 0 or i == len(masses)-1:
             continue
-        share_fraction = max_share * i / len(masses)
+        share_fraction = max_share * i / mass_count
         share_amount = masses[i] * share_fraction
         changes[i-1] += share_amount / 2.0
         changes[i] -= share_amount
@@ -304,8 +305,10 @@ def get_peak_distance(masses, max_tries=1000):
     peak = climb_to_peak(masses, median)
     tries = 0
     while True:
-        if peak == 0:
+        # If our peak is the global maximum, then there's no need to look further.
+        if masses[peak] == max(masses):
             break
+
         peak_before_smoothing = peak
         masses = smooth_distribution(masses, 1)
         peak = climb_to_peak(masses, peak)
@@ -317,7 +320,7 @@ def get_peak_distance(masses, max_tries=1000):
             break
     adjustment = interpolate(masses[peak-1] if peak > 0 else 0.0,
                              masses[peak],
-                             masses[peak+1] if peak < len(masses) else 0.0)
+                             masses[peak+1] if peak < len(masses)-1 else 0.0)
     return peak + adjustment, masses
 
 
@@ -325,8 +328,8 @@ def climb_to_peak(masses, starting_point):
     peak = starting_point
     while True:
         lower_mass = masses[peak-1] if peak > 0 else float('-inf')
-        higher_mass = masses[peak+1] if peak < len(masses) else float('-inf')
-        if lower_mass > masses[peak] and lower_mass > higher_mass:
+        higher_mass = masses[peak+1] if peak < len(masses)-1 else float('-inf')
+        if lower_mass >= masses[peak] and lower_mass > higher_mass:
             peak -= 1
         elif higher_mass > masses[peak] and higher_mass > lower_mass:
             peak += 1

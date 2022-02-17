@@ -197,3 +197,59 @@ def test_interpolate():
     assert phylo.distance.interpolate(0.4, 0.4, 0.1) == pytest.approx(-0.5)
     assert phylo.distance.interpolate(0.2, 0.4, 0.3) == pytest.approx(0.25)
     assert phylo.distance.interpolate(0.3, 0.4, 0.2) == pytest.approx(-0.25)
+
+
+def test_climb_to_peak_1():
+    # Climb to a single peak at position 0.
+    assert phylo.distance.climb_to_peak([0.4, 0.3, 0.2, 0.1, 0.0], 0) == 0
+    assert phylo.distance.climb_to_peak([0.4, 0.3, 0.2, 0.1, 0.0], 1) == 0
+    assert phylo.distance.climb_to_peak([0.4, 0.3, 0.2, 0.1, 0.0], 2) == 0
+    assert phylo.distance.climb_to_peak([0.4, 0.3, 0.2, 0.1, 0.0], 3) == 0
+    assert phylo.distance.climb_to_peak([0.4, 0.3, 0.2, 0.1, 0.0], 4) == 0
+
+
+def test_climb_to_peak_2():
+    # Climb to a single peak at position 2.
+    assert phylo.distance.climb_to_peak([0.1, 0.3, 0.4, 0.2, 0.0], 0) == 2
+    assert phylo.distance.climb_to_peak([0.1, 0.3, 0.4, 0.2, 0.0], 1) == 2
+    assert phylo.distance.climb_to_peak([0.1, 0.3, 0.4, 0.2, 0.0], 2) == 2
+    assert phylo.distance.climb_to_peak([0.1, 0.3, 0.4, 0.2, 0.0], 3) == 2
+    assert phylo.distance.climb_to_peak([0.1, 0.3, 0.4, 0.2, 0.0], 4) == 2
+
+
+def test_climb_to_peak_3():
+    # Two different peaks (positions 1 and 3), so depends on starting position.
+    assert phylo.distance.climb_to_peak([0.0, 0.3, 0.2, 0.4, 0.1], 0) == 1
+    assert phylo.distance.climb_to_peak([0.0, 0.3, 0.2, 0.4, 0.1], 1) == 1
+    assert phylo.distance.climb_to_peak([0.0, 0.3, 0.2, 0.4, 0.1], 2) == 3
+    assert phylo.distance.climb_to_peak([0.0, 0.3, 0.2, 0.4, 0.1], 3) == 3
+    assert phylo.distance.climb_to_peak([0.0, 0.3, 0.2, 0.4, 0.1], 4) == 3
+
+
+def test_climb_to_peak_4():
+    # When two adjacent positions tie for the peak, the lower one is chosen.
+    assert phylo.distance.climb_to_peak([0.35, 0.35, 0.15, 0.10, 0.05], 0) == 0
+    assert phylo.distance.climb_to_peak([0.35, 0.35, 0.15, 0.10, 0.05], 1) == 0
+    assert phylo.distance.climb_to_peak([0.35, 0.35, 0.15, 0.10, 0.05], 2) == 0
+    assert phylo.distance.climb_to_peak([0.35, 0.35, 0.15, 0.10, 0.05], 3) == 0
+    assert phylo.distance.climb_to_peak([0.35, 0.35, 0.15, 0.10, 0.05], 4) == 0
+    assert phylo.distance.climb_to_peak([0.10, 0.35, 0.35, 0.15, 0.05], 0) == 1
+    assert phylo.distance.climb_to_peak([0.10, 0.35, 0.35, 0.15, 0.05], 1) == 1
+    assert phylo.distance.climb_to_peak([0.10, 0.35, 0.35, 0.15, 0.05], 2) == 1
+    assert phylo.distance.climb_to_peak([0.10, 0.35, 0.35, 0.15, 0.05], 3) == 1
+    assert phylo.distance.climb_to_peak([0.10, 0.35, 0.35, 0.15, 0.05], 4) == 1
+
+
+def test_get_peak_distance_1():
+    assert phylo.distance.get_peak_distance([1.0, 0.0, 0.0, 0.0, 0.0])[0] == 0
+    assert phylo.distance.get_peak_distance([0.0, 1.0, 0.0, 0.0, 0.0])[0] == 1
+    assert phylo.distance.get_peak_distance([0.0, 0.0, 1.0, 0.0, 0.0])[0] == 2
+    assert phylo.distance.get_peak_distance([0.0, 0.0, 0.0, 1.0, 0.0])[0] == 3
+    assert phylo.distance.get_peak_distance([0.0, 0.0, 0.0, 0.0, 1.0])[0] == 4
+
+
+def test_get_peak_distance_2():
+    assert 0.0 < phylo.distance.get_peak_distance([0.7, 0.2, 0.1, 0.0, 0.0])[0] < 0.5
+    assert 1.0 < phylo.distance.get_peak_distance([0.1, 0.7, 0.2, 0.0, 0.0])[0] < 1.5
+    assert 2.0 < phylo.distance.get_peak_distance([0.0, 0.1, 0.7, 0.2, 0.0])[0] < 2.5
+    assert 3.0 < phylo.distance.get_peak_distance([0.0, 0.0, 0.1, 0.7, 0.2])[0] < 3.5
