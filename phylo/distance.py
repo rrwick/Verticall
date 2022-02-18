@@ -11,7 +11,6 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 
-import collections
 import itertools
 import math
 from multiprocessing import Pool
@@ -231,30 +230,47 @@ def initial_smoothing(masses):
 
 def smooth_distribution(masses):
     """
+    Smooths the distribution by averaging nearby masses.
+    """
+    smoothed_masses = []
+    for i, m in enumerate(masses):
+        masses_to_average = []
+        smoothing_range = int(2 * (i**0.5))
+        if smoothing_range == 0:
+            smoothed_masses.append(m)
+        else:
+            for j in range(i-smoothing_range, i+smoothing_range):
+                if 0 <= j < len(masses):
+                    masses_to_average.append(masses[j])
+            smoothed_masses.append(statistics.mean(masses_to_average))
+
+    for i in range(10):
+        smoothed_masses = smooth_distribution_2(smoothed_masses)
+    return smoothed_masses
+
+
+def smooth_distribution_2(masses):
+    """
     Smooths the distribution by redistributing mass between neighbouring points. Equal amounts of
     mass are moved up and down the distribution, so this smoothing doesn't change the mean.
+    More smoothing is applied to higher masses, so the very low end of the distribution should
+    remain relatively unchanged, using this bespoke function: (2^(-100/i))/2
+    https://www.desmos.com/calculator/olsensfzcq
     """
-    mean_mass = statistics.mean(masses.values())
-
-    changes = collections.defaultdict(float)
-    for i, m in masses.items():
-        share_amount = masses[i] / 2.0
+    masses.append(0.0)
+    changes = [0.0] * (len(masses))
+    for i, m in enumerate(masses):
+        if i == 0 or i == len(masses)-1:
+            continue
+        share_fraction = (2 ** (-100/i)) / 2
+        share_amount = masses[i] * share_fraction
         changes[i-1] += share_amount / 2.0
         changes[i] -= share_amount
         changes[i+1] += share_amount / 2.0
-    smoothed_masses = [(i, masses[i]+changes[i]) for i in changes.keys()]
-
-    # Trim off any zero-mass points at the start/end.
-    first, last = None, None
-    for i, m in enumerate(smoothed_masses):
-        if first is None and m[1] > 0.0:
-            first = i
-        if m[1] > 0.0:
-            last = i+1
-    return collections.defaultdict(float, smoothed_masses[first:last])
+    return [m+c for m, c in zip(masses, changes)]
 
 
-def get_peak_distance(masses, max_tries=50):
+def get_peak_distance(masses):
     """
     Starts with the median and climb upwards, smoothing when a peak is reached. If a lot of
     smoothing doesn't change the peak, the process stops.
@@ -263,25 +279,13 @@ def get_peak_distance(masses, max_tries=50):
     """
     masses = initial_smoothing(masses)
     median = get_median(masses)
-
-    masses = collections.defaultdict(float, enumerate(masses))
     peak = climb_to_peak(masses, median)
-    tries = 0
-    while True:
-        # If our peak is at zero, then no further smoothing is needed, so we can stop to save time.
-        if peak == 0:
-            break
+    print(peak)  # TEMP
 
-        peak_before_smoothing = peak
+    # If our peak is at zero, then no smoothing is needed, so we can stop to save time.
+    if peak >= 0:
         masses = smooth_distribution(masses)
         peak = climb_to_peak(masses, peak)
-
-        if peak == peak_before_smoothing:  # if the smoothing didn't change the peak
-            tries += 1
-        else:  # if we got a new peak after smoothing
-            tries = 0
-        if tries == max_tries:
-            break
 
     adjustment = interpolate(masses[peak-1] if peak > 0 else 0.0,
                              masses[peak],
@@ -292,8 +296,8 @@ def get_peak_distance(masses, max_tries=50):
 def climb_to_peak(masses, starting_point):
     peak = starting_point
     while True:
-        lower_mass = masses[peak-1]
-        higher_mass = masses[peak+1]
+        lower_mass = masses[peak-1] if peak > 0 else float('-inf')
+        higher_mass = masses[peak+1] if peak < len(masses)-1 else float('-inf')
         if lower_mass >= masses[peak] and lower_mass > higher_mass:
             peak -= 1
         elif higher_mass > masses[peak] and higher_mass > lower_mass:
