@@ -13,7 +13,7 @@ If not, see <https://www.gnu.org/licenses/>.
 
 import pandas as pd
 from plotnine import ggplot, aes, geom_segment, geom_line, geom_vline, labs, theme_bw, \
-    scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt
+    scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt, coord_cartesian
 import sys
 
 from .distance import get_distance, get_peak_distance
@@ -28,12 +28,9 @@ def view(args):
     peak, smoothed_masses = get_peak_distance(masses)
     peak /= piece_size
 
-    x_max = len(masses) / piece_size
-    y_max = 1.05 * max(max(masses), max(smoothed_masses))
-
-    distances = [i / piece_size for i in range(len(masses))]
-    df = pd.DataFrame(list(zip(distances, masses, smoothed_masses)),
-                      columns=['distance', 'mass', 'smoothed_mass'])
+    df, distances = build_data_frame(masses, smoothed_masses, piece_size)
+    x_min, x_max = get_x_axis_limits(df, 0.05)
+    y_max = 1.05 * max(max(masses), max(smoothed_masses.values()))
 
     g = (ggplot(df) +
          geom_segment(aes(x='distance', xend='distance', y=0, yend='mass'),
@@ -47,7 +44,7 @@ def view(args):
     if args.sqrt_x:
         g += scale_x_sqrt(limits=(0, x_max))
     else:
-        g += scale_x_continuous(limits=(0, x_max))
+        g += scale_x_continuous(limits=(x_min, x_max))
 
     if args.sqrt_y:
         g += scale_y_sqrt(expand=(0, 0), limits=(0, y_max))
@@ -55,6 +52,40 @@ def view(args):
         g += scale_y_continuous(expand=(0, 0), limits=(0, y_max))
 
     g.draw(show=True)
+
+
+def build_data_frame(masses, smoothed_masses, piece_size):
+    min_distance = min(0, min(smoothed_masses.keys()))
+    max_distance = max(len(masses), max(smoothed_masses.keys()))
+    distances = list(range(min_distance, max_distance+1))
+    mass_list, smoothed_mass_list = [], []
+    for d in distances:
+        try:
+            if d >= 0:
+                mass_list.append(masses[d])
+            else:
+                mass_list.append(0.0)
+        except IndexError:
+            mass_list.append(0.0)
+        try:
+            smoothed_mass_list.append(smoothed_masses[d])
+        except KeyError:
+            smoothed_mass_list.append(0.0)
+    distances = [d / piece_size for d in distances]
+    df = pd.DataFrame(list(zip(distances, mass_list, smoothed_mass_list)),
+                      columns=['distance', 'mass', 'smoothed_mass'])
+    return df, distances
+
+
+def get_x_axis_limits(df, margin):
+    x_min, x_max = 0.0, 0.0
+    for _, row in df.iterrows():
+        if row['mass'] > 0.0:
+            x_max = row['distance']
+    x_range = x_max - x_min
+    x_min -= x_range * margin
+    x_max += x_range * margin
+    return x_min, x_max
 
 
 def load_distance_distribution(alignment_results, assembly_1, assembly_2):

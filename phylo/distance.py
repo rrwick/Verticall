@@ -11,6 +11,7 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 
+import collections
 import itertools
 import math
 from multiprocessing import Pool
@@ -232,25 +233,28 @@ def smooth_distribution(masses):
     """
     Smooths the distribution by redistributing mass between neighbouring points. Equal amounts of
     mass are moved up and down the distribution, so this smoothing doesn't change the mean.
-
-    More smoothing is applied to higher masses, so the very low end of the distribution should
-    remain relatively unchanged, using this bespoke function: (2^(-100/i))/2
-    https://www.desmos.com/calculator/olsensfzcq
     """
-    masses.append(0.0)
-    changes = [0.0] * (len(masses))
-    for i, m in enumerate(masses):
-        if i == 0 or i == len(masses)-1:
-            continue
-        share_fraction = (2 ** (-100/i)) / 2
-        share_amount = masses[i] * share_fraction
+    mean_mass = statistics.mean(masses.values())
+
+    changes = collections.defaultdict(float)
+    for i, m in masses.items():
+        share_amount = masses[i] / 2.0
         changes[i-1] += share_amount / 2.0
         changes[i] -= share_amount
         changes[i+1] += share_amount / 2.0
-    return [m+c for m, c in zip(masses, changes)]
+    smoothed_masses = [(i, masses[i]+changes[i]) for i in changes.keys()]
+
+    # Trim off any zero-mass points at the start/end.
+    first, last = None, None
+    for i, m in enumerate(smoothed_masses):
+        if first is None and m[1] > 0.0:
+            first = i
+        if m[1] > 0.0:
+            last = i+1
+    return collections.defaultdict(float, smoothed_masses[first:last])
 
 
-def get_peak_distance(masses, max_tries=100):
+def get_peak_distance(masses, max_tries=50):
     """
     Starts with the median and climb upwards, smoothing when a peak is reached. If a lot of
     smoothing doesn't change the peak, the process stops.
@@ -259,6 +263,8 @@ def get_peak_distance(masses, max_tries=100):
     """
     masses = initial_smoothing(masses)
     median = get_median(masses)
+
+    masses = collections.defaultdict(float, enumerate(masses))
     peak = climb_to_peak(masses, median)
     tries = 0
     while True:
@@ -286,8 +292,8 @@ def get_peak_distance(masses, max_tries=100):
 def climb_to_peak(masses, starting_point):
     peak = starting_point
     while True:
-        lower_mass = masses[peak-1] if peak > 0 else float('-inf')
-        higher_mass = masses[peak+1] if peak < len(masses)-1 else float('-inf')
+        lower_mass = masses[peak-1]
+        higher_mass = masses[peak+1]
         if lower_mass >= masses[peak] and lower_mass > higher_mass:
             peak -= 1
         elif higher_mass > masses[peak] and higher_mass > lower_mass:

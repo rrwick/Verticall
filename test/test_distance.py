@@ -13,6 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
 details. You should have received a copy of the GNU General Public License along with XXXXXXXXX.
 If not, see <https://www.gnu.org/licenses/>.
 """
+import collections
 
 import pytest
 
@@ -165,43 +166,48 @@ def test_interpolate():
 
 def test_climb_to_peak_1():
     # Climb to a single peak at position 0.
-    assert phylo.distance.climb_to_peak([0.4, 0.3, 0.2, 0.1, 0.0], 0) == 0
-    assert phylo.distance.climb_to_peak([0.4, 0.3, 0.2, 0.1, 0.0], 1) == 0
-    assert phylo.distance.climb_to_peak([0.4, 0.3, 0.2, 0.1, 0.0], 2) == 0
-    assert phylo.distance.climb_to_peak([0.4, 0.3, 0.2, 0.1, 0.0], 3) == 0
-    assert phylo.distance.climb_to_peak([0.4, 0.3, 0.2, 0.1, 0.0], 4) == 0
+    masses = collections.defaultdict(float, {0: 0.4, 1: 0.3, 2: 0.2, 3: 0.1, 4: 0.0})
+    assert phylo.distance.climb_to_peak(masses, 0) == 0
+    assert phylo.distance.climb_to_peak(masses, 1) == 0
+    assert phylo.distance.climb_to_peak(masses, 2) == 0
+    assert phylo.distance.climb_to_peak(masses, 3) == 0
+    assert phylo.distance.climb_to_peak(masses, 4) == 0
 
 
 def test_climb_to_peak_2():
     # Climb to a single peak at position 2.
-    assert phylo.distance.climb_to_peak([0.1, 0.3, 0.4, 0.2, 0.0], 0) == 2
-    assert phylo.distance.climb_to_peak([0.1, 0.3, 0.4, 0.2, 0.0], 1) == 2
-    assert phylo.distance.climb_to_peak([0.1, 0.3, 0.4, 0.2, 0.0], 2) == 2
-    assert phylo.distance.climb_to_peak([0.1, 0.3, 0.4, 0.2, 0.0], 3) == 2
-    assert phylo.distance.climb_to_peak([0.1, 0.3, 0.4, 0.2, 0.0], 4) == 2
+    masses = collections.defaultdict(float, {0: 0.1, 1: 0.3, 2: 0.4, 3: 0.2, 4: 0.0})
+    assert phylo.distance.climb_to_peak(masses, 0) == 2
+    assert phylo.distance.climb_to_peak(masses, 1) == 2
+    assert phylo.distance.climb_to_peak(masses, 2) == 2
+    assert phylo.distance.climb_to_peak(masses, 3) == 2
+    assert phylo.distance.climb_to_peak(masses, 4) == 2
 
 
 def test_climb_to_peak_3():
     # Two different peaks (positions 1 and 3), so depends on starting position.
-    assert phylo.distance.climb_to_peak([0.0, 0.3, 0.2, 0.4, 0.1], 0) == 1
-    assert phylo.distance.climb_to_peak([0.0, 0.3, 0.2, 0.4, 0.1], 1) == 1
-    assert phylo.distance.climb_to_peak([0.0, 0.3, 0.2, 0.4, 0.1], 2) == 3
-    assert phylo.distance.climb_to_peak([0.0, 0.3, 0.2, 0.4, 0.1], 3) == 3
-    assert phylo.distance.climb_to_peak([0.0, 0.3, 0.2, 0.4, 0.1], 4) == 3
+    masses = collections.defaultdict(float, {0: 0.0, 1: 0.3, 2: 0.2, 3: 0.4, 4: 0.1})
+    assert phylo.distance.climb_to_peak(masses, 0) == 1
+    assert phylo.distance.climb_to_peak(masses, 1) == 1
+    assert phylo.distance.climb_to_peak(masses, 2) == 3
+    assert phylo.distance.climb_to_peak(masses, 3) == 3
+    assert phylo.distance.climb_to_peak(masses, 4) == 3
 
 
 def test_climb_to_peak_4():
     # When two adjacent positions tie for the peak, the lower one is chosen.
-    assert phylo.distance.climb_to_peak([0.35, 0.35, 0.15, 0.10, 0.05], 0) == 0
-    assert phylo.distance.climb_to_peak([0.35, 0.35, 0.15, 0.10, 0.05], 1) == 0
-    assert phylo.distance.climb_to_peak([0.35, 0.35, 0.15, 0.10, 0.05], 2) == 0
-    assert phylo.distance.climb_to_peak([0.35, 0.35, 0.15, 0.10, 0.05], 3) == 0
-    assert phylo.distance.climb_to_peak([0.35, 0.35, 0.15, 0.10, 0.05], 4) == 0
-    assert phylo.distance.climb_to_peak([0.10, 0.35, 0.35, 0.15, 0.05], 0) == 1
-    assert phylo.distance.climb_to_peak([0.10, 0.35, 0.35, 0.15, 0.05], 1) == 1
-    assert phylo.distance.climb_to_peak([0.10, 0.35, 0.35, 0.15, 0.05], 2) == 1
-    assert phylo.distance.climb_to_peak([0.10, 0.35, 0.35, 0.15, 0.05], 3) == 1
-    assert phylo.distance.climb_to_peak([0.10, 0.35, 0.35, 0.15, 0.05], 4) == 1
+    masses = collections.defaultdict(float, {0: 0.35, 1: 0.35, 2: 0.15, 3: 0.10, 4: 0.05})
+    assert phylo.distance.climb_to_peak(masses, 0) == 0
+    assert phylo.distance.climb_to_peak(masses, 1) == 0
+    assert phylo.distance.climb_to_peak(masses, 2) == 0
+    assert phylo.distance.climb_to_peak(masses, 3) == 0
+    assert phylo.distance.climb_to_peak(masses, 4) == 0
+    masses = collections.defaultdict(float, {0: 0.10, 1: 0.35, 2: 0.35, 3: 0.15, 4: 0.05})
+    assert phylo.distance.climb_to_peak(masses, 0) == 1
+    assert phylo.distance.climb_to_peak(masses, 1) == 1
+    assert phylo.distance.climb_to_peak(masses, 2) == 1
+    assert phylo.distance.climb_to_peak(masses, 3) == 1
+    assert phylo.distance.climb_to_peak(masses, 4) == 1
 
 
 def test_get_peak_distance_1():
