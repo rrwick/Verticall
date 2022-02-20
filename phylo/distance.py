@@ -291,7 +291,6 @@ def get_peak_distance(masses):
     adjustment = interpolate(masses[peak-1] if peak > 0 else 0.0,
                              masses[peak],
                              masses[peak+1] if peak < len(masses)-1 else 0.0)
-    print(peak, get_smoothing_bandwidth(peak))  # TEMP
     return peak + adjustment, masses
 
 
