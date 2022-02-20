@@ -201,7 +201,7 @@ def output_phylip_matrix(distances, sample_names):
         print()
 
 
-def initial_smoothing(masses):
+def smooth_distribution_1(masses):
     """
     This function does a quick single-pass smoothing of the masses, where mass 'falls' into
     valleys in the distribution. E.g. when a point has lower mass than both of its immediate
@@ -218,7 +218,7 @@ def initial_smoothing(masses):
         if a > b < c:
             a_diff = a - b
             c_diff = c - b
-            change = min(a_diff, c_diff)
+            change = min(a_diff, c_diff) / 2
             a_change = change * a_diff / (a_diff + c_diff)
             c_change = change * c_diff / (a_diff + c_diff)
             changes[i-1] -= a_change
@@ -228,46 +228,53 @@ def initial_smoothing(masses):
     return [m+c for m, c in zip(masses, changes)]
 
 
-def smooth_distribution(masses):
+def smooth_distribution_2(masses):
     """
     Smooths the distribution by averaging nearby masses.
     """
     smoothed_masses = []
-    for i, m in enumerate(masses):
-        masses_to_average = []
-        smoothing_range = int(2 * (i**0.5))
-        if smoothing_range == 0:
-            smoothed_masses.append(m)
-        else:
-            for j in range(i-smoothing_range, i+smoothing_range):
-                if 0 <= j < len(masses):
-                    masses_to_average.append(masses[j])
-            smoothed_masses.append(statistics.mean(masses_to_average))
-
-    for i in range(10):
-        smoothed_masses = smooth_distribution_2(smoothed_masses)
+    for i, _ in enumerate(masses):
+        bandwidth = get_smoothing_bandwidth(i)
+        smoothed_masses.append(get_average_mass(masses, i, bandwidth))
     return smoothed_masses
 
 
-def smooth_distribution_2(masses):
+def get_smoothing_bandwidth(i, max_output=65.0, rate=100.0):
     """
-    Smooths the distribution by redistributing mass between neighbouring points. Equal amounts of
-    mass are moved up and down the distribution, so this smoothing doesn't change the mean.
-    More smoothing is applied to higher masses, so the very low end of the distribution should
-    remain relatively unchanged, using this bespoke function: (2^(-100/i))/2
-    https://www.desmos.com/calculator/olsensfzcq
+    https://www.desmos.com/calculator/yukncfzzty
     """
-    masses.append(0.0)
-    changes = [0.0] * (len(masses))
-    for i, m in enumerate(masses):
-        if i == 0 or i == len(masses)-1:
-            continue
-        share_fraction = (2 ** (-100/i)) / 2
-        share_amount = masses[i] * share_fraction
-        changes[i-1] += share_amount / 2.0
-        changes[i] -= share_amount
-        changes[i+1] += share_amount / 2.0
-    return [m+c for m, c in zip(masses, changes)]
+    if i == 0:
+        return 0.0
+    return max_output * (2.0 ** (-rate / i))
+
+
+def get_gaussian_weight(stdev, x):
+    """
+    Returns the magnitude of the Gaussian function at value x. To save computation, it doesn't
+    bother normalising the function to area 1, because these are just used for a weighted average.
+    """
+    return math.exp((-x*x) / (stdev*stdev))
+
+
+def get_average_mass(masses, i, bandwidth):
+    """
+    Carries out gaussian smoothing on the given point in the masses distribution. The bandwidth
+    specifies the standard deviation of the smoothing kernel:
+    https://www.desmos.com/calculator/scadqd3lg8
+    """
+    if bandwidth == 0.0:
+        return masses[i]
+
+    # Collect points up to 3x the standard deviation away (beyond which weights will be so low we
+    # can ignore them).
+    range_size = int(bandwidth*3.0) + 1
+    masses_to_average, weights = [], []
+    for step in range(-range_size, range_size+1):
+        j = i + step
+        if 0 <= j < len(masses):
+            masses_to_average.append(masses[j])
+            weights.append(get_gaussian_weight(bandwidth, step))
+    return np.average(masses_to_average, weights=weights)
 
 
 def get_peak_distance(masses):
@@ -277,19 +284,14 @@ def get_peak_distance(masses):
 
     The final returned value is interpolated from the peak and its neighbours.
     """
-    masses = initial_smoothing(masses)
+    masses = smooth_distribution_1(masses)
+    masses = smooth_distribution_2(masses)
     median = get_median(masses)
     peak = climb_to_peak(masses, median)
-    print(peak)  # TEMP
-
-    # If our peak is at zero, then no smoothing is needed, so we can stop to save time.
-    if peak >= 0:
-        masses = smooth_distribution(masses)
-        peak = climb_to_peak(masses, peak)
-
     adjustment = interpolate(masses[peak-1] if peak > 0 else 0.0,
                              masses[peak],
                              masses[peak+1] if peak < len(masses)-1 else 0.0)
+    print(peak, get_smoothing_bandwidth(peak))  # TEMP
     return peak + adjustment, masses
 
 

@@ -204,6 +204,26 @@ def test_climb_to_peak_4():
     assert phylo.distance.climb_to_peak([0.10, 0.35, 0.35, 0.15, 0.05], 4) == 1
 
 
+def test_get_smoothing_bandwidth():
+    assert phylo.distance.get_smoothing_bandwidth(0.0, 50.0, 50.0) == pytest.approx(0.0)
+    assert phylo.distance.get_smoothing_bandwidth(25.0, 50.0, 50.0) == pytest.approx(12.5)
+    assert phylo.distance.get_smoothing_bandwidth(50.0, 50.0, 50.0) == pytest.approx(25.0)
+    assert phylo.distance.get_smoothing_bandwidth(99999999999.99, 50.0, 50.0) == pytest.approx(50.0)
+
+
+def test_get_gaussian_weight():
+    assert phylo.distance.get_gaussian_weight(1.0, 0.0) == pytest.approx(1.0)
+    assert phylo.distance.get_gaussian_weight(5.0, 0.0) == pytest.approx(1.0)
+    assert phylo.distance.get_gaussian_weight(1.0, 1.0) == pytest.approx(0.367879441171442)
+    assert phylo.distance.get_gaussian_weight(1.0, -1.0) == pytest.approx(0.367879441171442)
+    assert phylo.distance.get_gaussian_weight(5.0, 5.0) == pytest.approx(0.367879441171442)
+    assert phylo.distance.get_gaussian_weight(5.0, -5.0) == pytest.approx(0.367879441171442)
+    assert phylo.distance.get_gaussian_weight(1.0, 2.0) == pytest.approx(0.018315638888734)
+    assert phylo.distance.get_gaussian_weight(1.0, -2.0) == pytest.approx(0.018315638888734)
+    assert phylo.distance.get_gaussian_weight(5.0, 10.0) == pytest.approx(0.018315638888734)
+    assert phylo.distance.get_gaussian_weight(5.0, -10.0) == pytest.approx(0.018315638888734)
+
+
 def test_get_peak_distance_1():
     assert phylo.distance.get_peak_distance([1.0, 0.0, 0.0, 0.0, 0.0])[0] == pytest.approx(0)
     assert phylo.distance.get_peak_distance([0.0, 1.0, 0.0, 0.0, 0.0])[0] == pytest.approx(1)
