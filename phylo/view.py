@@ -17,6 +17,7 @@ from plotnine import ggplot, aes, geom_segment, geom_line, geom_vline, labs, the
 import sys
 
 from .distance import get_distance, get_peak_distance
+from .log import log
 
 
 def view(args):

@@ -201,82 +201,6 @@ def output_phylip_matrix(distances, sample_names):
         print()
 
 
-def smooth_distribution_1(masses):
-    """
-    This function does a quick single-pass smoothing of the masses, where mass 'falls' into
-    valleys in the distribution. E.g. when a point has lower mass than both of its immediate
-    neighbours, some of the neighbours' mass is moved onto that point.
-
-    This isn't particularly effective at making a nice smooth distribution, but it's 'safe' (e.g.
-    it doesn't mess up the shape of low distributions), so it makes for a good first pass.
-    """
-    changes = [0.0] * (len(masses))
-    for i, m in enumerate(masses):
-        if i == 0 or i == len(masses)-1:
-            continue
-        a, b, c = masses[i-1], masses[i], masses[i+1]
-        if a > b < c:
-            a_diff = a - b
-            c_diff = c - b
-            change = min(a_diff, c_diff) / 2
-            a_change = change * a_diff / (a_diff + c_diff)
-            c_change = change * c_diff / (a_diff + c_diff)
-            changes[i-1] -= a_change
-            changes[i] += a_change
-            changes[i] += c_change
-            changes[i+1] -= c_change
-    return [m+c for m, c in zip(masses, changes)]
-
-
-def smooth_distribution_2(masses):
-    """
-    Smooths the distribution by averaging nearby masses.
-    """
-    smoothed_masses = []
-    for i, _ in enumerate(masses):
-        bandwidth = get_smoothing_bandwidth(i)
-        smoothed_masses.append(get_average_mass(masses, i, bandwidth))
-    return smoothed_masses
-
-
-def get_smoothing_bandwidth(i, max_output=65.0, rate=100.0):
-    """
-    https://www.desmos.com/calculator/yukncfzzty
-    """
-    if i == 0:
-        return 0.0
-    return max_output * (2.0 ** (-rate / i))
-
-
-def get_gaussian_weight(stdev, x):
-    """
-    Returns the magnitude of the Gaussian function at value x. To save computation, it doesn't
-    bother normalising the function to area 1, because these are just used for a weighted average.
-    """
-    return math.exp((-x*x) / (stdev*stdev))
-
-
-def get_average_mass(masses, i, bandwidth):
-    """
-    Carries out gaussian smoothing on the given point in the masses distribution. The bandwidth
-    specifies the standard deviation of the smoothing kernel:
-    https://www.desmos.com/calculator/scadqd3lg8
-    """
-    if bandwidth == 0.0:
-        return masses[i]
-
-    # Collect points up to 3x the standard deviation away (beyond which weights will be so low we
-    # can ignore them).
-    range_size = int(bandwidth*3.0) + 1
-    masses_to_average, weights = [], []
-    for step in range(-range_size, range_size+1):
-        j = i + step
-        if 0 <= j < len(masses):
-            masses_to_average.append(masses[j])
-            weights.append(get_gaussian_weight(bandwidth, step))
-    return np.average(masses_to_average, weights=weights)
-
-
 def get_peak_distance(masses):
     """
     Starts with the median and climb upwards, smoothing when a peak is reached. If a lot of
@@ -284,8 +208,7 @@ def get_peak_distance(masses):
 
     The final returned value is interpolated from the peak and its neighbours.
     """
-    masses = smooth_distribution_1(masses)
-    masses = smooth_distribution_2(masses)
+    masses = smooth_distribution(masses)
     median = get_median(masses)
     peak = climb_to_peak(masses, median)
     adjustment = interpolate(masses[peak-1] if peak > 0 else 0.0,
@@ -323,3 +246,44 @@ def interpolate(low, peak, high):
         return (high - low) / (2.0 * peak)
     except ZeroDivisionError:
         return 0.0
+
+
+def smooth_distribution(masses, iterations=1000):
+    """
+    Smooths the mass distribution with a force-directed approach. Each point is pulled by two
+    forces:
+    * Trying to get close to the empirical point
+    * Trying to get close to the neighbouring points.
+    """
+    smoothed = masses.copy()
+    for _ in range(iterations):
+        for i, m in enumerate(masses):
+
+            # The first force pulls the point back to the empirical distribution, but it's squared,
+            # so small deviations are okay.
+            difference = m - smoothed[i]
+            force_1 = difference * abs(difference)
+
+            # The second force
+            lower = smoothed[i-1] if i > 0 else None
+            upper = smoothed[i+1] if i < len(masses)-1 else None
+            if lower is not None and upper is not None:
+                mean_neighbour = (lower + upper) / 2.0
+                force_2 = mean_neighbour - smoothed[i]
+                force_2_scaling_factor = get_force_scaling_factor(i)
+                force_2 *= force_2_scaling_factor
+            else:
+                force_2 = 0.0
+
+            smoothed[i] += force_1
+            smoothed[i] += force_2
+
+    return smoothed
+
+
+def get_force_scaling_factor(i):
+    """
+    https://www.desmos.com/calculator/4ufb19uutk
+    """
+    scaling_factor = 2.0 ** (-100.0 / (i+5.0)) - 0.001
+    return max(scaling_factor, 0.0)
