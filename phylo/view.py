@@ -28,6 +28,7 @@ def view(args):
     mean = get_distance(masses, piece_size, 'mean')
     peak, smoothed_masses = get_peak_distance(masses)
     peak /= piece_size
+    log(f'Peak distance: {peak * piece_size}')  # TEMP
 
     x_max = len(masses) / piece_size
     y_max = 1.05 * max(max(masses), max(smoothed_masses))

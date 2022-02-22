@@ -209,8 +209,8 @@ def get_peak_distance(masses):
     The final returned value is interpolated from the peak and its neighbours.
     """
     masses = smooth_distribution(masses)
-    median = get_median(masses)
-    peak = climb_to_peak(masses, median)
+    peaks_with_total_mass = [(get_peak_total_mass(masses, p), p) for p in find_peaks(masses)]
+    peak = sorted(peaks_with_total_mass)[-1][1]
     adjustment = interpolate(masses[peak-1] if peak > 0 else 0.0,
                              masses[peak],
                              masses[peak+1] if peak < len(masses)-1 else 0.0)
@@ -287,3 +287,58 @@ def get_force_scaling_factor(i):
     """
     scaling_factor = 2.0 ** (-100.0 / (i+5.0)) - 0.001
     return max(scaling_factor, 0.0)
+
+
+def find_peaks(masses):
+    """
+    Given a mass distribution, this returns a list of all peaks indices.
+    """
+    peaks = []
+    for i, m in enumerate(masses):
+
+        # If the point is not greater than the left-neighbour, move on.
+        if not (True if i == 0 else m > masses[i-1]):
+            continue
+
+        # If the point is also greater than the right-neighbour, it's definitely a peak.
+        if True if i == len(masses)-1 else m > masses[i+1]:
+            peaks.append(i)
+            continue
+
+        # If the point is equal to its right-neighbour, then we need to check whether there is a
+        # multi-point peak. If so, we add the middle position of the multi-point peak (rounded
+        # down).
+        if m == masses[i+1]:
+            j = i
+            while j < len(masses) and masses[j] == m:
+                j += 1
+            if j == len(masses) or m > masses[j]:
+                peaks.append(int((i+j-1)/2))
+
+    return peaks
+
+
+def get_peak_total_mass(masses, peak):
+    """
+    Given a mass distribution and peak index, this returns the total mass of the peak by extending
+    in both directions until the masses rise.
+    """
+    total = masses[peak]
+
+    # Add masses on the right side of the peak.
+    previous_mass = masses[peak]
+    i = peak+1
+    while i < len(masses) and masses[i] <= previous_mass:
+        total += masses[i]
+        previous_mass = masses[i]
+        i += 1
+
+    # Add masses on the left side of the peak.
+    previous_mass = masses[peak]
+    i = peak-1
+    while i >= 0 and masses[i] <= previous_mass:
+        total += masses[i]
+        previous_mass = masses[i]
+        i -= 1
+
+    return total
