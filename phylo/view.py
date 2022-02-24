@@ -17,7 +17,6 @@ from plotnine import ggplot, aes, geom_segment, geom_line, geom_vline, labs, the
 import sys
 
 from .distance import get_distance, get_peak_distance
-from .log import log
 
 
 def view(args):
@@ -28,7 +27,6 @@ def view(args):
     mean = get_distance(masses, piece_size, 'mean')
     peak, smoothed_masses = get_peak_distance(masses)
     peak /= piece_size
-    log(f'Peak distance: {peak * piece_size}')  # TEMP
 
     x_max = len(masses) / piece_size
     y_max = 1.05 * max(max(masses), max(smoothed_masses))
@@ -44,7 +42,7 @@ def view(args):
          geom_vline(xintercept=mean, colour='#d95f02', linetype='dotted', size=0.5) +
          geom_vline(xintercept=peak, colour='#d95f02', linetype='dashed', size=0.5) +
          theme_bw() +
-         labs(title=title))
+         labs(title=title, x='distance', y='probability mass'))
 
     if args.sqrt_x:
         g += scale_x_sqrt(limits=(0, x_max))

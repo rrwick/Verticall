@@ -176,6 +176,9 @@ def correct_distances(distances, aligned_fractions, sample_names, correction):
 
 
 def jukes_cantor(d):
+    """
+    https://www.desmos.com/calculator/okovk3dipx
+    """
     if d == 0.0:
         return 0.0
     if d >= 0.75:
@@ -238,12 +241,8 @@ def interpolate(low, peak, high):
     peak mass). It then returns an interpolation adjustment that varies from -0.5 to 0.5, similar
     to how interpolated medians work.
     """
-    min_mass = min(low, peak, high)
-    low -= min_mass
-    peak -= min_mass
-    high -= min_mass
     try:
-        return (high - low) / (2.0 * peak)
+        return (high - low) / (2.0 * (peak - min(low, peak, high)))
     except ZeroDivisionError:
         return 0.0
 
@@ -283,9 +282,9 @@ def smooth_distribution(masses, iterations=1000):
 
 def get_force_scaling_factor(i):
     """
-    https://www.desmos.com/calculator/4ufb19uutk
+    https://www.desmos.com/calculator/xyxaykwudg
     """
-    scaling_factor = 2.0 ** (-100.0 / (i+5.0)) - 0.001
+    scaling_factor = 2.0 ** (-100.0 / (i+5.0)) - 0.0005
     return max(scaling_factor, 0.0)
 
 
