@@ -17,7 +17,7 @@ from multiprocessing import Pool
 import pathlib
 import sys
 
-from .align import build_indices
+from .align import build_indices, align_sample_pair, get_distribution
 from .help_formatter import MyParser, MyHelpFormatter
 from .misc import check_python_version, get_ascii_art, get_default_thread_count
 from .log import bold, log, section_header, explanation
@@ -31,7 +31,11 @@ def main():
     welcome_message()
     assemblies = find_assemblies(args.in_dir)
     build_indices(args.in_dir, assemblies)
-    process_all_pairs(args, assemblies)
+    if args.view is not None:
+        view_one_pair(args, assemblies)
+    else:
+        process_all_pairs(args, assemblies)
+    # TODO
     finished_message()
 
 
@@ -48,16 +52,18 @@ def parse_args(args):
                                help='Output directory where results will be saved')
 
     align_args = parser.add_argument_group('Alignment settings')
+    align_args.add_argument('--index_options', type=str, default='TODO',
+                            help='Minimap2 options for assembly indexing')
+    align_args.add_argument('--align_options', type=str, default='TODO',
+                            help='Minimap2 options for assembly-to-assembly alignment')
     align_args.add_argument('--allowed_overlap', type=int, default=100,
                             help='Allow this much overlap between alignments')
-    align_args.add_argument('--target_window_count', type=int, default=50000,
+    align_args.add_argument('--window_count', type=int, default=50000,
                             help='Aim to have at least this many comparison windows between '
                                  'assemblies')
     align_args.add_argument('--ignore_indels', action='store_true',
                             help='Only use mismatches to determine distance (default: use '
                                  'both mismatches and gap-compressed indels)')
-    align_args.add_argument('--minimap2_options', type=str, default='TODO',
-                            help='Minimap2 options for assembly-to-assembly alignment')
 
     distance_args = parser.add_argument_group('Distance settings')
     distance_args.add_argument('--method', type=str,
@@ -67,17 +73,23 @@ def parse_args(args):
                                help='Distance correction technique(s) from "none", "jukescantor" '
                                     'and "alignedfrac"')
     distance_args.add_argument('--asymmetrical', action='store_true',
-                               help='Do not average pairs to make a symmetrical matrix')
+                               help='Do not average pairs to make a symmetrical matrix (default: '
+                                    'make matrix symmetrical)')
 
     view_args = parser.add_argument_group('View settings')
     view_args.add_argument('--view', type=str,
                            help='Two assemblies (comma-separated) to view in plots')
     view_args.add_argument('--sqrt_x', action='store_true',
-                           help='Use a square-root transform on the x-axis')
+                           help='Use a square-root transform on the x-axis (default: no x-axis '
+                                'transform)')
     view_args.add_argument('--sqrt_y', action='store_true',
-                           help='Use a square-root transform on the y-axis')
+                           help='Use a square-root transform on the y-axis (default: no y-axis '
+                                'transform)')
 
     setting_args = parser.add_argument_group('General settings')
+    setting_args.add_argument('--verbose', action='store_true',
+                              help='Output more detail to stderr for debugging (default: only '
+                                   'output essential information)')
     setting_args.add_argument('-t', '--threads', type=int, default=get_default_thread_count(),
                               help='CPU threads for parallel processing')
 
@@ -106,6 +118,12 @@ def check_args(args):
     if len(valid_removed) > 0:
         sys.exit('Error: only "none", "jukescantor" and "alignedfrac" can be used in '
                  '--correction')
+
+    # Check --view
+    if args.view is not None:
+        samples = args.view.split(',')
+        if len(samples) != 2:
+            sys.exit('Error: two assemblies (comma-delimited) must be supplied to --view')
 
 
 def welcome_message():
@@ -156,7 +174,7 @@ def process_all_pairs(args, assemblies):
     for sample_name_a, assembly_filename_a in assemblies:
         for sample_name_b, assembly_filename_b in assemblies:
             if sample_name_a != sample_name_b:
-                arg_list.append((args, sample_name_a, sample_name_b))
+                arg_list.append((args, assembly_filename_a, sample_name_a, sample_name_b))
 
     # If only using a single thread, do the alignment in a simple loop (easier for debugging).
     if args.threads == 1:
@@ -171,19 +189,36 @@ def process_all_pairs(args, assemblies):
                 log('\n'.join(log_text), end='\n\n')
 
 
-def process_one_pair(all_args):
-    args, sample_name_a, sample_name_b = all_args
+def process_one_pair(all_args, view=False):
+    args, assembly_filename_a, sample_name_a, sample_name_b = all_args
     log_text = [f'{sample_name_a} vs {sample_name_b}:']
 
-    # TODO
-    # TODO
-    # TODO
-    # TODO
-    # TODO
-    # TODO
-    # TODO
+    alignments, alignment_log_text = align_sample_pair(args, assembly_filename_a, sample_name_b)
+    log_text += alignment_log_text
+
+    distance_counts, query_coverage, distribution_log_text = \
+        get_distribution(args, alignments, assembly_filename_a)
+    log_text += distribution_log_text
+
+    # TODO: find peaks and partition the distance distribution
+    # TODO: paint each contig using the partitions
+    # TODO: get mean distance using non-recombinant regions
+    # TODO: save painting info to file
+
+    if view:
+        log('\n'.join(log_text), end='\n\n')
 
     return log_text
+
+
+def view_one_pair(args, assemblies):
+    section_header('Viewing single pair')
+    explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
+                'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
+                'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
+    sample_name_a, sample_name_b = args.view.split(',')
+    assembly_filename_a = [filename for name, filename in assemblies if name == sample_name_a][0]
+    process_one_pair([args, assembly_filename_a, sample_name_a, sample_name_b], view=True)
 
 
 if __name__ == '__main__':

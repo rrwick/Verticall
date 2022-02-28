@@ -12,7 +12,6 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 import collections
-from multiprocessing import Pool
 import re
 import subprocess
 import sys
@@ -28,7 +27,7 @@ def build_indices(in_dir, assemblies):
     explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
                 'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
                 'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
-    # TODO: do this in parallel in a thread pool?
+    # TODO: do this in parallel in a process pool?
     log(f'0 / {len(assemblies)}', end='')
     for i, a in enumerate(assemblies):
         sample_name, assembly_filename = a
@@ -50,15 +49,8 @@ def index_exists(in_dir, sample_name):
     return index.is_file() and index.stat().st_size > 0
 
 
-def align_sample_pair(all_args):
-    """
-    Arguments are passes as a single tuple to make this function easier to call via pool.imap.
-    """
-    in_dir, sample_name_a, sample_name_b, assembly_filename_a, allowed_overlap, ignore_indels, \
-        target_window_count = all_args
-
-    sequence_index = in_dir / (sample_name_b + '.mmi')
-    log_text = [f'Aligning {sample_name_a} to {sample_name_b}:']
+def align_sample_pair(args, assembly_filename_a, sample_name_b):
+    sequence_index = args.in_dir / (sample_name_b + '.mmi')
     # TODO: explore different alignment options (e.g. the things set by -x asm20) to see how they
     #       affect the results.
     # TODO: make minimap2 alignment options settable via an option
@@ -67,44 +59,41 @@ def align_sample_pair(all_args):
     p = subprocess.run(command, capture_output=True, text=True)
 
     alignments = [Alignment(line) for line in p.stdout.splitlines() if not line.startswith('@')]
-    full_alignment_count = len(alignments)
-    alignments = cull_redundant_alignments(alignments, allowed_overlap)
-    if ignore_indels:
+    alignments = cull_redundant_alignments(alignments, args.allowed_overlap)
+
+    if not alignments:
+        return [], ['  no alignments found']
+
+    return alignments, [f'  {len(alignments)} alignments']
+
+
+def get_distribution(args, alignments, assembly_filename_a):
+    """
+    Uses the alignments to build a distance distribution.
+    """
+    if args.ignore_indels:
         all_cigars = [remove_indels(a.expanded_cigar) for a in alignments]
     else:
         all_cigars = [compress_indels(a.expanded_cigar) for a in alignments]
 
-    if not alignments:
-        log_text.append(f'  no alignments found')
-        return '', log_text
-
-    window_size, window_step = choose_window_size_and_step(all_cigars, target_window_count)
-    all_cigars = [c for c in all_cigars if len(c) >= window_size]
-    log_text.append(f'  {full_alignment_count} alignments ({len(all_cigars)} after filtering)')
-
     n50_alignment_length = get_n50(len(c) for c in all_cigars)
-    log_text.append(f'  N50 alignment length: {n50_alignment_length}')
+    log_text = [f'  N50 alignment length: {n50_alignment_length}']
 
     query_coverage = get_query_coverage(alignments, assembly_filename_a)
     mean_identity = 1.0 - (sum(get_difference_count(c) for c in all_cigars) /
                            sum(len(c) for c in all_cigars))
 
-    log_text.append(f'  aligned fraction: {100.0 * query_coverage:6.2f}%')
-    log_text.append(f'  mean identity:    {100.0 * mean_identity:6.2f}%')
+    log_text.append(f'  aligned fraction: {100.0 * query_coverage:.2f}%')
+    log_text.append(f'  mean identity: {100.0 * mean_identity:.2f}%')
+
+    window_size, window_step = choose_window_size_and_step(all_cigars, args.window_count)
+    all_cigars = [c for c in all_cigars if len(c) >= window_size]
 
     distances, max_difference_count = get_distances(all_cigars, window_size, window_step)
     distance_counts = collections.Counter(distances)
     log_text.append(f'  distances sampled from {len(distances)} x {window_size} bp windows')
 
-    output_line = [sample_name_a, sample_name_b, str(window_size), f'{query_coverage:.8f}']
-    for i in range(max_difference_count + 1):
-        d = i / window_size
-        if distance_counts[d] == 0:
-            output_line.append('0')
-        else:
-            probability_mass = distance_counts[d] / len(distances)
-            output_line.append(f'{probability_mass:.8f}')
-    return '\t'.join(output_line) + '\n', log_text
+    return distance_counts, query_coverage, log_text
 
 
 def cull_redundant_alignments(alignments, allowed_overlap):
