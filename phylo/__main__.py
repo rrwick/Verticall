@@ -17,7 +17,7 @@ from multiprocessing import Pool
 import pathlib
 import sys
 
-from .align import build_indices, align_sample_pair, get_distribution
+from .alignment import build_indices, align_sample_pair, get_distribution
 from .help_formatter import MyParser, MyHelpFormatter
 from .misc import check_python_version, get_ascii_art, get_default_thread_count
 from .log import bold, log, section_header, explanation
@@ -35,7 +35,6 @@ def main():
         view_one_pair(args, assemblies)
     else:
         process_all_pairs(args, assemblies)
-    # TODO
     finished_message()
 
 
@@ -160,8 +159,7 @@ def find_assemblies(in_dir):
     find_assemblies_with_extension('fna.gz', assemblies)
     assemblies = sorted(assemblies.items())
 
-    log(f'Found {len(assemblies):,} samples in {in_dir.resolve()}')
-    log()
+    log(f'Found {len(assemblies):,} samples in {in_dir.resolve()}\n')
     return assemblies
 
 
@@ -207,6 +205,9 @@ def process_one_pair(all_args, view=False):
 
     if view:
         log('\n'.join(log_text), end='\n\n')
+        # TODO: plot distance distribution
+        # TODO: plot assembly a painted contigs
+        # TODO: plot assembly b painted contigs
 
     return log_text
 
