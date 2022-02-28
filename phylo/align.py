@@ -23,54 +23,6 @@ from .log import log, section_header, explanation
 from .misc import get_fasta_size, get_n50
 
 
-def align(args):
-    welcome_message()
-    assemblies = find_assemblies(args.in_dir)
-    build_indices(args.in_dir, assemblies)
-    align_all_samples(args.in_dir, args.out_file, assemblies, args.threads, args.allowed_overlap,
-                      args.ignore_indels, args.target_window_count)
-    finished_message()
-
-
-def welcome_message():
-    section_header('Starting XXXXXXXXX align')
-    explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
-                'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
-                'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
-
-
-def finished_message():
-    section_header('Finished!')
-    explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
-                'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
-                'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
-
-
-def find_assemblies(in_dir):
-    """
-    Returns assemblies in a (sample_name, filename) tuple.
-    """
-    def find_assemblies_with_extension(extension, all_assemblies):
-        extension_len = len(extension) + 1  # plus one for the dot
-        fasta_assemblies = sorted(f for f in in_dir.glob('*.' + extension) if f.is_file())
-        for a in fasta_assemblies:
-            sample_name = a.name[:-extension_len]
-            if sample_name in all_assemblies:
-                sys.exit(f'\nError: duplicate sample name {sample_name}')
-            all_assemblies[sample_name] = a
-
-    assemblies = {}
-    find_assemblies_with_extension('fasta', assemblies)
-    find_assemblies_with_extension('fasta.gz', assemblies)
-    find_assemblies_with_extension('fna', assemblies)
-    find_assemblies_with_extension('fna.gz', assemblies)
-    assemblies = sorted(assemblies.items())
-
-    log(f'Found {len(assemblies):,} samples in {in_dir.resolve()}')
-    log()
-    return assemblies
-
-
 def build_indices(in_dir, assemblies):
     section_header('Building alignment indices')
     explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
@@ -98,40 +50,6 @@ def index_exists(in_dir, sample_name):
     return index.is_file() and index.stat().st_size > 0
 
 
-def align_all_samples(in_dir, out_filename, assemblies, threads, allowed_overlap, ignore_indels,
-                      target_window_count):
-    section_header('Aligning pairwise combinations')
-    explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
-                'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
-                'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
-
-    arg_list = []
-    for sample_name_a, assembly_filename_a in assemblies:
-        for sample_name_b, assembly_filename_b in assemblies:
-            if sample_name_a != sample_name_b:
-                arg_list.append((in_dir, sample_name_a, sample_name_b, assembly_filename_a,
-                                 allowed_overlap, ignore_indels, target_window_count))
-
-    with open(out_filename, 'wt') as out_file:
-        out_file.write('#sample_a\tsample_b\twindow_size\talignment_coverage\tprobability_masses\n')
-
-        # If only using a single thread, do the alignment in a simple loop (easier for debugging).
-        if threads == 1:
-            for a in arg_list:
-                output_line, log_text = align_sample_pair(a)
-                if output_line:
-                    out_file.write(output_line)
-                log('\n'.join(log_text), end='\n\n')
-
-        # If using multiple threads, do the alignments in a thread pool.
-        else:
-            with Pool(processes=threads) as pool:
-                for output_line, log_text in pool.imap(align_sample_pair, arg_list):
-                    if output_line:
-                        out_file.write(output_line)
-                    log('\n'.join(log_text), end='\n\n')
-
-
 def align_sample_pair(all_args):
     """
     Arguments are passes as a single tuple to make this function easier to call via pool.imap.
@@ -143,6 +61,7 @@ def align_sample_pair(all_args):
     log_text = [f'Aligning {sample_name_a} to {sample_name_b}:']
     # TODO: explore different alignment options (e.g. the things set by -x asm20) to see how they
     #       affect the results.
+    # TODO: make minimap2 alignment options settable via an option
     command = ['minimap2', '-c', '-t', '1', '--eqx', '-x', 'asm20',
                str(sequence_index.resolve()), str(assembly_filename_a.resolve())]
     p = subprocess.run(command, capture_output=True, text=True)
