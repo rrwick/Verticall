@@ -30,7 +30,7 @@ def main():
     check_args(args)
     welcome_message()
     assemblies = find_assemblies(args.in_dir)
-    build_indices(args.in_dir, assemblies)
+    build_indices(args, assemblies)
     if args.view is not None:
         view_one_pair(args, assemblies)
     else:
@@ -51,9 +51,11 @@ def parse_args(args):
                                help='Output directory where results will be saved')
 
     align_args = parser.add_argument_group('Alignment settings')
-    align_args.add_argument('--index_options', type=str, default='TODO',
+    # TODO: explore different indexing options (e.g. -k and -w) to see how they affect the results.
+    align_args.add_argument('--index_options', type=str, default='-k15 -w10',
                             help='Minimap2 options for assembly indexing')
-    align_args.add_argument('--align_options', type=str, default='TODO',
+    # TODO: explore different alignment options (e.g. the things set by -x asm20).
+    align_args.add_argument('--align_options', type=str, default='-x asm20',
                             help='Minimap2 options for assembly-to-assembly alignment')
     align_args.add_argument('--allowed_overlap', type=int, default=100,
                             help='Allow this much overlap between alignments')

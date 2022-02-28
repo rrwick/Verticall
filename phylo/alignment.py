@@ -21,49 +21,60 @@ from .log import log, section_header, explanation
 from .misc import get_fasta_size, get_n50
 
 
-def build_indices(in_dir, assemblies):
+def build_indices(args, assemblies):
     section_header('Building alignment indices')
     explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
                 'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
                 'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
-    # TODO: do this in parallel in a process pool?
-    log(f'0 / {len(assemblies)}', end='')
+    index_options = args.index_options.split()
+    if not args.verbose:
+        log(f'0 / {len(assemblies)}', end='')
     for i, a in enumerate(assemblies):
         sample_name, assembly_filename = a
-        if not index_exists(in_dir, sample_name):
-            index_file = (in_dir / (sample_name + '.mmi')).resolve()
-            # TODO: explore different indexing options (e.g. -k and -w) to see how they affect
-            #       the results.
-            command = ['minimap2', '-k15', '-w10', '-d', index_file, assembly_filename]
+        if not index_exists(args, sample_name):
+            index_file = (args.in_dir / (sample_name + '.mmi')).resolve()
+            command = ['minimap2']
+            command += index_options
+            command += ['-d', index_file, assembly_filename]
+            if args.verbose:
+                log(' '.join(str(x) for x in command))
             p = subprocess.run(command, capture_output=True, text=True)
             if p.returncode != 0:
                 sys.exit(f'\nError: minimap2 failed to index sample {sample_name}:\n{p.stderr}')
-        log(f'\r{i+1} / {len(assemblies)}', end='')
-    log('\n')
+        if not args.verbose:
+            log(f'\r{i+1} / {len(assemblies)}', end='')
+    if not args.verbose:
+        log()
+    log()
 
 
-def index_exists(in_dir, sample_name):
-    index = in_dir / (sample_name + '.mmi')
+def index_exists(args, sample_name):
+    index = args.in_dir / (sample_name + '.mmi')
     # TODO: is there a way to check for malformed indices?
-    return index.is_file() and index.stat().st_size > 0
+    exists = (index.is_file() and index.stat().st_size > 0)
+    if exists and args.verbose:
+        log(f'{index} already exists')
+    return exists
 
 
 def align_sample_pair(args, assembly_filename_a, sample_name_b):
+    log_text = []
     sequence_index = args.in_dir / (sample_name_b + '.mmi')
-    # TODO: explore different alignment options (e.g. the things set by -x asm20) to see how they
-    #       affect the results.
-    # TODO: make minimap2 alignment options settable via an option
-    command = ['minimap2', '-c', '-t', '1', '--eqx', '-x', 'asm20',
-               str(sequence_index.resolve()), str(assembly_filename_a.resolve())]
+    command = ['minimap2', '-c', '-t', '1', '--eqx']
+    command += args.align_options.split()
+    command += [str(sequence_index.resolve()), str(assembly_filename_a.resolve())]
+    if args.verbose:
+        log_text.append('  ' + ' '.join(str(x) for x in command))
     p = subprocess.run(command, capture_output=True, text=True)
 
     alignments = [Alignment(line) for line in p.stdout.splitlines() if not line.startswith('@')]
     alignments = cull_redundant_alignments(alignments, args.allowed_overlap)
 
     if not alignments:
-        return [], ['  no alignments found']
-
-    return alignments, [f'  {len(alignments)} alignments']
+        log_text.append('  no alignments found')
+    else:
+        log_text.append(f'  {len(alignments)} alignments')
+    return alignments, log_text
 
 
 def get_distribution(args, alignments, assembly_filename_a):
