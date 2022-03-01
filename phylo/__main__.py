@@ -17,8 +17,8 @@ from multiprocessing import Pool
 import pathlib
 import sys
 
-from .alignment import build_indices, align_sample_pair, get_distribution
-from .distance import smooth_distribution, get_peak_distance
+from .alignment import build_indices, align_sample_pair
+from .distance import get_distribution, smooth_distribution, get_peak_distance
 from .help_formatter import MyParser, MyHelpFormatter
 from .misc import check_python_version, get_ascii_art, get_default_thread_count
 from .log import bold, log, section_header, explanation
@@ -205,7 +205,6 @@ def process_one_pair(all_args, view=False):
     peak, low, high, log_text = get_peak_distance(smoothed_masses, window_size)
     all_log_text += log_text
 
-    # TODO: find peaks and partition the distance distribution
     # TODO: paint each contig using the partitions
     # TODO: get mean distance using non-recombinant regions
     # TODO: save painting info to file

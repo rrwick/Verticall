@@ -21,6 +21,12 @@ from .distance import get_distance
 
 def show_plots(sample_name_a, sample_name_b, window_size, aligned_frac, masses, smoothed_masses,
                low, high, sqrt_x, sqrt_y):
+    distribution_plot(sample_name_a, sample_name_b, window_size, aligned_frac, masses,
+                      smoothed_masses, low, high, sqrt_x, sqrt_y)
+
+
+def distribution_plot(sample_name_a, sample_name_b, window_size, aligned_frac, masses,
+                      smoothed_masses, low, high, sqrt_x, sqrt_y):
     title = f'{sample_name_a} vs {sample_name_b}, {window_size} bp windows, ' \
             f'{100.0 * aligned_frac:.1f}% aligned'
 

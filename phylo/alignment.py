@@ -2,6 +2,8 @@
 Copyright 2022 Ryan Wick (rrwick@gmail.com)
 https://github.com/rrwick/XXXXXXXXX
 
+This module contains code related to assembly-vs-assembly alignment via minimap2.
+
 This file is part of XXXXXXXXX. XXXXXXXXX is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by the Free Software Foundation,
 either version 3 of the License, or (at your option) any later version. XXXXXXXXX is distributed
@@ -16,10 +18,7 @@ import re
 import subprocess
 import sys
 
-from .distance import get_distance
-from .intrange import IntRange
 from .log import log, section_header, explanation
-from .misc import get_fasta_size, get_n50
 
 
 def build_indices(args, assemblies):
@@ -78,35 +77,6 @@ def align_sample_pair(args, assembly_filename_a, sample_name_b):
     return alignments, log_text
 
 
-def get_distribution(args, alignments, assembly_filename_a):
-    """
-    Uses the alignments to build a distance distribution.
-    """
-    if args.ignore_indels:
-        all_cigars = [remove_indels(a.expanded_cigar) for a in alignments]
-    else:
-        all_cigars = [compress_indels(a.expanded_cigar) for a in alignments]
-
-    n50_alignment_length = get_n50(len(c) for c in all_cigars)
-
-    aligned_frac = get_query_coverage(alignments, assembly_filename_a)
-    window_size, window_step = choose_window_size_and_step(all_cigars, args.window_count)
-    all_cigars = [c for c in all_cigars if len(c) >= window_size]
-    distances, max_difference_count = get_distances(all_cigars, window_size, window_step)
-    distance_counts = collections.Counter(distances)
-
-    masses = [0 if distance_counts[i] == 0 else distance_counts[i] / len(distances)
-              for i in range(max_difference_count + 1)]
-    mean_identity = 1.0 - get_distance(masses, window_size, 'mean')
-
-    log_text = [f'  N50 alignment length: {n50_alignment_length}',
-                f'  aligned fraction: {100.0 * aligned_frac:.2f}%',
-                f'  mean identity: {100.0 * mean_identity:.2f}%',
-                f'  distances sampled from {len(distances)} x {window_size} bp windows']
-
-    return masses, aligned_frac, window_size, log_text
-
-
 def cull_redundant_alignments(alignments, allowed_overlap):
     alignments = sorted(alignments, key=lambda x: x.alignment_score, reverse=True)
     alignments_by_contig = collections.defaultdict(list)
@@ -116,90 +86,6 @@ def cull_redundant_alignments(alignments, allowed_overlap):
             alignments_no_redundancy.append(a)
         alignments_by_contig[a.query_name].append(a)
     return alignments_no_redundancy
-
-
-def get_query_coverage(alignments, assembly_filename):
-    assembly_size = get_fasta_size(assembly_filename)
-    ranges_by_contig = {}
-    for a in alignments:
-        if a.query_name not in ranges_by_contig:
-            ranges_by_contig[a.query_name] = IntRange()
-        ranges_by_contig[a.query_name].add_range(a.query_start, a.query_end)
-    aligned_bases = sum(r.total_length() for r in ranges_by_contig.values())
-    assert aligned_bases <= assembly_size
-    return aligned_bases / assembly_size
-
-
-def get_distances(all_cigars, window_size, window_step):
-    distances, max_difference_count = [], 0
-    for cigar in all_cigars:
-        # TODO: trim CIGAR so windows fit in the middle?
-        start, end = 0, window_size
-        while end <= len(cigar):
-            cigar_window = cigar[start:end]
-            assert len(cigar_window) == window_size
-            difference_count = get_difference_count(cigar_window)
-            distances.append(difference_count)
-            max_difference_count = max(max_difference_count, difference_count)
-            start += window_step
-            end += window_step
-    return distances, max_difference_count
-
-
-def remove_indels(cigar):
-    """
-    Removes all indels from a CIGAR. For example:
-    in:  ===X=IIII==XX==DDDD==
-    out: ===X===XX====
-    """
-    return re.sub(r'I+', '', re.sub(r'D+', '', cigar))
-
-
-def compress_indels(cigar):
-    """
-    Compresses runs of indels into size-1 indels. For example:
-    in:  ===X=IIII==XX==DDDD==
-    out: ===X=I==XX==D==
-    """
-    return re.sub(r'I+', 'I', re.sub(r'D+', 'D', cigar))
-
-
-def get_difference_count(cigar):
-    """
-    Returns the number of mismatches and indels in the CIGAR.
-    """
-    return cigar.count('X') + cigar.count('I') + cigar.count('D')
-
-
-def choose_window_size_and_step(cigars, target_window_count):
-    """
-    This function chooses an appropriate window size and step for the given CIGARs. It tries to
-    balance larger windows, which give higher-resolution identity samples, especially with
-    closely-related assemblies, and smaller windows, which allow for more identity samples.
-    """
-    window_step = 1000
-    while window_step > 1:
-        window_size = window_step * 100
-        if get_window_count(cigars, window_size, window_step) > target_window_count:
-            return window_size, window_step
-        window_step -= 1
-    return window_step * 100, window_step
-
-
-def get_window_count(cigars, window_size, window_step):
-    """
-    For a given window size, window step and set of CIGARs, this function returns how many windows
-    there will be in total.
-    """
-    count = 0
-    for cigar in cigars:
-        cigar_len = len(cigar)
-        if cigar_len < window_size:
-            continue
-        cigar_len -= window_size
-        count += 1
-        count += cigar_len // window_step
-    return count
 
 
 class Alignment(object):

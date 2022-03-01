@@ -2,6 +2,9 @@
 Copyright 2022 Ryan Wick (rrwick@gmail.com)
 https://github.com/rrwick/XXXXXXXXX
 
+This module contains code related to making a distance distribution using the assembly-vs-assembly
+alignments.
+
 This file is part of XXXXXXXXX. XXXXXXXXX is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by the Free Software Foundation,
 either version 3 of the License, or (at your option) any later version. XXXXXXXXX is distributed
@@ -11,74 +14,130 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 
+import collections
 import itertools
 import math
-from multiprocessing import Pool
 import numpy as np
+import re
 import statistics
 import sys
 
-from .log import log, section_header, explanation
+from .intrange import IntRange
+from .misc import get_fasta_size, get_n50
 
 
-def distance(args):
-    distances, aligned_fractions, sample_names = \
-        load_distances(args.alignment_results, args.method, args.threads)
-    add_self_distances(distances, aligned_fractions, sample_names)
-    check_matrix_size(distances, sample_names, args.alignment_results)
-    correct_distances(distances, aligned_fractions, sample_names, args.correction)
-    if not args.asymmetrical:
-        make_symmetrical(distances, sample_names)
-    output_phylip_matrix(distances, sample_names)
-
-
-def load_distances(alignment_results, method, threads):
-    section_header('Finding distances from distributions')
-    explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
-                'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
-                'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
-    distances, aligned_fractions, sample_names = {}, {}, set()
-
-    arg_list = []
-    with open(alignment_results, 'rt') as results:
-        for line in results:
-            if not line.startswith('#'):
-                arg_list.append((line, method))
-    count = len(arg_list)
-
-    # If only using a single thread, do the alignment in a simple loop (easier for debugging).
-    if threads == 1:
-        for a in arg_list:
-            a_1, a_2, d, aligned_fraction = load_one_distance(a)
-            sample_names.update([a_1, a_2])
-            distances[(a_1, a_2)] = d
-            aligned_fractions[(a_1, a_2)] = aligned_fraction
-            log(f'({len(distances)}/{count}) {a_1} vs {a_2}: {d:.9f}')
-
-    # If using multiple threads, do the alignments in a process pool.
+def get_distribution(args, alignments, assembly_filename_a):
+    """
+    Uses the alignments to build a distance distribution.
+    """
+    if args.ignore_indels:
+        all_cigars = [remove_indels(a.expanded_cigar) for a in alignments]
     else:
-        with Pool(processes=threads) as pool:
-            for a_1, a_2, d, aligned_fraction in pool.imap(load_one_distance, arg_list):
-                sample_names.update([a_1, a_2])
-                distances[(a_1, a_2)] = d
-                aligned_fractions[(a_1, a_2)] = aligned_fraction
-                log(f'({len(distances)}/{count}) {a_1} vs {a_2}: {d:.9f}')
+        all_cigars = [compress_indels(a.expanded_cigar) for a in alignments]
 
-    log()
-    return distances, aligned_fractions, sorted(sample_names)
+    n50_alignment_length = get_n50(len(c) for c in all_cigars)
+
+    aligned_frac = get_query_coverage(alignments, assembly_filename_a)
+    window_size, window_step = choose_window_size_and_step(all_cigars, args.window_count)
+    all_cigars = [c for c in all_cigars if len(c) >= window_size]
+    distances, max_difference_count = get_distances(all_cigars, window_size, window_step)
+    distance_counts = collections.Counter(distances)
+
+    masses = [0 if distance_counts[i] == 0 else distance_counts[i] / len(distances)
+              for i in range(max_difference_count + 1)]
+    mean_identity = 1.0 - get_distance(masses, window_size, 'mean')
+
+    log_text = [f'  N50 alignment length: {n50_alignment_length}',
+                f'  aligned fraction: {100.0 * aligned_frac:.2f}%',
+                f'  mean identity: {100.0 * mean_identity:.2f}%',
+                f'  distances sampled from {len(distances)} x {window_size} bp windows']
+
+    return masses, aligned_frac, window_size, log_text
 
 
-def load_one_distance(all_args):
-    line, method = all_args
-    parts = line.strip().split('\t')
-    assembly_1, assembly_2 = parts[0], parts[1]
-    piece_size = int(parts[2])
-    assert piece_size > 0
-    aligned_fraction = float(parts[3])
-    assert 0.0 <= aligned_fraction <= 1.0
-    masses = [float(p) for p in parts[4:]]
-    d = get_distance(masses, piece_size, method)
-    return assembly_1, assembly_2, d, aligned_fraction
+def choose_window_size_and_step(cigars, target_window_count):
+    """
+    This function chooses an appropriate window size and step for the given CIGARs. It tries to
+    balance larger windows, which give higher-resolution identity samples, especially with
+    closely-related assemblies, and smaller windows, which allow for more identity samples.
+    """
+    window_step = 1000
+    while window_step > 1:
+        window_size = window_step * 100
+        if get_window_count(cigars, window_size, window_step) > target_window_count:
+            return window_size, window_step
+        window_step -= 1
+    return window_step * 100, window_step
+
+
+def get_window_count(cigars, window_size, window_step):
+    """
+    For a given window size, window step and set of CIGARs, this function returns how many windows
+    there will be in total.
+    """
+    count = 0
+    for cigar in cigars:
+        cigar_len = len(cigar)
+        if cigar_len < window_size:
+            continue
+        cigar_len -= window_size
+        count += 1
+        count += cigar_len // window_step
+    return count
+
+
+
+def get_query_coverage(alignments, assembly_filename):
+    assembly_size = get_fasta_size(assembly_filename)
+    ranges_by_contig = {}
+    for a in alignments:
+        if a.query_name not in ranges_by_contig:
+            ranges_by_contig[a.query_name] = IntRange()
+        ranges_by_contig[a.query_name].add_range(a.query_start, a.query_end)
+    aligned_bases = sum(r.total_length() for r in ranges_by_contig.values())
+    assert aligned_bases <= assembly_size
+    return aligned_bases / assembly_size
+
+
+def get_distances(all_cigars, window_size, window_step):
+    distances, max_difference_count = [], 0
+    for cigar in all_cigars:
+        # TODO: trim CIGAR so windows fit in the middle?
+        start, end = 0, window_size
+        while end <= len(cigar):
+            cigar_window = cigar[start:end]
+            assert len(cigar_window) == window_size
+            difference_count = get_difference_count(cigar_window)
+            distances.append(difference_count)
+            max_difference_count = max(max_difference_count, difference_count)
+            start += window_step
+            end += window_step
+    return distances, max_difference_count
+
+
+def remove_indels(cigar):
+    """
+    Removes all indels from a CIGAR. For example:
+    in:  ===X=IIII==XX==DDDD==
+    out: ===X===XX====
+    """
+    return re.sub(r'I+', '', re.sub(r'D+', '', cigar))
+
+
+def compress_indels(cigar):
+    """
+    Compresses runs of indels into size-1 indels. For example:
+    in:  ===X=IIII==XX==DDDD==
+    out: ===X=I==XX==D==
+    """
+    return re.sub(r'I+', 'I', re.sub(r'D+', 'D', cigar))
+
+
+def get_difference_count(cigar):
+    """
+    Returns the number of mismatches and indels in the CIGAR.
+    """
+    return cigar.count('X') + cigar.count('I') + cigar.count('D')
 
 
 def get_distance(masses, piece_size, method):
