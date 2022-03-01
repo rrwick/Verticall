@@ -204,20 +204,25 @@ def output_phylip_matrix(distances, sample_names):
         print()
 
 
-def get_peak_distance(masses):
+def get_peak_distance(smoothed_masses, window_size):
     """
     Starts with the median and climb upwards, smoothing when a peak is reached. If a lot of
     smoothing doesn't change the peak, the process stops.
 
     The final returned value is interpolated from the peak and its neighbours.
     """
-    masses = smooth_distribution(masses)
-    peaks_with_total_mass = [(get_peak_total_mass(masses, p), p) for p in find_peaks(masses)]
-    peak = sorted(peaks_with_total_mass)[-1][1]
-    adjustment = interpolate(masses[peak-1] if peak > 0 else 0.0,
-                             masses[peak],
-                             masses[peak+1] if peak < len(masses)-1 else 0.0)
-    return peak + adjustment, masses
+    log_text = ['  mass peaks:']
+    peaks_with_total_mass = [(get_peak_total_mass(smoothed_masses, p)[0], p)
+                             for p in find_peaks(smoothed_masses)]
+    most_massive_peak = sorted(peaks_with_total_mass)[-1][1]
+    for mass, peak in peaks_with_total_mass:
+        star = ' *' if peak == most_massive_peak else ''
+        log_text.append(f'    {peak/window_size:.9f} ({100.0 * mass:.1f}%){star}')
+
+    # Get the lower and upper bounds of the peak.
+    _, low, high = get_peak_total_mass(smoothed_masses, most_massive_peak)
+
+    return most_massive_peak, low, high, log_text
 
 
 def climb_to_peak(masses, starting_point):
@@ -277,6 +282,10 @@ def smooth_distribution(masses, iterations=1000):
             smoothed[i] += force_1
             smoothed[i] += force_2
 
+    # Normalise to sum to one.
+    total = sum(smoothed)
+    smoothed = [s/total for s in smoothed]
+
     return smoothed
 
 
@@ -324,20 +333,20 @@ def get_peak_total_mass(masses, peak):
     """
     total = masses[peak]
 
-    # Add masses on the right side of the peak.
-    previous_mass = masses[peak]
-    i = peak+1
-    while i < len(masses) and masses[i] <= previous_mass:
-        total += masses[i]
-        previous_mass = masses[i]
-        i += 1
-
     # Add masses on the left side of the peak.
     previous_mass = masses[peak]
-    i = peak-1
-    while i >= 0 and masses[i] <= previous_mass:
-        total += masses[i]
-        previous_mass = masses[i]
-        i -= 1
+    low = peak-1
+    while low >= 0 and masses[low] <= previous_mass:
+        total += masses[low]
+        previous_mass = masses[low]
+        low -= 1
 
-    return total
+    # Add masses on the right side of the peak.
+    previous_mass = masses[peak]
+    high = peak+1
+    while high < len(masses) and masses[high] <= previous_mass:
+        total += masses[high]
+        previous_mass = masses[high]
+        high += 1
+
+    return total, low, high

@@ -16,6 +16,7 @@ import re
 import subprocess
 import sys
 
+from .distance import get_distance
 from .intrange import IntRange
 from .log import log, section_header, explanation
 from .misc import get_fasta_size, get_n50
@@ -87,23 +88,23 @@ def get_distribution(args, alignments, assembly_filename_a):
         all_cigars = [compress_indels(a.expanded_cigar) for a in alignments]
 
     n50_alignment_length = get_n50(len(c) for c in all_cigars)
-    log_text = [f'  N50 alignment length: {n50_alignment_length}']
 
-    query_coverage = get_query_coverage(alignments, assembly_filename_a)
-    mean_identity = 1.0 - (sum(get_difference_count(c) for c in all_cigars) /
-                           sum(len(c) for c in all_cigars))
-
-    log_text.append(f'  aligned fraction: {100.0 * query_coverage:.2f}%')
-    log_text.append(f'  mean identity: {100.0 * mean_identity:.2f}%')
-
+    aligned_frac = get_query_coverage(alignments, assembly_filename_a)
     window_size, window_step = choose_window_size_and_step(all_cigars, args.window_count)
     all_cigars = [c for c in all_cigars if len(c) >= window_size]
-
     distances, max_difference_count = get_distances(all_cigars, window_size, window_step)
     distance_counts = collections.Counter(distances)
-    log_text.append(f'  distances sampled from {len(distances)} x {window_size} bp windows')
 
-    return distance_counts, query_coverage, log_text
+    masses = [0 if distance_counts[i] == 0 else distance_counts[i] / len(distances)
+              for i in range(max_difference_count + 1)]
+    mean_identity = 1.0 - get_distance(masses, window_size, 'mean')
+
+    log_text = [f'  N50 alignment length: {n50_alignment_length}',
+                f'  aligned fraction: {100.0 * aligned_frac:.2f}%',
+                f'  mean identity: {100.0 * mean_identity:.2f}%',
+                f'  distances sampled from {len(distances)} x {window_size} bp windows']
+
+    return masses, aligned_frac, window_size, log_text
 
 
 def cull_redundant_alignments(alignments, allowed_overlap):
@@ -138,7 +139,7 @@ def get_distances(all_cigars, window_size, window_step):
             cigar_window = cigar[start:end]
             assert len(cigar_window) == window_size
             difference_count = get_difference_count(cigar_window)
-            distances.append(difference_count / window_size)
+            distances.append(difference_count)
             max_difference_count = max(max_difference_count, difference_count)
             start += window_step
             end += window_step

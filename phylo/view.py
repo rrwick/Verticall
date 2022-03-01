@@ -13,43 +13,48 @@ If not, see <https://www.gnu.org/licenses/>.
 
 import pandas as pd
 from plotnine import ggplot, aes, geom_segment, geom_line, geom_vline, labs, theme_bw, \
-    scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt
+    scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt, scale_color_manual
 import sys
 
-from .distance import get_distance, get_peak_distance
+from .distance import get_distance
 
 
-def view(args):
-    piece_size, aligned_frac, masses = \
-        load_distance_distribution(args.alignment_results, args.assembly_1, args.assembly_2)
+def show_plots(sample_name_a, sample_name_b, window_size, aligned_frac, masses, smoothed_masses,
+               low, high):
+    title = f'{sample_name_a} vs {sample_name_b}, {window_size} bp windows, ' \
+            f'{100.0 * aligned_frac:.1f}% aligned'
 
-    title = f'{args.assembly_1} vs {args.assembly_2} ({piece_size} bp windows)'
-    mean = get_distance(masses, piece_size, 'mean')
-    peak, smoothed_masses = get_peak_distance(masses)
-    peak /= piece_size
+    mean = get_distance(masses, window_size, 'mean')
+    peak_mean = get_distance([m if low <= i <= high else 0.0 for i, m in enumerate(masses)],
+                             window_size, 'mean')
 
-    x_max = len(masses) / piece_size
+    sqrt_x, sqrt_y = False, False  # TODO: get these from the command line options
+
+    x_max = len(masses) / window_size
     y_max = 1.05 * max(max(masses), max(smoothed_masses))
 
-    distances = [i / piece_size for i in range(len(masses))]
-    df = pd.DataFrame(list(zip(distances, masses, smoothed_masses)),
-                      columns=['distance', 'mass', 'smoothed_mass'])
+    distances = [i / window_size for i in range(len(masses))]
+    in_main_peak = [low <= i <= high for i in range(len(masses))]
+
+    df = pd.DataFrame(list(zip(distances, masses, smoothed_masses, in_main_peak)),
+                      columns=['distance', 'mass', 'smoothed_mass', 'in_main_peak'])
 
     g = (ggplot(df) +
-         geom_segment(aes(x='distance', xend='distance', y=0, yend='mass'),
-                      size=1, colour='#7570b3') +
+         geom_segment(aes(x='distance', xend='distance', y=0, yend='mass', colour='in_main_peak'),
+                      size=1) +
+         scale_color_manual({True: '#7570b3', False: '#eeaaaa'}, guide=False) +
          geom_line(aes(x='distance', y='smoothed_mass'), size=0.5) +
          geom_vline(xintercept=mean, colour='#d95f02', linetype='dotted', size=0.5) +
-         geom_vline(xintercept=peak, colour='#d95f02', linetype='dashed', size=0.5) +
+         geom_vline(xintercept=peak_mean, colour='#d95f02', linetype='dashed', size=0.5) +
          theme_bw() +
          labs(title=title, x='distance', y='probability mass'))
 
-    if args.sqrt_x:
+    if sqrt_x:
         g += scale_x_sqrt(limits=(0, x_max))
     else:
         g += scale_x_continuous(limits=(0, x_max))
 
-    if args.sqrt_y:
+    if sqrt_y:
         g += scale_y_sqrt(expand=(0, 0), limits=(0, y_max))
     else:
         g += scale_y_continuous(expand=(0, 0), limits=(0, y_max))

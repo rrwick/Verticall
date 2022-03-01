@@ -18,10 +18,12 @@ import pathlib
 import sys
 
 from .alignment import build_indices, align_sample_pair, get_distribution
+from .distance import smooth_distribution, get_peak_distance
 from .help_formatter import MyParser, MyHelpFormatter
 from .misc import check_python_version, get_ascii_art, get_default_thread_count
 from .log import bold, log, section_header, explanation
 from .version import __version__
+from .view import show_plots
 
 
 def main():
@@ -190,15 +192,18 @@ def process_all_pairs(args, assemblies):
 
 
 def process_one_pair(all_args, view=False):
-    args, assembly_filename_a, sample_name_a, sample_name_b = all_args
-    log_text = [f'{sample_name_a} vs {sample_name_b}:']
+    args, filename_a, sample_name_a, sample_name_b = all_args
+    all_log_text = [f'{sample_name_a} vs {sample_name_b}:']
 
-    alignments, alignment_log_text = align_sample_pair(args, assembly_filename_a, sample_name_b)
-    log_text += alignment_log_text
+    alignments, log_text = align_sample_pair(args, filename_a, sample_name_b)
+    all_log_text += log_text
 
-    distance_counts, query_coverage, distribution_log_text = \
-        get_distribution(args, alignments, assembly_filename_a)
-    log_text += distribution_log_text
+    masses, aligned_frac, window_size, log_text = get_distribution(args, alignments, filename_a)
+    all_log_text += log_text
+
+    smoothed_masses = smooth_distribution(masses)
+    peak, low, high, log_text = get_peak_distance(smoothed_masses, window_size)
+    all_log_text += log_text
 
     # TODO: find peaks and partition the distance distribution
     # TODO: paint each contig using the partitions
@@ -206,10 +211,9 @@ def process_one_pair(all_args, view=False):
     # TODO: save painting info to file
 
     if view:
-        log('\n'.join(log_text), end='\n\n')
-        # TODO: plot distance distribution
-        # TODO: plot assembly a painted contigs
-        # TODO: plot assembly b painted contigs
+        log('\n'.join(all_log_text), end='\n\n')
+        show_plots(sample_name_a, sample_name_b, window_size, aligned_frac, masses,
+                   smoothed_masses, low, high)
 
     return log_text
 

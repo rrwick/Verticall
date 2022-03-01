@@ -205,18 +205,18 @@ def test_climb_to_peak_4():
 
 
 def test_get_peak_distance_1():
-    assert phylo.distance.get_peak_distance([1.0, 0.0, 0.0, 0.0, 0.0])[0] == pytest.approx(0.0)
-    assert phylo.distance.get_peak_distance([0.0, 1.0, 0.0, 0.0, 0.0])[0] == pytest.approx(1.0)
-    assert phylo.distance.get_peak_distance([0.0, 0.0, 1.0, 0.0, 0.0])[0] == pytest.approx(2.0)
-    assert phylo.distance.get_peak_distance([0.0, 0.0, 0.0, 1.0, 0.0])[0] == pytest.approx(3.0)
-    assert phylo.distance.get_peak_distance([0.0, 0.0, 0.0, 0.0, 1.0])[0] == pytest.approx(4.0)
+    assert phylo.distance.get_peak_distance([1.0, 0.0, 0.0, 0.0, 0.0], 1)[0] == 0
+    assert phylo.distance.get_peak_distance([0.0, 1.0, 0.0, 0.0, 0.0], 1)[0] == 1
+    assert phylo.distance.get_peak_distance([0.0, 0.0, 1.0, 0.0, 0.0], 1)[0] == 2
+    assert phylo.distance.get_peak_distance([0.0, 0.0, 0.0, 1.0, 0.0], 1)[0] == 3
+    assert phylo.distance.get_peak_distance([0.0, 0.0, 0.0, 0.0, 1.0], 1)[0] == 4
 
 
 def test_get_peak_distance_2():
-    assert 0.0 < phylo.distance.get_peak_distance([0.7, 0.2, 0.1, 0.0, 0.0])[0] < 0.5
-    assert 1.0 < phylo.distance.get_peak_distance([0.1, 0.7, 0.2, 0.0, 0.0])[0] < 1.5
-    assert 2.0 < phylo.distance.get_peak_distance([0.0, 0.1, 0.7, 0.2, 0.0])[0] < 2.5
-    assert 3.0 < phylo.distance.get_peak_distance([0.0, 0.0, 0.1, 0.7, 0.2])[0] < 3.5
+    assert phylo.distance.get_peak_distance([0.7, 0.2, 0.1, 0.0, 0.0], 1)[0] == 0
+    assert phylo.distance.get_peak_distance([0.1, 0.7, 0.2, 0.0, 0.0], 1)[0] == 1
+    assert phylo.distance.get_peak_distance([0.0, 0.1, 0.7, 0.2, 0.0], 1)[0] == 2
+    assert phylo.distance.get_peak_distance([0.0, 0.0, 0.1, 0.7, 0.2], 1)[0] == 3
 
 
 def test_find_peaks_1():
@@ -244,10 +244,10 @@ def test_find_peaks_2():
 
 def test_get_peak_total_mass():
     masses = [0.0, 0.1, 0.2, 0.5, 0.1, 0.1, 0.0]
-    assert phylo.distance.get_peak_total_mass(masses, 3) == pytest.approx(1.0)
+    assert phylo.distance.get_peak_total_mass(masses, 3)[0] == pytest.approx(1.0)
     masses = [0.1, 0.2, 0.1, 0.0, 0.1, 0.4, 0.1]
-    assert phylo.distance.get_peak_total_mass(masses, 1) == pytest.approx(0.4)
-    assert phylo.distance.get_peak_total_mass(masses, 5) == pytest.approx(0.6)
+    assert phylo.distance.get_peak_total_mass(masses, 1)[0] == pytest.approx(0.4)
+    assert phylo.distance.get_peak_total_mass(masses, 5)[0] == pytest.approx(0.6)
     masses = [0.6, 0.1, 0.0, 0.0, 0.0, 0.1, 0.2]
-    assert phylo.distance.get_peak_total_mass(masses, 0) == pytest.approx(0.7)
-    assert phylo.distance.get_peak_total_mass(masses, 6) == pytest.approx(0.3)
+    assert phylo.distance.get_peak_total_mass(masses, 0)[0] == pytest.approx(0.7)
+    assert phylo.distance.get_peak_total_mass(masses, 6)[0] == pytest.approx(0.3)
