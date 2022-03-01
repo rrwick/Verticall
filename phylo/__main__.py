@@ -195,10 +195,10 @@ def process_one_pair(all_args, view=False):
     args, filename_a, sample_name_a, sample_name_b = all_args
     all_log_text = [f'{sample_name_a} vs {sample_name_b}:']
 
-    alignments, log_text = align_sample_pair(args, filename_a, sample_name_b)
+    alignments, aligned_frac, log_text = align_sample_pair(args, filename_a, sample_name_b)
     all_log_text += log_text
 
-    masses, aligned_frac, window_size, log_text = get_distribution(args, alignments, filename_a)
+    masses, window_size, log_text = get_distribution(args, alignments)
     all_log_text += log_text
 
     smoothed_masses = smooth_distribution(masses)

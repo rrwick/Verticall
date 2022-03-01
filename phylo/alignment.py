@@ -18,7 +18,9 @@ import re
 import subprocess
 import sys
 
+from .intrange import IntRange
 from .log import log, section_header, explanation
+from .misc import get_fasta_size, get_n50
 
 
 def build_indices(args, assemblies):
@@ -70,11 +72,16 @@ def align_sample_pair(args, assembly_filename_a, sample_name_b):
     alignments = [Alignment(line) for line in p.stdout.splitlines() if not line.startswith('@')]
     alignments = cull_redundant_alignments(alignments, args.allowed_overlap)
 
+    n50_alignment_length = get_n50(len(a.expanded_cigar) for a in alignments)
+    aligned_frac = get_query_coverage(alignments, assembly_filename_a)
+
     if not alignments:
         log_text.append('  no alignments found')
     else:
         log_text.append(f'  {len(alignments)} alignments')
-    return alignments, log_text
+        log_text.append(f'  N50 alignment length: {n50_alignment_length}')
+        log_text.append(f'  aligned fraction: {100.0 * aligned_frac:.2f}%')
+    return alignments, aligned_frac, log_text
 
 
 def cull_redundant_alignments(alignments, allowed_overlap):
@@ -86,6 +93,18 @@ def cull_redundant_alignments(alignments, allowed_overlap):
             alignments_no_redundancy.append(a)
         alignments_by_contig[a.query_name].append(a)
     return alignments_no_redundancy
+
+
+def get_query_coverage(alignments, assembly_filename):
+    assembly_size = get_fasta_size(assembly_filename)
+    ranges_by_contig = {}
+    for a in alignments:
+        if a.query_name not in ranges_by_contig:
+            ranges_by_contig[a.query_name] = IntRange()
+        ranges_by_contig[a.query_name].add_range(a.query_start, a.query_end)
+    aligned_bases = sum(r.total_length() for r in ranges_by_contig.values())
+    assert aligned_bases <= assembly_size
+    return aligned_bases / assembly_size
 
 
 class Alignment(object):

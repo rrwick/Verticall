@@ -22,11 +22,8 @@ import re
 import statistics
 import sys
 
-from .intrange import IntRange
-from .misc import get_fasta_size, get_n50
 
-
-def get_distribution(args, alignments, assembly_filename_a):
+def get_distribution(args, alignments):
     """
     Uses the alignments to build a distance distribution.
     """
@@ -35,9 +32,6 @@ def get_distribution(args, alignments, assembly_filename_a):
     else:
         all_cigars = [compress_indels(a.expanded_cigar) for a in alignments]
 
-    n50_alignment_length = get_n50(len(c) for c in all_cigars)
-
-    aligned_frac = get_query_coverage(alignments, assembly_filename_a)
     window_size, window_step = choose_window_size_and_step(all_cigars, args.window_count)
     all_cigars = [c for c in all_cigars if len(c) >= window_size]
     distances, max_difference_count = get_distances(all_cigars, window_size, window_step)
@@ -47,12 +41,10 @@ def get_distribution(args, alignments, assembly_filename_a):
               for i in range(max_difference_count + 1)]
     mean_identity = 1.0 - get_distance(masses, window_size, 'mean')
 
-    log_text = [f'  N50 alignment length: {n50_alignment_length}',
-                f'  aligned fraction: {100.0 * aligned_frac:.2f}%',
-                f'  mean identity: {100.0 * mean_identity:.2f}%',
+    log_text = [f'  mean identity: {100.0 * mean_identity:.2f}%',
                 f'  distances sampled from {len(distances)} x {window_size} bp windows']
 
-    return masses, aligned_frac, window_size, log_text
+    return masses, window_size, log_text
 
 
 def choose_window_size_and_step(cigars, target_window_count):
@@ -84,19 +76,6 @@ def get_window_count(cigars, window_size, window_step):
         count += 1
         count += cigar_len // window_step
     return count
-
-
-
-def get_query_coverage(alignments, assembly_filename):
-    assembly_size = get_fasta_size(assembly_filename)
-    ranges_by_contig = {}
-    for a in alignments:
-        if a.query_name not in ranges_by_contig:
-            ranges_by_contig[a.query_name] = IntRange()
-        ranges_by_contig[a.query_name].add_range(a.query_start, a.query_end)
-    aligned_bases = sum(r.total_length() for r in ranges_by_contig.values())
-    assert aligned_bases <= assembly_size
-    return aligned_bases / assembly_size
 
 
 def get_distances(all_cigars, window_size, window_step):
