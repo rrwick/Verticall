@@ -213,7 +213,7 @@ def process_one_pair(all_args, view=False):
     if view:
         log('\n'.join(all_log_text), end='\n\n')
         show_plots(sample_name_a, sample_name_b, window_size, aligned_frac, masses,
-                   smoothed_masses, low, high)
+                   smoothed_masses, low, high, args.sqrt_x, args.sqrt_y)
 
     return log_text
 

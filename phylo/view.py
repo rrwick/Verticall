@@ -20,15 +20,13 @@ from .distance import get_distance
 
 
 def show_plots(sample_name_a, sample_name_b, window_size, aligned_frac, masses, smoothed_masses,
-               low, high):
+               low, high, sqrt_x, sqrt_y):
     title = f'{sample_name_a} vs {sample_name_b}, {window_size} bp windows, ' \
             f'{100.0 * aligned_frac:.1f}% aligned'
 
     mean = get_distance(masses, window_size, 'mean')
     peak_mean = get_distance([m if low <= i <= high else 0.0 for i, m in enumerate(masses)],
                              window_size, 'mean')
-
-    sqrt_x, sqrt_y = False, False  # TODO: get these from the command line options
 
     x_max = len(masses) / window_size
     y_max = 1.05 * max(max(masses), max(smoothed_masses))
