@@ -22,6 +22,7 @@ from .distance import get_distribution, smooth_distribution, get_peak_distance
 from .help_formatter import MyParser, MyHelpFormatter
 from .misc import check_python_version, get_ascii_art, get_default_thread_count
 from .log import bold, log, section_header, explanation
+from .paint import paint_assemblies
 from .version import __version__
 from .view import show_plots
 
@@ -173,10 +174,10 @@ def process_all_pairs(args, assemblies):
                 'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
                 'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
     arg_list = []
-    for sample_name_a, assembly_filename_a in assemblies:
-        for sample_name_b, assembly_filename_b in assemblies:
-            if sample_name_a != sample_name_b:
-                arg_list.append((args, assembly_filename_a, sample_name_a, sample_name_b))
+    for name_a, filename_a in assemblies:
+        for name_b, filename_b in assemblies:
+            if name_a != name_b:
+                arg_list.append((args, name_a, name_b, filename_a, filename_b))
 
     # If only using a single thread, do the alignment in a simple loop (easier for debugging).
     if args.threads == 1:
@@ -191,11 +192,22 @@ def process_all_pairs(args, assemblies):
                 log('\n'.join(log_text), end='\n\n')
 
 
-def process_one_pair(all_args, view=False):
-    args, filename_a, sample_name_a, sample_name_b = all_args
-    all_log_text = [f'{sample_name_a} vs {sample_name_b}:']
+def view_one_pair(args, assemblies):
+    section_header('Viewing single pair')
+    explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
+                'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
+                'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
+    name_a, name_b = args.view.split(',')
+    filename_a = [filename for name, filename in assemblies if name == name_a][0]
+    filename_b = [filename for name, filename in assemblies if name == name_b][0]
+    process_one_pair([args, name_a, name_b, filename_a, filename_b], view=True)
 
-    alignments, aligned_frac, log_text = align_sample_pair(args, filename_a, sample_name_b)
+
+def process_one_pair(all_args, view=False):
+    args, name_a, name_b, filename_a, filename_b = all_args
+    all_log_text = [f'{name_a} vs {name_b}:']
+
+    alignments, aligned_frac, log_text = align_sample_pair(args, filename_a, name_b)
     all_log_text += log_text
 
     masses, window_size, log_text = get_distribution(args, alignments)
@@ -205,26 +217,19 @@ def process_one_pair(all_args, view=False):
     peak, low, high, log_text = get_peak_distance(smoothed_masses, window_size)
     all_log_text += log_text
 
-    # TODO: paint each contig using the partitions
+    painted_a, painted_b, log_text = paint_assemblies(args, name_a, name_b, filename_a, filename_b,
+                                                      alignments, window_size, low, high)
+    all_log_text += log_text
+
     # TODO: get mean distance using non-recombinant regions
     # TODO: save painting info to file
 
     if view:
         log('\n'.join(all_log_text), end='\n\n')
-        show_plots(sample_name_a, sample_name_b, window_size, aligned_frac, masses,
-                   smoothed_masses, low, high, args.sqrt_x, args.sqrt_y)
+        show_plots(name_a, name_b, window_size, aligned_frac, masses, smoothed_masses, low, high,
+                   painted_a, painted_b, args.sqrt_x, args.sqrt_y)
 
     return log_text
-
-
-def view_one_pair(args, assemblies):
-    section_header('Viewing single pair')
-    explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
-                'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
-                'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
-    sample_name_a, sample_name_b = args.view.split(',')
-    assembly_filename_a = [filename for name, filename in assemblies if name == sample_name_a][0]
-    process_one_pair([args, assembly_filename_a, sample_name_a, sample_name_b], view=True)
 
 
 if __name__ == '__main__':

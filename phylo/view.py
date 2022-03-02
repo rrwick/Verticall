@@ -13,16 +13,17 @@ If not, see <https://www.gnu.org/licenses/>.
 
 import pandas as pd
 from plotnine import ggplot, aes, geom_segment, geom_line, geom_vline, labs, theme_bw, \
-    scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt, scale_color_manual
-import sys
+    scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt, scale_color_manual, \
+    geom_point
 
 from .distance import get_distance
 
 
 def show_plots(sample_name_a, sample_name_b, window_size, aligned_frac, masses, smoothed_masses,
-               low, high, sqrt_x, sqrt_y):
+               low, high, painted_a, painted_b, sqrt_x, sqrt_y):
     distribution_plot(sample_name_a, sample_name_b, window_size, aligned_frac, masses,
                       smoothed_masses, low, high, sqrt_x, sqrt_y)
+    contig_plot(sample_name_a, painted_a, window_size, low, high)
 
 
 def distribution_plot(sample_name_a, sample_name_b, window_size, aligned_frac, masses,
@@ -66,17 +67,25 @@ def distribution_plot(sample_name_a, sample_name_b, window_size, aligned_frac, m
     g.draw(show=True)
 
 
-def load_distance_distribution(alignment_results, assembly_1, assembly_2):
-    with open(alignment_results, 'rt') as results:
-        for line in results:
-            if line.startswith('#'):
-                continue
-            parts = line.strip().split('\t')
-            if len(parts) < 5:
-                continue
-            if parts[0] == assembly_1 and parts[1] == assembly_2:
-                piece_size = int(parts[2])
-                aligned_frac = float(parts[3])
-                masses = [float(p) for p in parts[4:]]
-                return piece_size, aligned_frac, masses
-    sys.exit(f'\nError: could not find {assembly_1} and {assembly_2} in {alignment_results}')
+def contig_plot(sample_name_a, painted_a, window_size, low, high):
+    positions, differences, boundaries = [], [], []
+    i = 0
+    for name, contig in painted_a.contigs.items():
+        for pos, diff in contig.window_differences:
+            positions.append(i + pos)
+            differences.append(diff)
+        i += contig.length
+        boundaries.append(i)
+    if boundaries:
+        boundaries.pop()
+
+    df = pd.DataFrame(list(zip(positions, differences)), columns=['positions', 'differences'])
+
+    g = (ggplot(df) +
+         geom_line(aes(x='positions', y='differences'), size=0.5) +
+         theme_bw())
+
+    for b in boundaries:
+        g += geom_vline(xintercept=b, colour='#d95f02', linetype='dotted', size=0.5)
+
+    g.draw(show=True)

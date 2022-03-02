@@ -78,9 +78,9 @@ def align_sample_pair(args, assembly_filename_a, sample_name_b):
     if not alignments:
         log_text.append('  no alignments found')
     else:
-        log_text.append(f'  {len(alignments)} alignments')
-        log_text.append(f'  N50 alignment length: {n50_alignment_length}')
-        log_text.append(f'  aligned fraction: {100.0 * aligned_frac:.2f}%')
+        log_text.append(f'  {len(alignments)} alignments:')
+        log_text.append(f'    N50 alignment length: {n50_alignment_length}')
+        log_text.append(f'    aligned fraction: {100.0 * aligned_frac:.2f}%')
     return alignments, aligned_frac, log_text
 
 
@@ -168,3 +168,74 @@ def get_expanded_cigar(cigar):
         letter = p[-1]
         expanded_cigar.append(letter * size)
     return ''.join(expanded_cigar)
+
+
+def cigar_to_contig_positions(cigar, start, end):
+    """
+    Takes an expanded CIGAR and returns a list of the same length, where the list contains
+    contig positions corresponding to each CIGAR position.
+
+    Indels are interpreted from the contig's point of view. I.e. an insertion means the contig has
+    an extra base and a deletion means the contig is missing a base, so insertions 'consume'
+    sequence positions while deletions do not.
+    """
+    cigar_to_contig = []
+    i = start
+    for c in cigar:
+        cigar_to_contig.append(i)
+        if c == '=' or c == 'X' or c == 'I':
+            i += 1
+    assert i == end
+    return cigar_to_contig
+
+
+def remove_indels(cigar, cigar_to_contig=None):
+    """
+    Removes all indels from an expanded CIGAR. For example:
+    in:  ===X=IIII==XX==DDDD==
+    out: ===X===XX====
+
+    Can optionally take a list of cigar-to-contig positions, in which case it will also modify that
+    to match the returned CIGAR.
+    """
+    if cigar_to_contig is None:
+        return re.sub(r'I+', '', re.sub(r'D+', '', cigar))
+    assert len(cigar) == len(cigar_to_contig)
+    new_cigar, new_cigar_to_contig = [], []
+    for c, i in zip(cigar, cigar_to_contig):
+        if c == '=' or c == 'X':
+            new_cigar.append(c)
+            new_cigar_to_contig.append(i)
+    return ''.join(new_cigar), new_cigar_to_contig
+
+
+def compress_indels(cigar, cigar_to_contig=None):
+    """
+    Compresses runs of indels into size-1 indels in an expanded CIGAR. For example:
+    in:  ===X=IIII==XX==DDDD==
+    out: ===X=I==XX==D==
+
+    Can optionally take a list of cigar-to-contig positions, in which case it will also modify that
+    to match the returned CIGAR.
+    """
+    if cigar_to_contig is None:
+        return re.sub(r'I+', 'I', re.sub(r'D+', 'D', cigar))
+    assert len(cigar) == len(cigar_to_contig)
+    new_cigar, new_cigar_to_contig = [], []
+    for c, i in zip(cigar, cigar_to_contig):
+        if c == 'D' and len(new_cigar) > 0 and new_cigar[-1] == 'D':
+            new_cigar.pop()
+            new_cigar_to_contig.pop()
+        if c == 'I' and len(new_cigar) > 0 and new_cigar[-1] == 'I':
+            new_cigar.pop()
+            new_cigar_to_contig.pop()
+        new_cigar.append(c)
+        new_cigar_to_contig.append(i)
+    return ''.join(new_cigar), new_cigar_to_contig
+
+
+def swap_insertions_and_deletions(cigar):
+    """
+    Swaps I and D characters in an expanded CIGAR.
+    """
+    return cigar.replace('I', 'd').replace('D', 'I').replace('d', 'D')

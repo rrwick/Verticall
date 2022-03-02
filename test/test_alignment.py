@@ -71,3 +71,43 @@ def test_overlaps_4():
     for allowed_overlap in [5, 10, 100]:
         assert not a.overlaps(b, allowed_overlap)
         assert not b.overlaps(a, allowed_overlap)
+
+
+def test_swap_insertions_and_deletions():
+    assert phylo.alignment.swap_insertions_and_deletions('==========') == '=========='
+    assert phylo.alignment.swap_insertions_and_deletions('==I===II==') == '==D===DD=='
+    assert phylo.alignment.swap_insertions_and_deletions('=DDD==D=D=') == '=III==I=I='
+    assert phylo.alignment.swap_insertions_and_deletions('=IDI=DD=I=') == '=DID=II=D='
+
+
+def test_remove_indels():
+    assert phylo.alignment.remove_indels('========================') == '========================'
+    assert phylo.alignment.remove_indels('====X===XXX=====XX=XX===') == '====X===XXX=====XX=XX==='
+    assert phylo.alignment.remove_indels('=======IIIII====II===I==') == '================'
+    assert phylo.alignment.remove_indels('===DDD===D====DD===DD===') == '================'
+    assert phylo.alignment.remove_indels('==X==II===XXXII=IDD==X==') == '==X=====XXX===X=='
+
+    assert phylo.alignment.remove_indels('=====', [4, 5, 6, 7, 8]) == ('=====', [4, 5, 6, 7, 8])
+    assert phylo.alignment.remove_indels('==II=', [4, 5, 6, 7, 8]) == ('===', [4, 5, 8])
+    assert phylo.alignment.remove_indels('=D=D=', [4, 5, 6, 7, 8]) == ('===', [4, 6, 8])
+
+
+def test_compress_indels():
+    assert phylo.alignment.compress_indels('========================') == '========================'
+    assert phylo.alignment.compress_indels('====X===XXX=====XX=XX===') == '====X===XXX=====XX=XX==='
+    assert phylo.alignment.compress_indels('=======IIIII====II===I==') == '=======I====I===I=='
+    assert phylo.alignment.compress_indels('===DDD===D====DD===DD===') == '===D===D====D===D==='
+    assert phylo.alignment.compress_indels('==X==II===XXXII=IDD==X==') == '==X==I===XXXI=ID==X=='
+
+    assert phylo.alignment.compress_indels('=====', [4, 5, 6, 7, 8]) == ('=====', [4, 5, 6, 7, 8])
+    assert phylo.alignment.compress_indels('==II=', [4, 5, 6, 7, 8]) == ('==I=', [4, 5, 7, 8])
+    assert phylo.alignment.compress_indels('=D=D=', [4, 5, 6, 7, 8]) == ('=D=D=', [4, 5, 6, 7, 8])
+    assert phylo.alignment.compress_indels('=DDD=', [4, 5, 6, 7, 8]) == ('=D=', [4, 7, 8])
+
+
+def test_cigar_to_contig_positions():
+    assert phylo.alignment.cigar_to_contig_positions('=====', 0, 5) == [0, 1, 2, 3, 4]
+    assert phylo.alignment.cigar_to_contig_positions('=X=X=', 5, 10) == [5, 6, 7, 8, 9]
+    assert phylo.alignment.cigar_to_contig_positions('==I==', 2, 7) == [2, 3, 4, 5, 6]
+    assert phylo.alignment.cigar_to_contig_positions('==D==', 3, 7) == [3, 4, 5, 5, 6]
+    assert phylo.alignment.cigar_to_contig_positions('=D===', 3, 7) == [3, 4, 4, 5, 6]

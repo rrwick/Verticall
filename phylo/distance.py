@@ -18,9 +18,10 @@ import collections
 import itertools
 import math
 import numpy as np
-import re
 import statistics
 import sys
+
+from .alignment import remove_indels, compress_indels
 
 
 def get_distribution(args, alignments):
@@ -41,8 +42,10 @@ def get_distribution(args, alignments):
               for i in range(max_difference_count + 1)]
     mean_identity = 1.0 - get_distance(masses, window_size, 'mean')
 
-    log_text = [f'  mean identity: {100.0 * mean_identity:.2f}%',
-                f'  distances sampled from {len(distances)} x {window_size} bp windows']
+    log_text = [f'  distances sampled from sliding windows:',
+                f'    window size: {window_size} bp',
+                f'    window count: {len(distances)}',
+                f'    mean identity: {100.0 * mean_identity:.2f}%']
 
     return masses, window_size, log_text
 
@@ -92,24 +95,6 @@ def get_distances(all_cigars, window_size, window_step):
             start += window_step
             end += window_step
     return distances, max_difference_count
-
-
-def remove_indels(cigar):
-    """
-    Removes all indels from a CIGAR. For example:
-    in:  ===X=IIII==XX==DDDD==
-    out: ===X===XX====
-    """
-    return re.sub(r'I+', '', re.sub(r'D+', '', cigar))
-
-
-def compress_indels(cigar):
-    """
-    Compresses runs of indels into size-1 indels. For example:
-    in:  ===X=IIII==XX==DDDD==
-    out: ===X=I==XX==D==
-    """
-    return re.sub(r'I+', 'I', re.sub(r'D+', 'D', cigar))
 
 
 def get_difference_count(cigar):

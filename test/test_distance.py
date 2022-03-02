@@ -253,22 +253,6 @@ def test_get_peak_total_mass():
     assert phylo.distance.get_peak_total_mass(masses, 6)[0] == pytest.approx(0.3)
 
 
-def test_compress_indels():
-    assert phylo.distance.compress_indels('========================') == '========================'
-    assert phylo.distance.compress_indels('====X===XXX=====XX=XX===') == '====X===XXX=====XX=XX==='
-    assert phylo.distance.compress_indels('=======IIIII====II===I==') == '=======I====I===I=='
-    assert phylo.distance.compress_indels('===DDD===D====DD===DD===') == '===D===D====D===D==='
-    assert phylo.distance.compress_indels('==X==II===XXXII=IDD==X==') == '==X==I===XXXI=ID==X=='
-
-
-def test_remove_indels():
-    assert phylo.distance.remove_indels('========================') == '========================'
-    assert phylo.distance.remove_indels('====X===XXX=====XX=XX===') == '====X===XXX=====XX=XX==='
-    assert phylo.distance.remove_indels('=======IIIII====II===I==') == '================'
-    assert phylo.distance.remove_indels('===DDD===D====DD===DD===') == '================'
-    assert phylo.distance.remove_indels('==X==II===XXXII=IDD==X==') == '==X=====XXX===X=='
-
-
 def test_get_difference_count_1():
     assert phylo.distance.get_difference_count('==================================') == 0
     assert phylo.distance.get_difference_count('==========X=======================') == 1
