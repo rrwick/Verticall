@@ -30,6 +30,13 @@ def paint_assemblies(args, name_a, name_b, filename_a, filename_b, alignments, w
         painted_a.add_alignment(a, 'query', window_size, args.ignore_indels)
         painted_b.add_alignment(a, 'target', window_size, args.ignore_indels)
 
+    # TODO: finalise the painting
+    #   * define aligned vs unaligned regions of the assembly
+    #   * average the difference at each position of each contig (from overlapping windows)
+    #   * make a simplified collection of points for plotting (per aligned region)
+    #   * define recombinant vs non-recombinant regions
+    #   * join close recombinant regions to simplify
+
     return painted_a, painted_b, log_text
 
 
@@ -51,12 +58,23 @@ class PaintedAssembly(object):
             assert False
         self.contigs[name].add_alignment(start, end, cigar, window_size, ignore_indels)
 
+    def finalise(self):
+        for c in self.contigs.values():
+            c.finalise()
+
+    def get_max_differences(self):
+        if len(self.contigs) == 0:
+            return 0
+        else:
+            return max(c.get_max_differences() for c in self.contigs.values())
+
 
 class PaintedContig(object):
 
     def __init__(self, seq):
         self.length = len(seq)
-        self.window_differences = []   # (contig position, difference count)
+        self.differences = [0] * self.length  # difference count per aligned contig position
+        self.window_differences = []   # (contig start, contig end, difference count)
 
     def add_alignment(self, a_start, a_end, cigar, window_size, ignore_indels):
         assert window_size % 100 == 0
@@ -67,12 +85,29 @@ class PaintedContig(object):
         else:
             cigar, cigar_to_contig = compress_indels(cigar, cigar_to_contig)
 
+        # TODO: rework this loop so we sample to the very end of the alignment?
         start, end = 0, window_size
         while end <= len(cigar):
             cigar_window = cigar[start:end]
             assert len(cigar_window) == window_size
             difference_count = get_difference_count(cigar_window)
-            contig_pos = (cigar_to_contig[start] + cigar_to_contig[end-1]) // 2
-            self.window_differences.append((contig_pos, difference_count))
+            self.window_differences.append((cigar_to_contig[start], cigar_to_contig[end-1],
+                                            difference_count))
             start += window_step
             end += window_step
+
+    def finalise(self):
+        counts = [None] * self.length
+        for contig_range, differences in self.window_differences:
+            start, end = contig_range
+            # TODO
+            # TODO
+            # TODO
+            # TODO
+            # TODO
+
+    def get_max_differences(self):
+        if len(self.window_differences) == 0:
+            return 0
+        else:
+            return max(d[2] for d in self.window_differences)

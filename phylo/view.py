@@ -12,9 +12,9 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 import pandas as pd
-from plotnine import ggplot, aes, geom_segment, geom_line, geom_vline, labs, theme_bw, \
+from plotnine import ggplot, aes, geom_segment, geom_line, geom_hline, geom_vline, labs, theme_bw, \
     scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt, scale_color_manual, \
-    geom_point
+    element_blank, theme
 
 from .distance import get_distance
 
@@ -23,7 +23,7 @@ def show_plots(sample_name_a, sample_name_b, window_size, aligned_frac, masses, 
                low, high, painted_a, painted_b, sqrt_x, sqrt_y):
     distribution_plot(sample_name_a, sample_name_b, window_size, aligned_frac, masses,
                       smoothed_masses, low, high, sqrt_x, sqrt_y)
-    contig_plot(sample_name_a, painted_a, window_size, low, high)
+    contig_plot(sample_name_a, sample_name_b, aligned_frac, painted_a, window_size, low, high)
 
 
 def distribution_plot(sample_name_a, sample_name_b, window_size, aligned_frac, masses,
@@ -67,25 +67,35 @@ def distribution_plot(sample_name_a, sample_name_b, window_size, aligned_frac, m
     g.draw(show=True)
 
 
-def contig_plot(sample_name_a, painted_a, window_size, low, high):
-    positions, differences, boundaries = [], [], []
-    i = 0
-    for name, contig in painted_a.contigs.items():
-        for pos, diff in contig.window_differences:
-            positions.append(i + pos)
-            differences.append(diff)
-        i += contig.length
-        boundaries.append(i)
-    if boundaries:
-        boundaries.pop()
+def contig_plot(sample_name_a, sample_name_b, aligned_frac, painted, window_size, low, high):
+    title = f'{sample_name_a} vs {sample_name_b}, {window_size} bp windows, ' \
+            f'{100.0 * aligned_frac:.1f}% aligned'
 
-    df = pd.DataFrame(list(zip(positions, differences)), columns=['positions', 'differences'])
+    boundaries = [0]
+    x_max = 0
+    for name, contig in painted.contigs.items():
+        x_max += contig.length
+        boundaries.append(x_max)
+    y_max = painted.get_max_differences()
 
-    g = (ggplot(df) +
-         geom_line(aes(x='positions', y='differences'), size=0.5) +
-         theme_bw())
+    g = (ggplot() +
+         theme_bw() +
+         theme(panel_grid_major_x=element_blank(), panel_grid_minor_x=element_blank()) +
+         geom_hline(yintercept=low, colour='#d95f02', linetype='dotted') +
+         geom_hline(yintercept=high, colour='#d95f02', linetype='dotted') +
+         scale_y_continuous(expand=(0, 0), limits=(0, y_max)) +
+         scale_x_continuous(expand=(0, 0), limits=(0, x_max)) +
+         labs(title=title, x='contig position', y='distance'))
 
     for b in boundaries:
-        g += geom_vline(xintercept=b, colour='#d95f02', linetype='dotted', size=0.5)
+        g += geom_vline(xintercept=b, colour='#aaaaaa', size=0.5)
+
+    offset = 0
+    for name, contig in painted.contigs.items():
+        positions = [offset + d[0] for d in contig.window_differences]  # TEMP
+        differences = [d[2] for d in contig.window_differences]  # TEMP
+        df = pd.DataFrame(list(zip(positions, differences)), columns=['positions', 'differences'])
+        g += geom_line(data=df, mapping=aes(x='positions', y='differences'), size=0.5)
+        offset += contig.length
 
     g.draw(show=True)
