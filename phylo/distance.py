@@ -347,9 +347,9 @@ def get_peak_total_mass(masses, peak):
 
 
 def get_thresholds(masses, peak):
-    low_1, low_2 = get_low_thresholds(masses, peak)
-    high_1, high_2 = get_high_thresholds(masses, peak)
-    return {'low1': low_1, 'low2': low_2, 'high1': high_1, 'high2': high_2}
+    low, very_low = get_low_thresholds(masses, peak)
+    high, very_high = get_high_thresholds(masses, peak)
+    return {'low': low, 'very_low': very_low, 'high': high, 'very_high': very_high}
 
 
 def get_low_thresholds(masses, peak):

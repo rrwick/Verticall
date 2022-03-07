@@ -13,6 +13,7 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 
+import enum
 import collections
 import re
 import subprocess
@@ -109,16 +110,41 @@ def get_query_coverage(alignments, assembly_filename):
     return aligned_bases / assembly_size
 
 
+class Paint(enum.Enum):
+    VERTICAL = 1
+    HORIZONTAL = 2
+    BORDERLINE = 3
+    # TODO: split horizontal into low and high varieties?
+
+    def __repr__(self):
+        if self == Paint.VERTICAL:
+            return 'V'
+        elif self == Paint.HORIZONTAL:
+            return 'H'
+        elif self == Paint.BORDERLINE:
+            return 'B'
+        else:
+            assert False
+
+
 class Alignment(object):
 
     def __init__(self, paf_line, ignore_indels=False):
+        # Basic alignment info from the PAF file:
         self.query_name, self.query_length, self.query_start, self.query_end, self.strand, \
             self.target_name, self.target_length, self.target_start, self.target_end, \
             self.matches, self.alignment_length, self.percent_identity, self.cigar, \
             self.alignment_score = self.read_paf_columns(paf_line)
-        self.expanded_cigar, self.simplified_cigar, self.cigar_to_query, self.cigar_to_target = \
-            self.get_cigars(ignore_indels)
-        self.sliding_windows, self.window_differences = None, None
+
+        self.expanded_cigar = None    # the alignment CIGAR in an expanded format (e.g. ===X==I===)
+        self.simplified_cigar = None  # the expanded CIGAR with indels compressed/removed
+        self.cigar_to_query = None    # relates positions of the simplified CIGAR to the query seq
+        self.cigar_to_target = None   # relates positions of the simplified CIGAR to the target seq
+        self.set_up_cigars(ignore_indels)
+
+        self.sliding_windows = []         # Start/end pos of each window in the simplified CIGAR
+        self.window_differences = []      # The number of differences in each window
+        self.window_classifications = []  # Vertical/horizontal call for each window
 
     @staticmethod
     def read_paf_columns(paf_line):
@@ -147,23 +173,28 @@ class Alignment(object):
             target_length, target_start, target_end, matches, alignment_length, percent_identity,\
             cigar, alignment_score
 
-    def get_cigars(self, ignore_indels):
-        expanded_cigar = get_expanded_cigar(self.cigar)
-        cigar_to_query = cigar_to_contig_pos(expanded_cigar, self.query_start, self.query_end)
-        flipped_cigar = swap_insertions_and_deletions(expanded_cigar)
+    def set_up_cigars(self, ignore_indels):
+        """
+        Starting with the CIGAR from the PAF file, this method defines other CIGAR-related stuff.
+        """
+        self.expanded_cigar = get_expanded_cigar(self.cigar)
+        cigar_to_query = cigar_to_contig_pos(self.expanded_cigar, self.query_start, self.query_end)
+        flipped_cigar = swap_insertions_and_deletions(self.expanded_cigar)
         cigar_to_target = cigar_to_contig_pos(flipped_cigar, self.target_start, self.target_end)
 
         # Compress/remove indels from the CIGAR to make a simplified CIGAR over which the sliding
         # window will operate.
         indel_func = remove_indels if ignore_indels else compress_indels
-        simplified_cigar, cigar_to_query = indel_func(expanded_cigar, cigar_to_contig=cigar_to_query)
-        _, cigar_to_target = indel_func(expanded_cigar, cigar_to_contig=cigar_to_target)
-        assert len(simplified_cigar) == len(cigar_to_query) == len(cigar_to_target)
-
-        return expanded_cigar, simplified_cigar, cigar_to_query, cigar_to_target
+        self.simplified_cigar, self.cigar_to_query = indel_func(self.expanded_cigar,
+                                                                cigar_to_contig=cigar_to_query)
+        _, self.cigar_to_target = indel_func(self.expanded_cigar, cigar_to_contig=cigar_to_target)
+        assert len(self.simplified_cigar) == len(self.cigar_to_query) == len(self.cigar_to_target)
 
     def set_up_sliding_windows(self, window_size, window_step):
-        self.sliding_windows, self.window_differences = [], []
+        """
+        This method defines the positions of the alignment's sliding windows and the number of
+        differences in each window.
+        """
         if window_size > len(self.simplified_cigar):
             return
         window_count = get_window_count(len(self.simplified_cigar), window_size, window_step)
@@ -175,6 +206,43 @@ class Alignment(object):
             self.window_differences.append(get_difference_count(self.simplified_cigar[start:end]))
             start += window_step
             end += window_step
+
+    def paint_sliding_windows(self, thresholds):
+        """
+        This method assigns a vertical/horizontal call for each window.
+
+        Any window below the very_low threshold or above the very_high threshold is considered
+        horizontal. Any window between the low and high thresholds is considered vertical.
+
+        Windows between very_low and low or between high and very_high are borderline, and they
+        will be painted based on their neighbours. E.g. a borderline low window surrounded by
+        vertical windows is vertical, while a borderline low window surrounded by horizontal
+        windows is horizontal. Borderline windows surrounded by both are conservatively called as
+        horizontal.
+        """
+        very_low, low = thresholds['very_low'], thresholds['low']
+        high, very_high = thresholds['high'], thresholds['very_high']
+
+        if very_low is None:
+            very_low = float('-inf')
+            low = float('-inf')
+        if very_high is None:
+            very_high = float('inf')
+            high = float('inf')
+
+        for d in self.window_differences:
+            if d < very_low:
+                self.window_classifications.append(Paint.HORIZONTAL)
+            elif d < low:
+                self.window_classifications.append(Paint.BORDERLINE)
+            elif d > very_high:
+                self.window_classifications.append(Paint.HORIZONTAL)
+            elif d > high:
+                self.window_classifications.append(Paint.BORDERLINE)
+            else:
+                self.window_classifications.append(Paint.VERTICAL)
+
+        # TODO: simplify painting by changing borderline to either vertical or horizontal
 
     def query_covered_bases(self):
         return self.query_end - self.query_start

@@ -204,6 +204,13 @@ def view_one_pair(args, assemblies):
 
 
 def process_one_pair(all_args, view=False):
+    """
+    This is the master function for each pairwise comparison. It gets called once for each assembly
+    pair and carries out all analysis on that pair.
+
+    Since this function can be called in parallel, it doesn't log text directly, but instead
+    collects the text to be logged in a list which is returned.
+    """
     args, name_a, name_b, filename_a, filename_b = all_args
     all_log_text = [f'{name_a} vs {name_b}:']
 
@@ -216,6 +223,18 @@ def process_one_pair(all_args, view=False):
     smoothed_masses = smooth_distribution(masses)
     peak, thresholds, log_text = get_peak_distance(smoothed_masses, window_size)
     all_log_text += log_text
+
+    for a in alignments:
+        a.paint_sliding_windows(thresholds)
+        print(a.window_classifications)  # TEMP
+
+
+
+
+
+
+
+
 
     painted_a, painted_b, log_text = paint_assemblies(args, name_a, name_b, filename_a, filename_b,
                                                       alignments, window_size, thresholds)
