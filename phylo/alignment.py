@@ -20,7 +20,7 @@ import sys
 
 from .intrange import IntRange
 from .log import log, section_header, explanation
-from .misc import get_fasta_size, get_n50
+from .misc import get_fasta_size, get_n50, get_window_count, get_window_coverage
 
 
 def build_indices(args, assemblies):
@@ -118,6 +118,7 @@ class Alignment(object):
             self.alignment_score = self.read_paf_columns(paf_line)
         self.expanded_cigar, self.simplified_cigar, self.cigar_to_query, self.cigar_to_target = \
             self.get_cigars(ignore_indels)
+        self.sliding_windows, self.window_differences = None, None
 
     @staticmethod
     def read_paf_columns(paf_line):
@@ -161,6 +162,20 @@ class Alignment(object):
 
         return expanded_cigar, simplified_cigar, cigar_to_query, cigar_to_target
 
+    def set_up_sliding_windows(self, window_size, window_step):
+        self.sliding_windows, self.window_differences = [], []
+        if window_size > len(self.simplified_cigar):
+            return
+        window_count = get_window_count(len(self.simplified_cigar), window_size, window_step)
+        window_coverage = get_window_coverage(window_size, window_step, window_count)
+        start = (len(self.simplified_cigar) - window_coverage) // 2
+        end = start + window_size
+        while end <= len(self.simplified_cigar):
+            self.sliding_windows.append((start, end))
+            self.window_differences.append(get_difference_count(self.simplified_cigar[start:end]))
+            start += window_step
+            end += window_step
+
     def query_covered_bases(self):
         return self.query_end - self.query_start
 
@@ -192,6 +207,13 @@ def get_expanded_cigar(cigar):
         letter = p[-1]
         expanded_cigar.append(letter * size)
     return ''.join(expanded_cigar)
+
+
+def get_difference_count(cigar):
+    """
+    Returns the number of mismatches and indels in the CIGAR.
+    """
+    return cigar.count('X') + cigar.count('I') + cigar.count('D')
 
 
 def cigar_to_contig_pos(cigar, start, end):

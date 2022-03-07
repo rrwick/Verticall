@@ -129,3 +129,29 @@ def test_get_n50():
     assert phylo.misc.get_n50([1, 2, 3, 4, 1000]) == 1000
     assert phylo.misc.get_n50([12, 23455, 15, 12433, 15343, 9, 10]) == 15343
     assert phylo.misc.get_n50([]) == 0
+
+
+def test_get_window_count():
+    # ----------      ----------      ----------
+    #         ----------      ----------      ----------
+    # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    assert phylo.misc.get_window_count(50, 10, 8) == 6
+
+    # ----------       ----------       ----------
+    #          ----------       ----------
+    # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    assert phylo.misc.get_window_count(50, 10, 9) == 5
+
+    # ----------          ----------          ----------
+    #           ----------          ----------
+    # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    assert phylo.misc.get_window_count(50, 10, 10) == 5
+
+    # ----------            ----------
+    #            ----------            ----------
+    # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    assert phylo.misc.get_window_count(50, 10, 11) == 4
+
+
+def test_get_window_coverage():
+    assert phylo.misc.get_window_coverage(10, 8, 5) == 42

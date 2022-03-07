@@ -16,7 +16,7 @@ If not, see <https://www.gnu.org/licenses/>.
 
 from .alignment import remove_indels, compress_indels, swap_insertions_and_deletions, \
     cigar_to_contig_pos
-from .distance import get_difference_count
+from .alignment import get_difference_count
 from .misc import iterate_fasta
 
 

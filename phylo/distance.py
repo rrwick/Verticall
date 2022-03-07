@@ -28,15 +28,16 @@ def get_distribution(args, alignments):
     """
     all_cigars = [a.simplified_cigar for a in alignments]
     window_size, window_step = choose_window_size_and_step(all_cigars, args.window_count)
+    for a in alignments:
+        a.set_up_sliding_windows(window_size, window_step)
 
-
-
-    all_cigars = [c for c in all_cigars if len(c) >= window_size]
-    distances, max_difference_count = get_distances(all_cigars, window_size, window_step)
+    distances = []
+    for a in alignments:
+        distances += a.window_differences
     distance_counts = collections.Counter(distances)
 
     masses = [0 if distance_counts[i] == 0 else distance_counts[i] / len(distances)
-              for i in range(max_difference_count + 1)]
+              for i in range(max(distances) + 1)]
     mean_identity = 1.0 - get_distance(masses, window_size, 'mean')
 
     log_text = [f'  distances sampled from sliding windows:',
@@ -56,13 +57,13 @@ def choose_window_size_and_step(cigars, target_window_count):
     window_step = 1000
     while window_step > 1:
         window_size = window_step * 100
-        if get_window_count(cigars, window_size, window_step) > target_window_count:
+        if get_sliding_window_count(cigars, window_size, window_step) > target_window_count:
             return window_size, window_step
         window_step -= 1
     return window_step * 100, window_step
 
 
-def get_window_count(cigars, window_size, window_step):
+def get_sliding_window_count(cigars, window_size, window_step):
     """
     For a given window size, window step and set of CIGARs, this function returns how many windows
     there will be in total.
@@ -76,29 +77,6 @@ def get_window_count(cigars, window_size, window_step):
         count += 1
         count += cigar_len // window_step
     return count
-
-
-def get_distances(all_cigars, window_size, window_step):
-    distances, max_difference_count = [], 0
-    for cigar in all_cigars:
-        # TODO: trim CIGAR so windows fit in the middle?
-        start, end = 0, window_size
-        while end <= len(cigar):
-            cigar_window = cigar[start:end]
-            assert len(cigar_window) == window_size
-            difference_count = get_difference_count(cigar_window)
-            distances.append(difference_count)
-            max_difference_count = max(max_difference_count, difference_count)
-            start += window_step
-            end += window_step
-    return distances, max_difference_count
-
-
-def get_difference_count(cigar):
-    """
-    Returns the number of mismatches and indels in the CIGAR.
-    """
-    return cigar.count('X') + cigar.count('I') + cigar.count('D')
 
 
 def get_distance(masses, piece_size, method):

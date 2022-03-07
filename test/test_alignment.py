@@ -111,3 +111,16 @@ def test_cigar_to_contig_pos():
     assert phylo.alignment.cigar_to_contig_pos('==I==', 2, 7) == [2, 3, 4, 5, 6]
     assert phylo.alignment.cigar_to_contig_pos('==D==', 3, 7) == [3, 4, 5, 5, 6]
     assert phylo.alignment.cigar_to_contig_pos('=D===', 3, 7) == [3, 4, 4, 5, 6]
+
+
+def test_get_difference_count_1():
+    assert phylo.alignment.get_difference_count('==================================') == 0
+    assert phylo.alignment.get_difference_count('==========X=======================') == 1
+    assert phylo.alignment.get_difference_count('====D============D========D=======') == 3
+    assert phylo.alignment.get_difference_count('===========I==========I===========') == 2
+    assert phylo.alignment.get_difference_count('======D==X===I===XX====I=====D====') == 7
+
+
+def test_get_difference_count_2():
+    cigar = '=====XX===X===DDD===I======IIII===D==X====='
+    assert phylo.alignment.get_difference_count(phylo.alignment.compress_indels(cigar)) == 8

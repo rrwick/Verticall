@@ -253,35 +253,14 @@ def test_get_peak_total_mass():
     assert phylo.distance.get_peak_total_mass(masses, 6) == pytest.approx(0.3)
 
 
-def test_get_difference_count_1():
-    assert phylo.distance.get_difference_count('==================================') == 0
-    assert phylo.distance.get_difference_count('==========X=======================') == 1
-    assert phylo.distance.get_difference_count('====D============D========D=======') == 3
-    assert phylo.distance.get_difference_count('===========I==========I===========') == 2
-    assert phylo.distance.get_difference_count('======D==X===I===XX====I=====D====') == 7
-
-
-def test_get_difference_count_2():
-    cigar = '=====XX===X===DDD===I======IIII===D==X====='
-    assert phylo.distance.get_difference_count(phylo.distance.compress_indels(cigar)) == 8
-
-
-def test_get_window_count_1():
+def test_get_sliding_window_count_1():
     # Test get_window_count() by checking the numbers directly.
     cigars = ['='*1000, '='*100, '='*10]
-    assert phylo.distance.get_window_count(cigars, 1000, 100) == 1
-    assert phylo.distance.get_window_count(cigars, 500, 100) == 6
-    assert phylo.distance.get_window_count(cigars, 100, 100) == 11
-    assert phylo.distance.get_window_count(cigars, 100, 10) == 92
-    assert phylo.distance.get_window_count(cigars, 10, 10) == 111
-
-
-def test_get_window_count_2():
-    # Test get_window_count() by comparing the numbers to the results of get_distances().
-    for cigars in [['='*56743, '='*4324, '='*19], ['='*4565, '='*343, '='*12], ['='*9867, '='*789]]:
-        for window_size, window_step in [(1000, 100), (456, 12), (34234, 232), (2938, 23)]:
-            assert phylo.distance.get_window_count(cigars, window_size, window_step) == \
-                   len(phylo.distance.get_distances(cigars, window_size, window_step)[0])
+    assert phylo.distance.get_sliding_window_count(cigars, 1000, 100) == 1
+    assert phylo.distance.get_sliding_window_count(cigars, 500, 100) == 6
+    assert phylo.distance.get_sliding_window_count(cigars, 100, 100) == 11
+    assert phylo.distance.get_sliding_window_count(cigars, 100, 10) == 92
+    assert phylo.distance.get_sliding_window_count(cigars, 10, 10) == 111
 
 
 def test_find_local_minimum_to_right():

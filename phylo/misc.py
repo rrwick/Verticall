@@ -137,3 +137,34 @@ def get_n50(lengths):
         if total_so_far >= target_bases:
             return length
     return 0
+
+
+def get_window_count(full_length, window_size, window_step):
+    """
+    Returns the number of possible windows in a sequence, given the full sequence length, the
+    window size and the window step.
+
+    For example:
+      inputs: full_length=50, window_size=10, window_step=8
+      output: 5 windows
+    ----------      ----------      ----------
+            ----------      ----------
+    XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    """
+    if full_length < window_size:
+        return 0
+    return 1 + ((full_length - window_size) // window_step)
+
+
+def get_window_coverage(window_size, window_step, window_count):
+    """
+    Returns the number of bases covered by sliding windows.
+
+    For example:
+      inputs: window_size=10, window_step=8, window_count=5
+      output: 42
+    ----------      ----------      ----------
+            ----------      ----------
+    XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    """
+    return window_size + ((window_count-1) * window_step)
