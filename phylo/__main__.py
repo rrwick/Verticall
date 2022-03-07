@@ -214,11 +214,11 @@ def process_one_pair(all_args, view=False):
     all_log_text += log_text
 
     smoothed_masses = smooth_distribution(masses)
-    peak, low, high, log_text = get_peak_distance(smoothed_masses, window_size)
+    peak, thresholds, log_text = get_peak_distance(smoothed_masses, window_size)
     all_log_text += log_text
 
     painted_a, painted_b, log_text = paint_assemblies(args, name_a, name_b, filename_a, filename_b,
-                                                      alignments, window_size, low, high)
+                                                      alignments, window_size, thresholds)
     all_log_text += log_text
 
     # TODO: get mean distance using non-recombinant regions
@@ -226,7 +226,7 @@ def process_one_pair(all_args, view=False):
 
     if view:
         log('\n'.join(all_log_text), end='\n\n')
-        show_plots(name_a, name_b, window_size, aligned_frac, masses, smoothed_masses, low, high,
+        show_plots(name_a, name_b, window_size, aligned_frac, masses, smoothed_masses, thresholds,
                    painted_a, painted_b, args.sqrt_x, args.sqrt_y)
 
     return log_text

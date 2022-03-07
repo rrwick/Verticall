@@ -235,17 +235,17 @@ def get_peak_distance(smoothed_masses, window_size):
     The final returned value is interpolated from the peak and its neighbours.
     """
     log_text = ['  mass peaks:']
-    peaks_with_total_mass = [(get_peak_total_mass(smoothed_masses, p)[0], p)
+    peaks_with_total_mass = [(get_peak_total_mass(smoothed_masses, p), p)
                              for p in find_peaks(smoothed_masses)]
+    print(peaks_with_total_mass)
     most_massive_peak = sorted(peaks_with_total_mass)[-1][1]
     for mass, peak in peaks_with_total_mass:
         star = ' *' if peak == most_massive_peak else ''
         log_text.append(f'    {peak/window_size:.9f} ({100.0 * mass:.1f}%){star}')
 
-    # Get the lower and upper bounds of the peak.
-    _, low, high = get_peak_total_mass(smoothed_masses, most_massive_peak)
+    thresholds = get_thresholds(smoothed_masses, most_massive_peak)
 
-    return most_massive_peak, low, high, log_text
+    return most_massive_peak, thresholds, log_text
 
 
 def climb_to_peak(masses, starting_point):
@@ -313,10 +313,7 @@ def smooth_distribution(masses, iterations=1000):
 
 
 def get_force_scaling_factor(i):
-    """
-    https://www.desmos.com/calculator/xyxaykwudg
-    """
-    scaling_factor = 2.0 ** (-100.0 / (i+5.0)) - 0.0005
+    scaling_factor = 2.0 ** (-100.0 / (i + 10.0))
     return max(scaling_factor, 0.0)
 
 
@@ -372,4 +369,94 @@ def get_peak_total_mass(masses, peak):
         previous_mass = masses[high]
         high += 1
 
-    return total, low, high
+    return total
+
+
+def get_thresholds(masses, peak):
+    low_1, low_2 = get_low_thresholds(masses, peak)
+    high_1, high_2 = get_high_thresholds(masses, peak)
+    return {'low1': low_1, 'low2': low_2, 'high1': high_1, 'high2': high_2}
+
+
+def get_low_thresholds(masses, peak):
+    minimum = find_local_minimum_to_left(masses, peak)
+    if minimum is None:
+        return None, None
+    low_peak = find_local_maximum_to_left(masses, minimum)
+    if low_peak is None:
+        low_peak = 0
+    low_1 = (peak + minimum) / 2
+    low_2 = (minimum + low_peak) / 2
+    return low_1, low_2
+
+
+def get_high_thresholds(masses, peak):
+    minimum = find_local_minimum_to_right(masses, peak)
+    if minimum is None:
+        return None, None
+    high_peak = find_local_maximum_to_right(masses, minimum)
+    if high_peak is None:
+        high_peak = len(masses)-1
+    high_1 = (peak + minimum) / 2
+    high_2 = (minimum + high_peak) / 2
+    return high_1, high_2
+
+
+def find_local_minimum_to_right(masses, i):
+    """
+    Starting at a given index, this function looks for a local minimum to the right. If one exists,
+    its index is returned. If one does not exist (e.g. the masses decrease all the way to the end),
+    then None is returned.
+    """
+    if i == len(masses) - 1:
+        return None
+    while masses[i+1] < masses[i]:
+        i += 1
+        if i == len(masses)-1:
+            return None
+    return i
+
+
+def find_local_minimum_to_left(masses, i):
+    """
+    Starting at a given index, this function looks for a local minimum to the right. If one exists,
+    its index is returned. If one does not exist (e.g. the masses decrease all the way to the end),
+    then None is returned.
+    """
+    if i == 0:
+        return None
+    while masses[i-1] < masses[i]:
+        i -= 1
+        if i == 0:
+            return None
+    return i
+
+
+def find_local_maximum_to_right(masses, i):
+    """
+    Starting at a given index, this function looks for a local maximum to the right. If one exists,
+    its index is returned. If one does not exist (e.g. the masses increase all the way to the end),
+    then None is returned.
+    """
+    if i == len(masses) - 1:
+        return None
+    while masses[i+1] > masses[i]:
+        i += 1
+        if i == len(masses)-1:
+            return None
+    return i
+
+
+def find_local_maximum_to_left(masses, i):
+    """
+    Starting at a given index, this function looks for a local maximum to the right. If one exists,
+    its index is returned. If one does not exist (e.g. the masses increase all the way to the end),
+    then None is returned.
+    """
+    if i == 0:
+        return None
+    while masses[i-1] > masses[i]:
+        i -= 1
+        if i == 0:
+            return None
+    return i

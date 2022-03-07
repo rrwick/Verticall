@@ -204,19 +204,19 @@ def test_climb_to_peak_4():
     assert phylo.distance.climb_to_peak([0.10, 0.35, 0.35, 0.15, 0.05], 4) == 1
 
 
-def test_get_peak_distance_1():
-    assert phylo.distance.get_peak_distance([1.0, 0.0, 0.0, 0.0, 0.0], 1)[0] == 0
-    assert phylo.distance.get_peak_distance([0.0, 1.0, 0.0, 0.0, 0.0], 1)[0] == 1
-    assert phylo.distance.get_peak_distance([0.0, 0.0, 1.0, 0.0, 0.0], 1)[0] == 2
-    assert phylo.distance.get_peak_distance([0.0, 0.0, 0.0, 1.0, 0.0], 1)[0] == 3
-    assert phylo.distance.get_peak_distance([0.0, 0.0, 0.0, 0.0, 1.0], 1)[0] == 4
-
-
-def test_get_peak_distance_2():
-    assert phylo.distance.get_peak_distance([0.7, 0.2, 0.1, 0.0, 0.0], 1)[0] == 0
-    assert phylo.distance.get_peak_distance([0.1, 0.7, 0.2, 0.0, 0.0], 1)[0] == 1
-    assert phylo.distance.get_peak_distance([0.0, 0.1, 0.7, 0.2, 0.0], 1)[0] == 2
-    assert phylo.distance.get_peak_distance([0.0, 0.0, 0.1, 0.7, 0.2], 1)[0] == 3
+# def test_get_peak_distance_1():
+#     assert phylo.distance.get_peak_distance([1.0, 0.0, 0.0, 0.0, 0.0], 1)[0] == 0
+#     assert phylo.distance.get_peak_distance([0.0, 1.0, 0.0, 0.0, 0.0], 1)[0] == 1
+#     assert phylo.distance.get_peak_distance([0.0, 0.0, 1.0, 0.0, 0.0], 1)[0] == 2
+#     assert phylo.distance.get_peak_distance([0.0, 0.0, 0.0, 1.0, 0.0], 1)[0] == 3
+#     assert phylo.distance.get_peak_distance([0.0, 0.0, 0.0, 0.0, 1.0], 1)[0] == 4
+#
+#
+# def test_get_peak_distance_2():
+#     assert phylo.distance.get_peak_distance([0.7, 0.2, 0.1, 0.0, 0.0], 1)[0] == 0
+#     assert phylo.distance.get_peak_distance([0.1, 0.7, 0.2, 0.0, 0.0], 1)[0] == 1
+#     assert phylo.distance.get_peak_distance([0.0, 0.1, 0.7, 0.2, 0.0], 1)[0] == 2
+#     assert phylo.distance.get_peak_distance([0.0, 0.0, 0.1, 0.7, 0.2], 1)[0] == 3
 
 
 def test_find_peaks_1():
@@ -244,13 +244,13 @@ def test_find_peaks_2():
 
 def test_get_peak_total_mass():
     masses = [0.0, 0.1, 0.2, 0.5, 0.1, 0.1, 0.0]
-    assert phylo.distance.get_peak_total_mass(masses, 3)[0] == pytest.approx(1.0)
+    assert phylo.distance.get_peak_total_mass(masses, 3) == pytest.approx(1.0)
     masses = [0.1, 0.2, 0.1, 0.0, 0.1, 0.4, 0.1]
-    assert phylo.distance.get_peak_total_mass(masses, 1)[0] == pytest.approx(0.4)
-    assert phylo.distance.get_peak_total_mass(masses, 5)[0] == pytest.approx(0.6)
+    assert phylo.distance.get_peak_total_mass(masses, 1) == pytest.approx(0.4)
+    assert phylo.distance.get_peak_total_mass(masses, 5) == pytest.approx(0.6)
     masses = [0.6, 0.1, 0.0, 0.0, 0.0, 0.1, 0.2]
-    assert phylo.distance.get_peak_total_mass(masses, 0)[0] == pytest.approx(0.7)
-    assert phylo.distance.get_peak_total_mass(masses, 6)[0] == pytest.approx(0.3)
+    assert phylo.distance.get_peak_total_mass(masses, 0) == pytest.approx(0.7)
+    assert phylo.distance.get_peak_total_mass(masses, 6) == pytest.approx(0.3)
 
 
 def test_get_difference_count_1():
@@ -282,3 +282,41 @@ def test_get_window_count_2():
         for window_size, window_step in [(1000, 100), (456, 12), (34234, 232), (2938, 23)]:
             assert phylo.distance.get_window_count(cigars, window_size, window_step) == \
                    len(phylo.distance.get_distances(cigars, window_size, window_step)[0])
+
+
+def test_find_local_minimum_to_right():
+    masses = [0.25, 0.20, 0.10, 0.20, 0.25]
+    assert phylo.distance.find_local_minimum_to_right(masses, 0) == 2
+    masses = [0.25, 0.21, 0.19, 0.10, 0.25]
+    assert phylo.distance.find_local_minimum_to_right(masses, 0) == 3
+    masses = [0.25, 0.10, 0.19, 0.21, 0.25]
+    assert phylo.distance.find_local_minimum_to_right(masses, 0) == 1
+    masses = [0.26, 0.24, 0.21, 0.19, 0.10]
+    assert phylo.distance.find_local_minimum_to_right(masses, 0) is None
+
+
+def test_find_local_minimum_to_left():
+    masses = [0.25, 0.20, 0.10, 0.20, 0.25]
+    assert phylo.distance.find_local_minimum_to_left(masses, 4) == 2
+    masses = [0.25, 0.21, 0.19, 0.10, 0.25]
+    assert phylo.distance.find_local_minimum_to_left(masses, 4) == 3
+    masses = [0.25, 0.10, 0.19, 0.21, 0.25]
+    assert phylo.distance.find_local_minimum_to_left(masses, 4) == 1
+    masses = [0.10, 0.19, 0.21, 0.24, 0.26]
+    assert phylo.distance.find_local_minimum_to_left(masses, 4) is None
+
+
+def test_find_local_maximum_to_right():
+    masses = [0.25, 0.10, 0.20, 0.25, 0.20]
+    assert phylo.distance.find_local_maximum_to_right(masses, 1) == 3
+    masses = [0.25, 0.10, 0.20, 0.25, 0.20]
+    assert phylo.distance.find_local_maximum_to_right(masses, 2) == 3
+    masses = [0.20, 0.25, 0.10, 0.20, 0.25]
+    assert phylo.distance.find_local_maximum_to_right(masses, 2) is None
+
+
+def test_find_local_maximum_to_left():
+    masses = [0.25, 0.10, 0.20, 0.25, 0.20]
+    assert phylo.distance.find_local_maximum_to_left(masses, 1) is None
+    masses = [0.20, 0.25, 0.10, 0.20, 0.25]
+    assert phylo.distance.find_local_maximum_to_left(masses, 2) == 1

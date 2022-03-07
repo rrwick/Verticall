@@ -20,37 +20,53 @@ from .distance import get_distance
 
 
 def show_plots(sample_name_a, sample_name_b, window_size, aligned_frac, masses, smoothed_masses,
-               low, high, painted_a, painted_b, sqrt_x, sqrt_y):
+               thresholds, painted_a, painted_b, sqrt_x, sqrt_y):
     distribution_plot(sample_name_a, sample_name_b, window_size, aligned_frac, masses,
-                      smoothed_masses, low, high, sqrt_x, sqrt_y)
-    contig_plot(sample_name_a, sample_name_b, aligned_frac, painted_a, window_size, low, high)
+                      smoothed_masses, thresholds, sqrt_x, sqrt_y)
+    # contig_plot(sample_name_a, sample_name_b, aligned_frac, painted_a, window_size, thresholds)
 
 
 def distribution_plot(sample_name_a, sample_name_b, window_size, aligned_frac, masses,
-                      smoothed_masses, low, high, sqrt_x, sqrt_y):
+                      smoothed_masses, thresholds, sqrt_x, sqrt_y):
     title = f'{sample_name_a} vs {sample_name_b}, {window_size} bp windows, ' \
             f'{100.0 * aligned_frac:.1f}% aligned'
 
     mean = get_distance(masses, window_size, 'mean')
-    peak_mean = get_distance([m if low <= i <= high else 0.0 for i, m in enumerate(masses)],
-                             window_size, 'mean')
+    # peak_mean = get_distance([m if low <= i <= high else 0.0 for i, m in enumerate(masses)],
+    #                          window_size, 'mean')
 
     x_max = len(masses) / window_size
     y_max = 1.05 * max(max(masses), max(smoothed_masses))
 
     distances = [i / window_size for i in range(len(masses))]
-    in_main_peak = [low <= i <= high for i in range(len(masses))]
 
-    df = pd.DataFrame(list(zip(distances, masses, smoothed_masses, in_main_peak)),
-                      columns=['distance', 'mass', 'smoothed_mass', 'in_main_peak'])
+    grouping = []
+    low_2, low_1 = thresholds['low2'], thresholds['low1']
+    high_1, high_2 = thresholds['high1'], thresholds['high2']
+    for i in range(len(masses)):
+        if low_2 is not None and i < low_2:
+            grouping.append('low')
+        elif low_1 is not None and i < low_1:
+            grouping.append('lowish')
+        elif high_2 is not None and i > high_2:
+            grouping.append('high')
+        elif high_1 is not None and i > high_1:
+            grouping.append('highish')
+        else:
+            grouping.append('central')
+
+    df = pd.DataFrame(list(zip(distances, masses, smoothed_masses, grouping)),
+                      columns=['distance', 'mass', 'smoothed_mass', 'grouping'])
 
     g = (ggplot(df) +
-         geom_segment(aes(x='distance', xend='distance', y=0, yend='mass', colour='in_main_peak'),
+         geom_segment(aes(x='distance', xend='distance', y=0, yend='mass', colour='grouping'),
                       size=1) +
-         scale_color_manual({True: '#7570b3', False: '#eeaaaa'}, guide=False) +
+         scale_color_manual({'low': '#d6d6d6', 'lowish': '#d7cfff',
+                             'high': '#d6d6d6', 'highish': '#d7cfff',
+                             'central': '#7570b3'}, guide=False) +
          geom_line(aes(x='distance', y='smoothed_mass'), size=0.5) +
-         geom_vline(xintercept=mean, colour='#d95f02', linetype='dotted', size=0.5) +
-         geom_vline(xintercept=peak_mean, colour='#d95f02', linetype='dashed', size=0.5) +
+         # geom_vline(xintercept=mean, colour='#d95f02', linetype='dotted', size=0.5) +
+         # geom_vline(xintercept=peak_mean, colour='#d95f02', linetype='dashed', size=0.5) +
          theme_bw() +
          labs(title=title, x='distance', y='probability mass'))
 
@@ -67,7 +83,7 @@ def distribution_plot(sample_name_a, sample_name_b, window_size, aligned_frac, m
     g.draw(show=True)
 
 
-def contig_plot(sample_name_a, sample_name_b, aligned_frac, painted, window_size, low, high):
+def contig_plot(sample_name_a, sample_name_b, aligned_frac, painted, window_size, thresholds):
     title = f'{sample_name_a} vs {sample_name_b}, {window_size} bp windows, ' \
             f'{100.0 * aligned_frac:.1f}% aligned'
 

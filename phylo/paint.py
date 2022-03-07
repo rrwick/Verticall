@@ -21,7 +21,7 @@ from .misc import iterate_fasta
 
 
 def paint_assemblies(args, name_a, name_b, filename_a, filename_b, alignments, window_size,
-                     low, high):
+                     thresholds):
     log_text = [f'  painting {name_a}']
     painted_a = PaintedAssembly(filename_a)
     painted_b = PaintedAssembly(filename_b)
@@ -31,11 +31,15 @@ def paint_assemblies(args, name_a, name_b, filename_a, filename_b, alignments, w
         painted_b.add_alignment(a, 'target', window_size, args.ignore_indels)
 
     # TODO: finalise the painting
-    #   * define aligned vs unaligned regions of the assembly
-    #   * average the difference at each position of each contig (from overlapping windows)
+    #   * assign a value to each position of each contig:
+    #     * alignment identity (averaged over windows) if aligned
+    #     * 'None' if not aligned
     #   * make a simplified collection of points for plotting (per aligned region)
     #   * define recombinant vs non-recombinant regions
-    #   * join close recombinant regions to simplify
+    #     * intermediate positions surrounded by non-recombinant positions are non-recombinant
+    #     * intermediate positions surrounded by recombinant positions are recombinant
+    #     * intermediate positions surrounded by both (recombinant on one side, non-recombinant on
+    #       the other) are recombinant (i.e. erring on the side of calling recombination).
 
     return painted_a, painted_b, log_text
 
