@@ -21,8 +21,6 @@ import numpy as np
 import statistics
 import sys
 
-from .alignment import remove_indels, compress_indels
-
 
 def get_distribution(args, alignments):
     """
@@ -30,6 +28,9 @@ def get_distribution(args, alignments):
     """
     all_cigars = [a.simplified_cigar for a in alignments]
     window_size, window_step = choose_window_size_and_step(all_cigars, args.window_count)
+
+
+
     all_cigars = [c for c in all_cigars if len(c) >= window_size]
     distances, max_difference_count = get_distances(all_cigars, window_size, window_step)
     distance_counts = collections.Counter(distances)

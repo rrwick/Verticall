@@ -112,45 +112,54 @@ def get_query_coverage(alignments, assembly_filename):
 class Alignment(object):
 
     def __init__(self, paf_line, ignore_indels=False):
-        # Store the basic information from the PAF line.
+        self.query_name, self.query_length, self.query_start, self.query_end, self.strand, \
+            self.target_name, self.target_length, self.target_start, self.target_end, \
+            self.matches, self.alignment_length, self.percent_identity, self.cigar, \
+            self.alignment_score = self.read_paf_columns(paf_line)
+        self.expanded_cigar, self.simplified_cigar, self.cigar_to_query, self.cigar_to_target = \
+            self.get_cigars(ignore_indels)
+
+    @staticmethod
+    def read_paf_columns(paf_line):
         parts = paf_line.strip().split('\t')
         if len(parts) < 11:
             sys.exit('\nError: alignment file does not seem to be in PAF format')
-        self.query_name = parts[0]
-        self.query_length = int(parts[1])
-        self.query_start = int(parts[2])
-        self.query_end = int(parts[3])
-        self.strand = parts[4]
-        self.target_name = parts[5]
-        self.target_length = int(parts[6])
-        self.target_start = int(parts[7])
-        self.target_end = int(parts[8])
-        self.matches = int(parts[9])
-        self.alignment_length = int(parts[10])
-        self.percent_identity = 100.0 * self.matches / self.alignment_length
-        self.cigar, self.alignment_score = None, None
+        query_name = parts[0]
+        query_length = int(parts[1])
+        query_start = int(parts[2])
+        query_end = int(parts[3])
+        strand = parts[4]
+        target_name = parts[5]
+        target_length = int(parts[6])
+        target_start = int(parts[7])
+        target_end = int(parts[8])
+        matches = int(parts[9])
+        alignment_length = int(parts[10])
+        percent_identity = 100.0 * matches / alignment_length
+        cigar, alignment_score = None, None
         for part in parts:
             if part.startswith('cg:Z:'):
-                self.cigar = part[5:]
+                cigar = part[5:]
             if part.startswith('AS:i:'):
-                self.alignment_score = int(part[5:])
+                alignment_score = int(part[5:])
+        return query_name, query_length, query_start, query_end, strand, target_name,\
+            target_length, target_start, target_end, matches, alignment_length, percent_identity,\
+            cigar, alignment_score
 
-        # Produce the expanded CIGAR, along with position translations to both sequences.
-        self.expanded_cigar = get_expanded_cigar(self.cigar)
-        cigar_to_query = cigar_to_contig_positions(self.expanded_cigar,
-                                                   self.query_start, self.query_end)
-        flipped_cigar = swap_insertions_and_deletions(self.expanded_cigar)
-        cigar_to_target = cigar_to_contig_positions(flipped_cigar,
-                                                    self.target_start, self.target_end)
+    def get_cigars(self, ignore_indels):
+        expanded_cigar = get_expanded_cigar(self.cigar)
+        cigar_to_query = cigar_to_contig_pos(expanded_cigar, self.query_start, self.query_end)
+        flipped_cigar = swap_insertions_and_deletions(expanded_cigar)
+        cigar_to_target = cigar_to_contig_pos(flipped_cigar, self.target_start, self.target_end)
 
         # Compress/remove indels from the CIGAR to make a simplified CIGAR over which the sliding
         # window will operate.
         indel_func = remove_indels if ignore_indels else compress_indels
-        self.simplified_cigar, self.cigar_to_query = \
-            indel_func(self.expanded_cigar, cigar_to_contig=cigar_to_query)
-        _, self.cigar_to_target = \
-            indel_func(self.expanded_cigar, cigar_to_contig=cigar_to_target)
-        assert len(self.simplified_cigar) == len(self.cigar_to_query) == len(self.cigar_to_target)
+        simplified_cigar, cigar_to_query = indel_func(expanded_cigar, cigar_to_contig=cigar_to_query)
+        _, cigar_to_target = indel_func(expanded_cigar, cigar_to_contig=cigar_to_target)
+        assert len(simplified_cigar) == len(cigar_to_query) == len(cigar_to_target)
+
+        return expanded_cigar, simplified_cigar, cigar_to_query, cigar_to_target
 
     def query_covered_bases(self):
         return self.query_end - self.query_start
@@ -185,7 +194,7 @@ def get_expanded_cigar(cigar):
     return ''.join(expanded_cigar)
 
 
-def cigar_to_contig_positions(cigar, start, end):
+def cigar_to_contig_pos(cigar, start, end):
     """
     Takes an expanded CIGAR and returns a list of the same length, where the list contains
     contig positions corresponding to each CIGAR position.

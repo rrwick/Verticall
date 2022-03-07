@@ -105,9 +105,9 @@ def test_compress_indels():
     assert phylo.alignment.compress_indels('=DDD=', [4, 5, 6, 7, 8]) == ('=D=', [4, 7, 8])
 
 
-def test_cigar_to_contig_positions():
-    assert phylo.alignment.cigar_to_contig_positions('=====', 0, 5) == [0, 1, 2, 3, 4]
-    assert phylo.alignment.cigar_to_contig_positions('=X=X=', 5, 10) == [5, 6, 7, 8, 9]
-    assert phylo.alignment.cigar_to_contig_positions('==I==', 2, 7) == [2, 3, 4, 5, 6]
-    assert phylo.alignment.cigar_to_contig_positions('==D==', 3, 7) == [3, 4, 5, 5, 6]
-    assert phylo.alignment.cigar_to_contig_positions('=D===', 3, 7) == [3, 4, 4, 5, 6]
+def test_cigar_to_contig_pos():
+    assert phylo.alignment.cigar_to_contig_pos('=====', 0, 5) == [0, 1, 2, 3, 4]
+    assert phylo.alignment.cigar_to_contig_pos('=X=X=', 5, 10) == [5, 6, 7, 8, 9]
+    assert phylo.alignment.cigar_to_contig_pos('==I==', 2, 7) == [2, 3, 4, 5, 6]
+    assert phylo.alignment.cigar_to_contig_pos('==D==', 3, 7) == [3, 4, 5, 5, 6]
+    assert phylo.alignment.cigar_to_contig_pos('=D===', 3, 7) == [3, 4, 4, 5, 6]

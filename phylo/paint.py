@@ -15,7 +15,7 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 from .alignment import remove_indels, compress_indels, swap_insertions_and_deletions, \
-    cigar_to_contig_positions
+    cigar_to_contig_pos
 from .distance import get_difference_count
 from .misc import iterate_fasta
 
@@ -83,7 +83,7 @@ class PaintedContig(object):
     def add_alignment(self, a_start, a_end, cigar, window_size, ignore_indels):
         assert window_size % 100 == 0
         window_step = window_size // 100
-        cigar_to_contig = cigar_to_contig_positions(cigar, a_start, a_end)
+        cigar_to_contig = cigar_to_contig_pos(cigar, a_start, a_end)
         if ignore_indels:
             cigar, cigar_to_contig = remove_indels(cigar, cigar_to_contig)
         else:
