@@ -83,12 +83,12 @@ def parse_args(args):
     view_args = parser.add_argument_group('View settings')
     view_args.add_argument('--view', type=str,
                            help='Two assemblies (comma-separated) to view in plots')
-    view_args.add_argument('--sqrt_x', action='store_true',
-                           help='Use a square-root transform on the x-axis (default: no x-axis '
-                                'transform)')
-    view_args.add_argument('--sqrt_y', action='store_true',
-                           help='Use a square-root transform on the y-axis (default: no y-axis '
-                                'transform)')
+    view_args.add_argument('--sqrt_distance', action='store_true',
+                           help='Use a square-root transform on the genomic distance axis '
+                                '(default: no distance axis transform)')
+    view_args.add_argument('--sqrt_mass', action='store_true',
+                           help='Use a square-root transform on the probability mass axis '
+                                '(default: no mass axis transform)')
 
     setting_args = parser.add_argument_group('General settings')
     setting_args.add_argument('--verbose', action='store_true',
@@ -227,7 +227,7 @@ def process_one_pair(all_args, view=False):
     if view:
         log('\n'.join(all_log_text), end='\n\n')
         show_plots(name_a, name_b, window_size, aligned_frac, masses, smoothed_masses, thresholds,
-                   painted_a, painted_b, args.sqrt_x, args.sqrt_y)
+                   painted_a, painted_b, args.sqrt_distance, args.sqrt_mass)
 
     return log_text
 

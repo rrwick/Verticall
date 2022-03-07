@@ -28,11 +28,7 @@ def get_distribution(args, alignments):
     """
     Uses the alignments to build a distance distribution.
     """
-    if args.ignore_indels:
-        all_cigars = [remove_indels(a.expanded_cigar) for a in alignments]
-    else:
-        all_cigars = [compress_indels(a.expanded_cigar) for a in alignments]
-
+    all_cigars = [a.simplified_cigar for a in alignments]
     window_size, window_step = choose_window_size_and_step(all_cigars, args.window_count)
     all_cigars = [c for c in all_cigars if len(c) >= window_size]
     distances, max_difference_count = get_distances(all_cigars, window_size, window_step)
@@ -237,7 +233,6 @@ def get_peak_distance(smoothed_masses, window_size):
     log_text = ['  mass peaks:']
     peaks_with_total_mass = [(get_peak_total_mass(smoothed_masses, p), p)
                              for p in find_peaks(smoothed_masses)]
-    print(peaks_with_total_mass)
     most_massive_peak = sorted(peaks_with_total_mass)[-1][1]
     for mass, peak in peaks_with_total_mass:
         star = ' *' if peak == most_massive_peak else ''

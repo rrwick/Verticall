@@ -69,7 +69,9 @@ def align_sample_pair(args, assembly_filename_a, sample_name_b):
         log_text.append('  ' + ' '.join(str(x) for x in command))
     p = subprocess.run(command, capture_output=True, text=True)
 
-    alignments = [Alignment(line) for line in p.stdout.splitlines() if not line.startswith('@')]
+    ignore_indels = True if args.ignore_indels else False
+    alignments = [Alignment(line, ignore_indels) for line in p.stdout.splitlines()
+                  if not line.startswith('@')]
     alignments = cull_redundant_alignments(alignments, args.allowed_overlap)
 
     n50_alignment_length = get_n50(len(a.expanded_cigar) for a in alignments)
@@ -109,33 +111,46 @@ def get_query_coverage(alignments, assembly_filename):
 
 class Alignment(object):
 
-    def __init__(self, paf_line):
+    def __init__(self, paf_line, ignore_indels=False):
+        # Store the basic information from the PAF line.
         parts = paf_line.strip().split('\t')
         if len(parts) < 11:
-            sys.exit('\nError: alignment file does not seem to be in SAM format')
-
+            sys.exit('\nError: alignment file does not seem to be in PAF format')
         self.query_name = parts[0]
         self.query_length = int(parts[1])
         self.query_start = int(parts[2])
         self.query_end = int(parts[3])
         self.strand = parts[4]
-
         self.target_name = parts[5]
         self.target_length = int(parts[6])
         self.target_start = int(parts[7])
         self.target_end = int(parts[8])
-
         self.matches = int(parts[9])
         self.alignment_length = int(parts[10])
         self.percent_identity = 100.0 * self.matches / self.alignment_length
-
         self.cigar, self.alignment_score = None, None
         for part in parts:
             if part.startswith('cg:Z:'):
                 self.cigar = part[5:]
             if part.startswith('AS:i:'):
                 self.alignment_score = int(part[5:])
+
+        # Produce the expanded CIGAR, along with position translations to both sequences.
         self.expanded_cigar = get_expanded_cigar(self.cigar)
+        cigar_to_query = cigar_to_contig_positions(self.expanded_cigar,
+                                                   self.query_start, self.query_end)
+        flipped_cigar = swap_insertions_and_deletions(self.expanded_cigar)
+        cigar_to_target = cigar_to_contig_positions(flipped_cigar,
+                                                    self.target_start, self.target_end)
+
+        # Compress/remove indels from the CIGAR to make a simplified CIGAR over which the sliding
+        # window will operate.
+        indel_func = remove_indels if ignore_indels else compress_indels
+        self.simplified_cigar, self.cigar_to_query = \
+            indel_func(self.expanded_cigar, cigar_to_contig=cigar_to_query)
+        _, self.cigar_to_target = \
+            indel_func(self.expanded_cigar, cigar_to_contig=cigar_to_target)
+        assert len(self.simplified_cigar) == len(self.cigar_to_query) == len(self.cigar_to_target)
 
     def query_covered_bases(self):
         return self.query_end - self.query_start

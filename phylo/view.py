@@ -20,14 +20,14 @@ from .distance import get_distance
 
 
 def show_plots(sample_name_a, sample_name_b, window_size, aligned_frac, masses, smoothed_masses,
-               thresholds, painted_a, painted_b, sqrt_x, sqrt_y):
+               thresholds, painted_a, painted_b, sqrt_distance, sqrt_mass):
     distribution_plot(sample_name_a, sample_name_b, window_size, aligned_frac, masses,
-                      smoothed_masses, thresholds, sqrt_x, sqrt_y)
+                      smoothed_masses, thresholds, sqrt_distance, sqrt_mass)
     # contig_plot(sample_name_a, sample_name_b, aligned_frac, painted_a, window_size, thresholds)
 
 
 def distribution_plot(sample_name_a, sample_name_b, window_size, aligned_frac, masses,
-                      smoothed_masses, thresholds, sqrt_x, sqrt_y):
+                      smoothed_masses, thresholds, sqrt_distance, sqrt_mass):
     title = f'{sample_name_a} vs {sample_name_b}, {window_size} bp windows, ' \
             f'{100.0 * aligned_frac:.1f}% aligned'
 
@@ -70,12 +70,12 @@ def distribution_plot(sample_name_a, sample_name_b, window_size, aligned_frac, m
          theme_bw() +
          labs(title=title, x='distance', y='probability mass'))
 
-    if sqrt_x:
+    if sqrt_distance:
         g += scale_x_sqrt(limits=(0, x_max))
     else:
         g += scale_x_continuous(limits=(0, x_max))
 
-    if sqrt_y:
+    if sqrt_mass:
         g += scale_y_sqrt(expand=(0, 0), limits=(0, y_max))
     else:
         g += scale_y_continuous(expand=(0, 0), limits=(0, y_max))
