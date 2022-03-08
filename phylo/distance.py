@@ -38,12 +38,14 @@ def get_distribution(args, alignments):
 
     masses = [0 if distance_counts[i] == 0 else distance_counts[i] / len(distances)
               for i in range(max(distances) + 1)]
-    mean_identity = 1.0 - get_distance(masses, window_size, 'mean')
+    mean_distance = get_distance(masses, window_size, 'mean')
+    median_distance = get_distance(masses, window_size, 'median')
 
     log_text = [f'  distances sampled from sliding windows:',
                 f'    window size: {window_size} bp',
                 f'    window count: {len(distances)}',
-                f'    mean identity: {100.0 * mean_identity:.2f}%']
+                f'    mean distance: {mean_distance:.9f}',
+                f'    median distance: {median_distance:.9f}']
 
     return masses, window_size, log_text
 

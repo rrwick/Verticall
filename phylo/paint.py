@@ -15,9 +15,21 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 from .alignment import remove_indels, compress_indels, swap_insertions_and_deletions, \
-    cigar_to_contig_pos
-from .alignment import get_difference_count
+    cigar_to_contig_pos, get_difference_count
+from .distance import get_vertical_horizontal_distributions
 from .misc import iterate_fasta
+
+
+def paint_alignments(alignments, thresholds):
+    log_text = ['  painting alignments:']
+    for a in alignments:
+        a.paint_sliding_windows(thresholds)
+    vertical_masses, horizontal_masses = get_vertical_horizontal_distributions(alignments)
+    total_vertical_mass = sum(vertical_masses)
+    total_horizontal_mass = sum(horizontal_masses)
+    log_text.append(f'    vertical inheritance: {100.0 * total_vertical_mass:.2f}%')
+    log_text.append(f'    horizontal inheritance: {100.0 * total_horizontal_mass:.2f}%')
+    return vertical_masses, horizontal_masses, log_text
 
 
 def paint_assemblies(args, name_a, name_b, filename_a, filename_b, alignments, window_size,

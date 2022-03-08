@@ -18,12 +18,11 @@ import pathlib
 import sys
 
 from .alignment import build_indices, align_sample_pair
-from .distance import get_distribution, smooth_distribution, get_peak_distance, \
-    get_vertical_horizontal_distributions
+from .distance import get_distribution, smooth_distribution, get_peak_distance
 from .help_formatter import MyParser, MyHelpFormatter
 from .misc import check_python_version, get_ascii_art, get_default_thread_count
 from .log import bold, log, section_header, explanation
-from .paint import paint_assemblies
+from .paint import paint_alignments, paint_assemblies
 from .version import __version__
 from .view import show_plots
 
@@ -225,9 +224,8 @@ def process_one_pair(all_args, view=False):
     peak, thresholds, log_text = get_peak_distance(smoothed_masses, window_size)
     all_log_text += log_text
 
-    for a in alignments:
-        a.paint_sliding_windows(thresholds)
-    vertical_masses, horizontal_masses = get_vertical_horizontal_distributions(alignments)
+    vertical_masses, horizontal_masses, log_text = paint_alignments(alignments, thresholds)
+    all_log_text += log_text
 
     painted_a, painted_b, log_text = paint_assemblies(args, name_a, name_b, filename_a, filename_b,
                                                       alignments, window_size, thresholds)

@@ -19,25 +19,29 @@ from plotnine import ggplot, aes, geom_segment, geom_line, geom_hline, geom_vlin
 
 from .distance import get_distance
 
+VERTICAL_COLOUR = '#4859a0'
+HORIZONTAL_COLOUR = '#c47e7e'
+AMBIGUOUS_COLOUR = '#c9c9c9'
+
 
 def show_plots(sample_name_a, sample_name_b, window_size, aligned_frac, masses, smoothed_masses,
                thresholds, vertical_masses, horizontal_masses, painted_a, painted_b, sqrt_distance,
                sqrt_mass):
-    fig_1 = distribution_plot_1(sample_name_a, sample_name_b, window_size, aligned_frac, masses,
-                                smoothed_masses, thresholds, sqrt_distance, sqrt_mass)
-    fig_2 = distribution_plot_2(sample_name_a, sample_name_b, window_size, aligned_frac,
-                                vertical_masses, horizontal_masses, thresholds, sqrt_distance,
-                                sqrt_mass)
+    fig_1 = distribution_plot_1(sample_name_a, sample_name_b, window_size, masses, smoothed_masses,
+                                thresholds, sqrt_distance, sqrt_mass)
+    fig_2 = distribution_plot_2(sample_name_a, sample_name_b, window_size, vertical_masses,
+                                horizontal_masses, sqrt_distance, sqrt_mass)
     # fig_3 = contig_plot(sample_name_a, sample_name_b, aligned_frac, painted_a, window_size,
     #                     thresholds)
+
     plt.show()
 
 
-def distribution_plot_1(sample_name_a, sample_name_b, window_size, aligned_frac, masses,
+def distribution_plot_1(sample_name_a, sample_name_b, window_size, masses,
                         smoothed_masses, thresholds, sqrt_distance, sqrt_mass):
-    title = f'{sample_name_a} vs {sample_name_b}, {window_size} bp windows, ' \
-            f'{100.0 * aligned_frac:.1f}% aligned'
+    title = f'{sample_name_a} vs {sample_name_b} full distribution with thresholds'
     mean = get_distance(masses, window_size, 'mean')
+    median = get_distance(masses, window_size, 'median')
     x_max = len(masses) / window_size
     y_max = 1.05 * max(max(masses), max(smoothed_masses))
     distances = [i / window_size for i in range(len(masses))]
@@ -49,10 +53,12 @@ def distribution_plot_1(sample_name_a, sample_name_b, window_size, aligned_frac,
     g = (ggplot(df) +
          geom_segment(aes(x='distance', xend='distance', y=0, yend='mass', colour='grouping'),
                       size=1) +
-         scale_color_manual({'very_low': '#d6d6d6', 'low': '#d7cfff', 'very_high': '#d6d6d6',
-                             'high': '#d7cfff', 'central': '#7570b3'}, guide=False) +
+         scale_color_manual({'very_low': HORIZONTAL_COLOUR, 'low': AMBIGUOUS_COLOUR,
+                             'very_high': HORIZONTAL_COLOUR, 'high': AMBIGUOUS_COLOUR,
+                             'central': VERTICAL_COLOUR}, guide=False) +
          geom_line(aes(x='distance', y='smoothed_mass'), size=0.5) +
-         geom_vline(xintercept=mean, colour='#d95f02', linetype='dotted', size=0.5) +
+         geom_vline(xintercept=mean, colour='#000000', linetype='dotted', size=0.5) +
+         geom_vline(xintercept=median, colour='#000000', linetype='dashed', size=0.5) +
          theme_bw() +
          labs(title=title, x='distance', y='probability mass'))
 
@@ -68,11 +74,11 @@ def distribution_plot_1(sample_name_a, sample_name_b, window_size, aligned_frac,
     return g.draw()
 
 
-def distribution_plot_2(sample_name_a, sample_name_b, window_size, aligned_frac, vertical_masses,
-                        horizontal_masses, thresholds, sqrt_distance, sqrt_mass):
-    title = f'{sample_name_a} vs {sample_name_b}, {window_size} bp windows, ' \
-            f'{100.0 * aligned_frac:.1f}% aligned'
-    # mean = get_distance(masses, window_size, 'mean')
+def distribution_plot_2(sample_name_a, sample_name_b, window_size, vertical_masses,
+                        horizontal_masses, sqrt_distance, sqrt_mass):
+    title = f'{sample_name_a} vs {sample_name_b} vertical vs horizontal distribution'
+    mean = get_distance(vertical_masses, window_size, 'mean')
+    median = get_distance(vertical_masses, window_size, 'median')
     max_distance = max(len(vertical_masses), len(horizontal_masses))
     x_max = max_distance / window_size
     y_max = 1.05 * max(max(vertical_masses), max(horizontal_masses))
@@ -86,12 +92,11 @@ def distribution_plot_2(sample_name_a, sample_name_b, window_size, aligned_frac,
 
     g = (ggplot(df) +
          geom_segment(aes(x='distance', xend='distance', y=0, yend='vertical_mass'),
-                      size=1, colour='#7570b3') +
+                      size=1, colour=VERTICAL_COLOUR) +
          geom_segment(aes(x='distance', xend='distance', y='vertical_mass', yend='total_mass'),
-                      size=1, colour='#d6d6d6') +
-         scale_color_manual({'very_low': '#d6d6d6', 'low': '#d7cfff', 'very_high': '#d6d6d6',
-                             'high': '#d7cfff', 'central': '#7570b3'}, guide=False) +
-         # geom_vline(xintercept=mean, colour='#d95f02', linetype='dotted', size=0.5) +
+                      size=1, colour=HORIZONTAL_COLOUR) +
+         geom_vline(xintercept=mean, colour='#000000', linetype='dotted', size=0.5) +
+         geom_vline(xintercept=median, colour='#000000', linetype='dashed', size=0.5) +
          theme_bw() +
          labs(title=title, x='distance', y='probability mass'))
 
