@@ -13,7 +13,6 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 
-import enum
 import collections
 import re
 import subprocess
@@ -22,6 +21,7 @@ import sys
 from .intrange import IntRange
 from .log import log, section_header, explanation
 from .misc import get_fasta_size, get_n50, get_window_count, get_window_coverage
+from .paint import Paint
 
 
 def build_indices(args, assemblies):
@@ -108,23 +108,6 @@ def get_query_coverage(alignments, assembly_filename):
     aligned_bases = sum(r.total_length() for r in ranges_by_contig.values())
     assert aligned_bases <= assembly_size
     return aligned_bases / assembly_size
-
-
-class Paint(enum.Enum):
-    VERTICAL = 1
-    HORIZONTAL = 2
-    AMBIGUOUS = 3
-    # TODO: split horizontal into low and high varieties?
-
-    def __repr__(self):
-        if self == Paint.VERTICAL:
-            return 'V'
-        elif self == Paint.HORIZONTAL:
-            return 'H'
-        elif self == Paint.AMBIGUOUS:
-            return '?'
-        else:
-            assert False
 
 
 class Alignment(object):

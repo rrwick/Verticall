@@ -14,10 +14,35 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 
-from .alignment import remove_indels, compress_indels, swap_insertions_and_deletions, \
-    cigar_to_contig_pos, get_difference_count
+import enum
+
 from .distance import get_vertical_horizontal_distributions
+from .intrange import IntRange
 from .misc import iterate_fasta
+
+
+class AlignmentRole(enum.Enum):
+    QUERY = 0
+    TARGET = 1
+
+
+class Paint(enum.Enum):
+    UNALIGNED = 0
+    VERTICAL = 1
+    HORIZONTAL = 2
+    AMBIGUOUS = 3
+
+    def __repr__(self):
+        if self == Paint.UNALIGNED:
+            return 'U'
+        elif self == Paint.VERTICAL:
+            return 'V'
+        elif self == Paint.HORIZONTAL:
+            return 'H'
+        elif self == Paint.AMBIGUOUS:
+            return '?'
+        else:
+            assert False
 
 
 def paint_alignments(alignments, thresholds):
@@ -32,26 +57,16 @@ def paint_alignments(alignments, thresholds):
     return vertical_masses, horizontal_masses, log_text
 
 
-def paint_assemblies(args, name_a, name_b, filename_a, filename_b, alignments, window_size,
-                     thresholds):
-    log_text = [f'  painting {name_a}']
+def paint_assemblies(name_a, name_b, filename_a, filename_b, alignments):
     painted_a = PaintedAssembly(filename_a)
     painted_b = PaintedAssembly(filename_b)
 
     for a in alignments:
-        painted_a.add_alignment(a, 'query', window_size, args.ignore_indels)
-        painted_b.add_alignment(a, 'target', window_size, args.ignore_indels)
+        painted_a.add_alignment(a, AlignmentRole.QUERY)
+        painted_b.add_alignment(a, AlignmentRole.TARGET)
 
-    # TODO: finalise the painting
-    #   * assign a value to each position of each contig:
-    #     * alignment identity (averaged over windows) if aligned
-    #     * 'None' if not aligned
-    #   * make a simplified collection of points for plotting (per aligned region)
-    #   * define recombinant vs non-recombinant regions
-    #     * intermediate positions surrounded by non-recombinant positions are non-recombinant
-    #     * intermediate positions surrounded by recombinant positions are recombinant
-    #     * intermediate positions surrounded by both (recombinant on one side, non-recombinant on
-    #       the other) are recombinant (i.e. erring on the side of calling recombination).
+    log_text = [f'  painting {name_a}:',
+                f'  painting {name_b}:']
 
     return painted_a, painted_b, log_text
 
@@ -63,20 +78,9 @@ class PaintedAssembly(object):
         for name, seq in iterate_fasta(fasta_filename):
             self.contigs[name] = PaintedContig(seq)
 
-    def add_alignment(self, a, assembly_status, window_size, ignore_indels):
-        if assembly_status == 'query':
-            name, start, end = a.query_name, a.query_start, a.query_end
-            cigar = a.expanded_cigar
-        elif assembly_status == 'target':
-            name, start, end = a.target_name, a.target_start, a.target_end
-            cigar = swap_insertions_and_deletions(a.expanded_cigar)
-        else:
-            assert False
-        self.contigs[name].add_alignment(start, end, cigar, window_size, ignore_indels)
-
-    def finalise(self):
-        for c in self.contigs.values():
-            c.finalise()
+    def add_alignment(self, a, role):
+        name = a.query_name if role == AlignmentRole.QUERY else a.target_name
+        self.contigs[name].add_alignment(a, role)
 
     def get_max_differences(self):
         if len(self.contigs) == 0:
@@ -89,41 +93,87 @@ class PaintedContig(object):
 
     def __init__(self, seq):
         self.length = len(seq)
-        self.differences = [0] * self.length  # difference count per aligned contig position
-        self.window_differences = []   # (contig start, contig end, difference count)
+        self.paint = [Paint.UNALIGNED] * self.length
+        self.alignment_points = []
 
-    def add_alignment(self, a_start, a_end, cigar, window_size, ignore_indels):
-        assert window_size % 100 == 0
-        window_step = window_size // 100
-        cigar_to_contig = cigar_to_contig_pos(cigar, a_start, a_end)
-        if ignore_indels:
-            cigar, cigar_to_contig = remove_indels(cigar, cigar_to_contig)
-        else:
-            cigar, cigar_to_contig = compress_indels(cigar, cigar_to_contig)
+    def add_alignment(self, a, role):
+        cigar_to_seq = a.cigar_to_query if role == AlignmentRole.QUERY else a.cigar_to_target
+        points = []
+        vertical_ranges = IntRange()
+        horizontal_ranges = IntRange()
+        for i, window in enumerate(a.sliding_windows):
+            differences = a.window_differences[i]
+            classification = a.window_classifications[i]
+            a_start, a_end = window
 
-        # TODO: rework this loop so we sample to the very end of the alignment?
-        start, end = 0, window_size
-        while end <= len(cigar):
-            cigar_window = cigar[start:end]
-            assert len(cigar_window) == window_size
-            difference_count = get_difference_count(cigar_window)
-            self.window_differences.append((cigar_to_contig[start], cigar_to_contig[end-1],
-                                            difference_count))
-            start += window_step
-            end += window_step
+            # First and last windows are extended to the edges of the alignment.
+            if i == 0:
+                a_start = 0
+            if i == len(a.sliding_windows) - 1:
+                a_end = len(a.simplified_cigar) - 1
 
-    def finalise(self):
-        counts = [None] * self.length
-        for contig_range, differences in self.window_differences:
-            start, end = contig_range
-            # TODO
-            # TODO
-            # TODO
-            # TODO
-            # TODO
+            seq_start, seq_end = cigar_to_seq[a_start], cigar_to_seq[a_end]
+            seq_centre = (seq_start + seq_end) / 2
+            points.append((seq_centre, differences))
+
+            if classification == Paint.VERTICAL:
+                vertical_ranges.add_range(seq_start, seq_end)
+            elif classification == Paint.HORIZONTAL:
+                horizontal_ranges.add_range(seq_start, seq_end)
+            else:
+                assert False
+
+        for start, end in horizontal_ranges.ranges:
+            for i in range(start, end+1):
+                self.paint_position(i, Paint.HORIZONTAL)
+        for start, end in vertical_ranges.ranges:
+            for i in range(start, end+1):
+                self.paint_position(i, Paint.VERTICAL)
+
+        self.alignment_points.append(points)
 
     def get_max_differences(self):
-        if len(self.window_differences) == 0:
-            return 0
-        else:
-            return max(d[2] for d in self.window_differences)
+        max_differences = 0
+        for points in self.alignment_points:
+            differences = [p[1] for p in points]
+            if differences:
+                max_differences = max(max_differences, max(differences))
+        return max_differences
+
+    def paint_position(self, i, classification):
+        """
+        Paints a single position of the contig. Both VERTICAL and HORIZONTAL paint over UNALIGNED,
+        and VERTICAL paints over HORIZONTAL. I.e. VERTICAL takes precedence, then HORIZONTAL, then
+        UNALIGNED.
+        """
+        assert classification == Paint.VERTICAL or classification == Paint.HORIZONTAL
+        if self.paint[i] != Paint.VERTICAL:
+            self.paint[i] = classification
+
+    def get_vertical_blocks(self):
+        """
+        Returns a list of all ranges of the contig which have been painted as vertical.
+        """
+        return get_blocks(self.paint, Paint.VERTICAL)
+
+    def get_horizontal_blocks(self):
+        """
+        Returns a list of all ranges of the contig which have been painted as horizontal.
+        """
+        return get_blocks(self.paint, Paint.HORIZONTAL)
+
+
+def get_blocks(paint, classification):
+    blocks = []
+    start, end = None, None
+    for i, c in enumerate(paint):
+        if c == classification:
+            if start is None:
+                start = i
+            end = i + 1
+        elif start is not None:
+            blocks.append((start, end))
+            start, end = None, None
+    if start is not None:
+        blocks.append((start, end))
+    return blocks

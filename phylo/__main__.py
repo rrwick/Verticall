@@ -227,8 +227,8 @@ def process_one_pair(all_args, view=False):
     vertical_masses, horizontal_masses, log_text = paint_alignments(alignments, thresholds)
     all_log_text += log_text
 
-    painted_a, painted_b, log_text = paint_assemblies(args, name_a, name_b, filename_a, filename_b,
-                                                      alignments, window_size, thresholds)
+    painted_a, painted_b, log_text = paint_assemblies(name_a, name_b, filename_a, filename_b,
+                                                      alignments)
     all_log_text += log_text
 
     # TODO: get mean distance using non-recombinant regions

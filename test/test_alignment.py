@@ -15,6 +15,7 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 import phylo.alignment
+import phylo.paint
 
 
 def test_get_expanded_cigar():
@@ -127,9 +128,9 @@ def test_get_difference_count_2():
 
 
 def test_find_ambiguous_runs():
-    h = phylo.alignment.Paint.HORIZONTAL
-    v = phylo.alignment.Paint.VERTICAL
-    a = phylo.alignment.Paint.AMBIGUOUS
+    h = phylo.paint.Paint.HORIZONTAL
+    v = phylo.paint.Paint.VERTICAL
+    a = phylo.paint.Paint.AMBIGUOUS
     assert phylo.alignment.find_ambiguous_runs([h, h, h, h, h, h]) == []
     assert phylo.alignment.find_ambiguous_runs([v, v, v, v, v, v]) == []
     assert phylo.alignment.find_ambiguous_runs([h, h, a, h, h, h]) == [(2, 3)]
@@ -140,9 +141,9 @@ def test_find_ambiguous_runs():
 
 
 def test_remove_ambiguous():
-    h = phylo.alignment.Paint.HORIZONTAL
-    v = phylo.alignment.Paint.VERTICAL
-    a = phylo.alignment.Paint.AMBIGUOUS
+    h = phylo.paint.Paint.HORIZONTAL
+    v = phylo.paint.Paint.VERTICAL
+    a = phylo.paint.Paint.AMBIGUOUS
     assert phylo.alignment.remove_ambiguous([h, h, h, h, h, h]) == [h, h, h, h, h, h]
     assert phylo.alignment.remove_ambiguous([h, h, a, a, a, h]) == [h, h, h, h, h, h]
     assert phylo.alignment.remove_ambiguous([h, h, a, h, a, h]) == [h, h, h, h, h, h]

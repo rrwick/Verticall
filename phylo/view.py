@@ -13,14 +13,16 @@ If not, see <https://www.gnu.org/licenses/>.
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from plotnine import ggplot, aes, geom_segment, geom_line, geom_hline, geom_vline, labs, theme_bw, \
+from plotnine import ggplot, aes, geom_segment, geom_line, geom_vline, labs, theme_bw, \
     scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt, scale_color_manual, \
-    element_blank, theme
+    element_blank, theme, annotate
 
 from .distance import get_distance
 
 VERTICAL_COLOUR = '#4859a0'
+VERTICAL_COLOUR_LIGHT = '#aabbf2'
 HORIZONTAL_COLOUR = '#c47e7e'
+HORIZONTAL_COLOUR_LIGHT = '#eac7c7'
 AMBIGUOUS_COLOUR = '#c9c9c9'
 
 
@@ -31,8 +33,7 @@ def show_plots(sample_name_a, sample_name_b, window_size, aligned_frac, masses, 
                                 thresholds, sqrt_distance, sqrt_mass)
     fig_2 = distribution_plot_2(sample_name_a, sample_name_b, window_size, vertical_masses,
                                 horizontal_masses, sqrt_distance, sqrt_mass)
-    # fig_3 = contig_plot(sample_name_a, sample_name_b, aligned_frac, painted_a, window_size,
-    #                     thresholds)
+    fig_3 = contig_plot(sample_name_a, painted_a, window_size, sqrt_distance)
 
     plt.show()
 
@@ -133,35 +134,43 @@ def group_using_thresholds(masses, thresholds):
     return grouping
 
 
-def contig_plot(sample_name_a, sample_name_b, aligned_frac, painted, window_size, thresholds):
-    title = f'{sample_name_a} vs {sample_name_b}, {window_size} bp windows, ' \
-            f'{100.0 * aligned_frac:.1f}% aligned'
+def contig_plot(sample_name, painted, window_size, sqrt_distance):
+    title = f'{sample_name} painted contigs'
 
     boundaries = [0]
     x_max = 0
     for name, contig in painted.contigs.items():
         x_max += contig.length
         boundaries.append(x_max)
-    y_max = painted.get_max_differences()
+    y_max = 1.05 * (max(1, painted.get_max_differences()) / window_size)
 
     g = (ggplot() +
          theme_bw() +
          theme(panel_grid_major_x=element_blank(), panel_grid_minor_x=element_blank()) +
-         geom_hline(yintercept=low, colour='#d95f02', linetype='dotted') +
-         geom_hline(yintercept=high, colour='#d95f02', linetype='dotted') +
-         scale_y_continuous(expand=(0, 0), limits=(0, y_max)) +
          scale_x_continuous(expand=(0, 0), limits=(0, x_max)) +
          labs(title=title, x='contig position', y='distance'))
 
+    if sqrt_distance:
+        g += scale_y_sqrt(expand=(0, 0), limits=(0, y_max))
+    else:
+        g += scale_y_continuous(expand=(0, 0), limits=(0, y_max))
+
     for b in boundaries:
-        g += geom_vline(xintercept=b, colour='#aaaaaa', size=0.5)
+        g += geom_vline(xintercept=b, colour='#000000', size=0.5)
 
     offset = 0
     for name, contig in painted.contigs.items():
-        positions = [offset + d[0] for d in contig.window_differences]  # TEMP
-        differences = [d[2] for d in contig.window_differences]  # TEMP
-        df = pd.DataFrame(list(zip(positions, differences)), columns=['positions', 'differences'])
-        g += geom_line(data=df, mapping=aes(x='positions', y='differences'), size=0.5)
+        for start, end in contig.get_vertical_blocks():
+            g += annotate('rect', xmin=start+offset, xmax=end+offset, ymin=0.0, ymax=y_max,
+                          fill=VERTICAL_COLOUR, alpha=0.25)
+        for start, end in contig.get_horizontal_blocks():
+            g += annotate('rect', xmin=start+offset, xmax=end+offset, ymin=0.0, ymax=y_max,
+                          fill=HORIZONTAL_COLOUR, alpha=0.25)
+        for points in contig.alignment_points:
+            positions = [offset + p[0] for p in points]
+            distances = [p[1] / window_size for p in points]
+            df = pd.DataFrame(list(zip(positions, distances)), columns=['pos', 'dist'])
+            g += geom_line(data=df, mapping=aes(x='pos', y='dist'), size=0.5)
         offset += contig.length
 
-    g.draw(show=True)
+    return g.draw()
