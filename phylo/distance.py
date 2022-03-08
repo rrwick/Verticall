@@ -48,6 +48,30 @@ def get_distribution(args, alignments):
     return masses, window_size, log_text
 
 
+def get_vertical_horizontal_distributions(alignments):
+    """
+    Returns two mass distributions, one for the vertical windows and another for the horizontal
+    windows. Assumes that the alignments have already been painted.
+    """
+    vertical_distances, horizontal_distances = [], []
+    for a in alignments:
+        vertical_distances += a.get_all_vertical_distances()
+        horizontal_distances += a.get_all_horizontal_distances()
+
+    max_vertical_distance = max(vertical_distances) if vertical_distances else 0
+    max_horizontal_distance = max(horizontal_distances) if horizontal_distances else 0
+    max_distance = max(max_vertical_distance, max_horizontal_distance)
+
+    total_length = len(vertical_distances) + len(horizontal_distances)
+    vertical_counts = collections.Counter(vertical_distances)
+    horizontal_counts = collections.Counter(horizontal_distances)
+    vertical_masses = [0 if vertical_counts[i] == 0 else vertical_counts[i] / total_length
+                       for i in range(max_distance + 1)]
+    horizontal_masses = [0 if horizontal_counts[i] == 0 else horizontal_counts[i] / total_length
+                         for i in range(max_distance + 1)]
+    return vertical_masses, horizontal_masses
+
+
 def choose_window_size_and_step(cigars, target_window_count):
     """
     This function chooses an appropriate window size and step for the given CIGARs. It tries to

@@ -113,7 +113,7 @@ def get_query_coverage(alignments, assembly_filename):
 class Paint(enum.Enum):
     VERTICAL = 1
     HORIZONTAL = 2
-    BORDERLINE = 3
+    AMBIGUOUS = 3
     # TODO: split horizontal into low and high varieties?
 
     def __repr__(self):
@@ -121,8 +121,8 @@ class Paint(enum.Enum):
             return 'V'
         elif self == Paint.HORIZONTAL:
             return 'H'
-        elif self == Paint.BORDERLINE:
-            return 'B'
+        elif self == Paint.AMBIGUOUS:
+            return '?'
         else:
             assert False
 
@@ -214,10 +214,10 @@ class Alignment(object):
         Any window below the very_low threshold or above the very_high threshold is considered
         horizontal. Any window between the low and high thresholds is considered vertical.
 
-        Windows between very_low and low or between high and very_high are borderline, and they
-        will be painted based on their neighbours. E.g. a borderline low window surrounded by
-        vertical windows is vertical, while a borderline low window surrounded by horizontal
-        windows is horizontal. Borderline windows surrounded by both are conservatively called as
+        Windows between very_low and low or between high and very_high are ambiguous, and they
+        will be painted based on their neighbours. E.g. an ambiguous low window surrounded by
+        vertical windows is vertical, while an ambiguous low window surrounded by horizontal
+        windows is horizontal. Ambiguous windows surrounded by both are conservatively called as
         horizontal.
         """
         very_low, low = thresholds['very_low'], thresholds['low']
@@ -234,15 +234,23 @@ class Alignment(object):
             if d < very_low:
                 self.window_classifications.append(Paint.HORIZONTAL)
             elif d < low:
-                self.window_classifications.append(Paint.BORDERLINE)
+                self.window_classifications.append(Paint.AMBIGUOUS)
             elif d > very_high:
                 self.window_classifications.append(Paint.HORIZONTAL)
             elif d > high:
-                self.window_classifications.append(Paint.BORDERLINE)
+                self.window_classifications.append(Paint.AMBIGUOUS)
             else:
                 self.window_classifications.append(Paint.VERTICAL)
 
-        # TODO: simplify painting by changing borderline to either vertical or horizontal
+        self.window_classifications = remove_ambiguous(self.window_classifications)
+
+    def get_all_vertical_distances(self):
+        return [d for i, d in enumerate(self.window_differences)
+                if self.window_classifications[i] == Paint.VERTICAL]
+
+    def get_all_horizontal_distances(self):
+        return [d for i, d in enumerate(self.window_differences)
+                if self.window_classifications[i] == Paint.HORIZONTAL]
 
     def query_covered_bases(self):
         return self.query_end - self.query_start
@@ -353,3 +361,59 @@ def swap_insertions_and_deletions(cigar):
     Swaps I and D characters in an expanded CIGAR.
     """
     return cigar.replace('I', 'd').replace('D', 'I').replace('d', 'D')
+
+
+def remove_ambiguous(classifications):
+    """
+    This function takes a list of classifications (vertical, horizontal or ambiguous) and returns
+    a simplified version with no ambiguous positions.
+    """
+    simplified_classifications = classifications.copy()
+    for start, end in find_ambiguous_runs(classifications):
+
+        # Runs that span all windows are conservatively considered horizontal.
+        if start == 0 and end == len(classifications):
+            new_classification = Paint.HORIZONTAL
+
+        # Runs that begin at the start of the windows are defined by whatever follows them.
+        elif start == 0:
+            new_classification = classifications[end]
+
+        # Runs that go to the end of the windows are defined by whatever precedes them.
+        elif end == len(classifications):
+            new_classification = classifications[start-1]
+
+        # Runs in the middle of the windows are defined by whatever precedes and follows them, if
+        # those match. If they don't, then the run is conservatively considered horizontal.
+        else:
+            preceding = classifications[start-1]
+            following = classifications[end]
+            if preceding == following:
+                new_classification = preceding
+            else:
+                new_classification = Paint.HORIZONTAL
+
+        for i in range(start, end):
+            simplified_classifications[i] = new_classification
+
+    return simplified_classifications
+
+
+def find_ambiguous_runs(classifications):
+    """
+    Returns a list of tuples indicating all runs of ambiguous classifications. Tuples give the
+    start and end positions of the run with Pythonic indexing.
+    """
+    ambiguous_runs = []
+    start, end = None, None
+    for i, c in enumerate(classifications):
+        if c == Paint.AMBIGUOUS:
+            if start is None:
+                start = i
+            end = i+1
+        elif start is not None:
+            ambiguous_runs.append((start, end))
+            start, end = None, None
+    if start is not None:
+        ambiguous_runs.append((start, end))
+    return ambiguous_runs

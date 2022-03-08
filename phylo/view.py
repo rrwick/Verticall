@@ -11,6 +11,7 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 
+import matplotlib.pyplot as plt
 import pandas as pd
 from plotnine import ggplot, aes, geom_segment, geom_line, geom_hline, geom_vline, labs, theme_bw, \
     scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt, scale_color_manual, \
@@ -20,26 +21,96 @@ from .distance import get_distance
 
 
 def show_plots(sample_name_a, sample_name_b, window_size, aligned_frac, masses, smoothed_masses,
-               thresholds, painted_a, painted_b, sqrt_distance, sqrt_mass):
-    distribution_plot(sample_name_a, sample_name_b, window_size, aligned_frac, masses,
-                      smoothed_masses, thresholds, sqrt_distance, sqrt_mass)
-    # contig_plot(sample_name_a, sample_name_b, aligned_frac, painted_a, window_size, thresholds)
+               thresholds, vertical_masses, horizontal_masses, painted_a, painted_b, sqrt_distance,
+               sqrt_mass):
+    fig_1 = distribution_plot_1(sample_name_a, sample_name_b, window_size, aligned_frac, masses,
+                                smoothed_masses, thresholds, sqrt_distance, sqrt_mass)
+    fig_2 = distribution_plot_2(sample_name_a, sample_name_b, window_size, aligned_frac,
+                                vertical_masses, horizontal_masses, thresholds, sqrt_distance,
+                                sqrt_mass)
+    # fig_3 = contig_plot(sample_name_a, sample_name_b, aligned_frac, painted_a, window_size,
+    #                     thresholds)
+    plt.show()
 
 
-def distribution_plot(sample_name_a, sample_name_b, window_size, aligned_frac, masses,
-                      smoothed_masses, thresholds, sqrt_distance, sqrt_mass):
+def distribution_plot_1(sample_name_a, sample_name_b, window_size, aligned_frac, masses,
+                        smoothed_masses, thresholds, sqrt_distance, sqrt_mass):
     title = f'{sample_name_a} vs {sample_name_b}, {window_size} bp windows, ' \
             f'{100.0 * aligned_frac:.1f}% aligned'
-
     mean = get_distance(masses, window_size, 'mean')
-    # peak_mean = get_distance([m if low <= i <= high else 0.0 for i, m in enumerate(masses)],
-    #                          window_size, 'mean')
-
     x_max = len(masses) / window_size
     y_max = 1.05 * max(max(masses), max(smoothed_masses))
-
     distances = [i / window_size for i in range(len(masses))]
+    grouping = group_using_thresholds(masses, thresholds)
 
+    df = pd.DataFrame(list(zip(distances, masses, smoothed_masses, grouping)),
+                      columns=['distance', 'mass', 'smoothed_mass', 'grouping'])
+
+    g = (ggplot(df) +
+         geom_segment(aes(x='distance', xend='distance', y=0, yend='mass', colour='grouping'),
+                      size=1) +
+         scale_color_manual({'very_low': '#d6d6d6', 'low': '#d7cfff', 'very_high': '#d6d6d6',
+                             'high': '#d7cfff', 'central': '#7570b3'}, guide=False) +
+         geom_line(aes(x='distance', y='smoothed_mass'), size=0.5) +
+         geom_vline(xintercept=mean, colour='#d95f02', linetype='dotted', size=0.5) +
+         theme_bw() +
+         labs(title=title, x='distance', y='probability mass'))
+
+    if sqrt_distance:
+        g += scale_x_sqrt(limits=(0, x_max))
+    else:
+        g += scale_x_continuous(limits=(0, x_max))
+    if sqrt_mass:
+        g += scale_y_sqrt(expand=(0, 0), limits=(0, y_max))
+    else:
+        g += scale_y_continuous(expand=(0, 0), limits=(0, y_max))
+
+    return g.draw()
+
+
+def distribution_plot_2(sample_name_a, sample_name_b, window_size, aligned_frac, vertical_masses,
+                        horizontal_masses, thresholds, sqrt_distance, sqrt_mass):
+    title = f'{sample_name_a} vs {sample_name_b}, {window_size} bp windows, ' \
+            f'{100.0 * aligned_frac:.1f}% aligned'
+    # mean = get_distance(masses, window_size, 'mean')
+    max_distance = max(len(vertical_masses), len(horizontal_masses))
+    x_max = max_distance / window_size
+    y_max = 1.05 * max(max(vertical_masses), max(horizontal_masses))
+
+    distances = [i / window_size for i in range(max_distance)]
+
+    total_masses = [vertical_masses[i] + horizontal_masses[i] for i in range(max_distance)]
+
+    df = pd.DataFrame(list(zip(distances, vertical_masses, horizontal_masses, total_masses)),
+                      columns=['distance', 'vertical_mass', 'horizontal_mass', 'total_mass'])
+
+    g = (ggplot(df) +
+         geom_segment(aes(x='distance', xend='distance', y=0, yend='vertical_mass'),
+                      size=1, colour='#7570b3') +
+         geom_segment(aes(x='distance', xend='distance', y='vertical_mass', yend='total_mass'),
+                      size=1, colour='#d6d6d6') +
+         scale_color_manual({'very_low': '#d6d6d6', 'low': '#d7cfff', 'very_high': '#d6d6d6',
+                             'high': '#d7cfff', 'central': '#7570b3'}, guide=False) +
+         # geom_vline(xintercept=mean, colour='#d95f02', linetype='dotted', size=0.5) +
+         theme_bw() +
+         labs(title=title, x='distance', y='probability mass'))
+
+    if sqrt_distance:
+        g += scale_x_sqrt(limits=(0, x_max))
+    else:
+        g += scale_x_continuous(limits=(0, x_max))
+    if sqrt_mass:
+        g += scale_y_sqrt(expand=(0, 0), limits=(0, y_max))
+    else:
+        g += scale_y_continuous(expand=(0, 0), limits=(0, y_max))
+
+    return g.draw()
+
+
+def group_using_thresholds(masses, thresholds):
+    """
+    Assigns a group (very_low, low, central, high, very_high) to each mass, returned as a list.
+    """
     grouping = []
     very_low, low = thresholds['very_low'], thresholds['low']
     very_high, high = thresholds['very_high'], thresholds['high']
@@ -54,33 +125,7 @@ def distribution_plot(sample_name_a, sample_name_b, window_size, aligned_frac, m
             grouping.append('high')
         else:
             grouping.append('central')
-
-    df = pd.DataFrame(list(zip(distances, masses, smoothed_masses, grouping)),
-                      columns=['distance', 'mass', 'smoothed_mass', 'grouping'])
-
-    g = (ggplot(df) +
-         geom_segment(aes(x='distance', xend='distance', y=0, yend='mass', colour='grouping'),
-                      size=1) +
-         scale_color_manual({'very_low': '#d6d6d6', 'low': '#d7cfff',
-                             'very_high': '#d6d6d6', 'high': '#d7cfff',
-                             'central': '#7570b3'}, guide=False) +
-         geom_line(aes(x='distance', y='smoothed_mass'), size=0.5) +
-         # geom_vline(xintercept=mean, colour='#d95f02', linetype='dotted', size=0.5) +
-         # geom_vline(xintercept=peak_mean, colour='#d95f02', linetype='dashed', size=0.5) +
-         theme_bw() +
-         labs(title=title, x='distance', y='probability mass'))
-
-    if sqrt_distance:
-        g += scale_x_sqrt(limits=(0, x_max))
-    else:
-        g += scale_x_continuous(limits=(0, x_max))
-
-    if sqrt_mass:
-        g += scale_y_sqrt(expand=(0, 0), limits=(0, y_max))
-    else:
-        g += scale_y_continuous(expand=(0, 0), limits=(0, y_max))
-
-    g.draw(show=True)
+    return grouping
 
 
 def contig_plot(sample_name_a, sample_name_b, aligned_frac, painted, window_size, thresholds):

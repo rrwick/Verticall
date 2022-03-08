@@ -18,7 +18,8 @@ import pathlib
 import sys
 
 from .alignment import build_indices, align_sample_pair
-from .distance import get_distribution, smooth_distribution, get_peak_distance
+from .distance import get_distribution, smooth_distribution, get_peak_distance, \
+    get_vertical_horizontal_distributions
 from .help_formatter import MyParser, MyHelpFormatter
 from .misc import check_python_version, get_ascii_art, get_default_thread_count
 from .log import bold, log, section_header, explanation
@@ -226,15 +227,7 @@ def process_one_pair(all_args, view=False):
 
     for a in alignments:
         a.paint_sliding_windows(thresholds)
-        print(a.window_classifications)  # TEMP
-
-
-
-
-
-
-
-
+    vertical_masses, horizontal_masses = get_vertical_horizontal_distributions(alignments)
 
     painted_a, painted_b, log_text = paint_assemblies(args, name_a, name_b, filename_a, filename_b,
                                                       alignments, window_size, thresholds)
@@ -246,7 +239,8 @@ def process_one_pair(all_args, view=False):
     if view:
         log('\n'.join(all_log_text), end='\n\n')
         show_plots(name_a, name_b, window_size, aligned_frac, masses, smoothed_masses, thresholds,
-                   painted_a, painted_b, args.sqrt_distance, args.sqrt_mass)
+                   vertical_masses, horizontal_masses, painted_a, painted_b, args.sqrt_distance,
+                   args.sqrt_mass)
 
     return log_text
 

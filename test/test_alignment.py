@@ -124,3 +124,36 @@ def test_get_difference_count_1():
 def test_get_difference_count_2():
     cigar = '=====XX===X===DDD===I======IIII===D==X====='
     assert phylo.alignment.get_difference_count(phylo.alignment.compress_indels(cigar)) == 8
+
+
+def test_find_ambiguous_runs():
+    h = phylo.alignment.Paint.HORIZONTAL
+    v = phylo.alignment.Paint.VERTICAL
+    a = phylo.alignment.Paint.AMBIGUOUS
+    assert phylo.alignment.find_ambiguous_runs([h, h, h, h, h, h]) == []
+    assert phylo.alignment.find_ambiguous_runs([v, v, v, v, v, v]) == []
+    assert phylo.alignment.find_ambiguous_runs([h, h, a, h, h, h]) == [(2, 3)]
+    assert phylo.alignment.find_ambiguous_runs([v, v, v, a, a, v]) == [(3, 5)]
+    assert phylo.alignment.find_ambiguous_runs([a, a, a, h, a, h]) == [(0, 3), (4, 5)]
+    assert phylo.alignment.find_ambiguous_runs([a, v, a, a, a, a]) == [(0, 1), (2, 6)]
+    assert phylo.alignment.find_ambiguous_runs([a, a, a, a, a, a]) == [(0, 6)]
+
+
+def test_remove_ambiguous():
+    h = phylo.alignment.Paint.HORIZONTAL
+    v = phylo.alignment.Paint.VERTICAL
+    a = phylo.alignment.Paint.AMBIGUOUS
+    assert phylo.alignment.remove_ambiguous([h, h, h, h, h, h]) == [h, h, h, h, h, h]
+    assert phylo.alignment.remove_ambiguous([h, h, a, a, a, h]) == [h, h, h, h, h, h]
+    assert phylo.alignment.remove_ambiguous([h, h, a, h, a, h]) == [h, h, h, h, h, h]
+    assert phylo.alignment.remove_ambiguous([a, h, h, h, h, a]) == [h, h, h, h, h, h]
+    assert phylo.alignment.remove_ambiguous([v, v, v, v, v, v]) == [v, v, v, v, v, v]
+    assert phylo.alignment.remove_ambiguous([v, v, a, a, a, v]) == [v, v, v, v, v, v]
+    assert phylo.alignment.remove_ambiguous([v, v, a, v, a, v]) == [v, v, v, v, v, v]
+    assert phylo.alignment.remove_ambiguous([a, v, v, v, v, a]) == [v, v, v, v, v, v]
+    assert phylo.alignment.remove_ambiguous([h, h, h, v, v, v]) == [h, h, h, v, v, v]
+    assert phylo.alignment.remove_ambiguous([a, h, h, v, v, a]) == [h, h, h, v, v, v]
+    assert phylo.alignment.remove_ambiguous([h, a, h, v, v, a]) == [h, h, h, v, v, v]
+    assert phylo.alignment.remove_ambiguous([h, h, a, a, v, v]) == [h, h, h, h, v, v]
+    assert phylo.alignment.remove_ambiguous([h, a, a, a, a, v]) == [h, h, h, h, h, v]
+    assert phylo.alignment.remove_ambiguous([a, a, a, a, a, a]) == [h, h, h, h, h, h]
