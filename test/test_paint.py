@@ -14,10 +14,10 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 
-import pytest
-
 import phylo.paint
 
 
-def test_():
-    pass
+def test_get_blocks():
+    paint = [0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 0]
+    assert phylo.paint.get_blocks(paint, 0) == [(0, 1), (4, 7), (8, 9), (11, 12)]
+    assert phylo.paint.get_blocks(paint, 1) == [(1, 4), (7, 8), (9, 11)]

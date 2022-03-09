@@ -16,7 +16,7 @@ If not, see <https://www.gnu.org/licenses/>.
 
 import enum
 
-from .distance import get_vertical_horizontal_distributions
+from .distance import get_vertical_horizontal_distributions, get_distance
 from .intrange import IntRange
 from .misc import iterate_fasta
 
@@ -45,16 +45,20 @@ class Paint(enum.Enum):
             assert False
 
 
-def paint_alignments(alignments, thresholds):
-    log_text = ['  painting alignments:']
+def paint_alignments(alignments, thresholds, window_size):
     for a in alignments:
         a.paint_sliding_windows(thresholds)
     vertical_masses, horizontal_masses = get_vertical_horizontal_distributions(alignments)
     total_vertical_mass = sum(vertical_masses)
     total_horizontal_mass = sum(horizontal_masses)
-    log_text.append(f'    vertical inheritance: {100.0 * total_vertical_mass:.2f}%')
-    log_text.append(f'    horizontal inheritance: {100.0 * total_horizontal_mass:.2f}%')
-    return vertical_masses, horizontal_masses, log_text
+    mean_vert_distance = get_distance(vertical_masses, window_size, 'mean')
+    median_vert_distance = get_distance(vertical_masses, window_size, 'median')
+    log_text = ['  painting alignments:',
+                f'    vertical inheritance:   {100.0 * total_vertical_mass:6.2f}%',
+                f'    horizontal inheritance: {100.0 * total_horizontal_mass:6.2f}%',
+                f'    mean vertical distance:   {mean_vert_distance:.9f}',
+                f'    median vertical distance: {median_vert_distance:.9f}']
+    return vertical_masses, horizontal_masses, mean_vert_distance, median_vert_distance, log_text
 
 
 def paint_assemblies(name_a, name_b, filename_a, filename_b, alignments):
@@ -73,10 +77,10 @@ def paint_assemblies(name_a, name_b, filename_a, filename_b, alignments):
 
 def get_painting_log_text(name, painted):
     vertical, horizontal, unaligned = painted.get_fractions()
-    log_text = [f'  painting {name}:',
-                f'    vertical:   {100.0 * vertical:.2f}%',
-                f'    horizontal: {100.0 * horizontal:.2f}%',
-                f'    unaligned:  {100.0 * unaligned:.2f}%']
+    log_text = [f'  painting {name} contigs:',
+                f'    vertical:   {100.0 * vertical:6.2f}%',
+                f'    horizontal: {100.0 * horizontal:6.2f}%',
+                f'    unaligned:  {100.0 * unaligned:6.2f}%']
     return log_text
 
 

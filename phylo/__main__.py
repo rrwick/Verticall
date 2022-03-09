@@ -217,14 +217,16 @@ def process_one_pair(all_args, view=False):
     alignments, aligned_frac, log_text = align_sample_pair(args, filename_a, name_b)
     all_log_text += log_text
 
-    masses, window_size, log_text = get_distribution(args, alignments)
+    masses, window_size, mean_distance, median_distance, log_text = \
+        get_distribution(args, alignments)
     all_log_text += log_text
 
     smoothed_masses = smooth_distribution(masses)
-    peak, thresholds, log_text = get_peak_distance(smoothed_masses, window_size)
+    peak_distance, thresholds, log_text = get_peak_distance(smoothed_masses, window_size)
     all_log_text += log_text
 
-    vertical_masses, horizontal_masses, log_text = paint_alignments(alignments, thresholds)
+    vertical_masses, horizontal_masses, mean_vert_distance, median_vert_distance, log_text = \
+        paint_alignments(alignments, thresholds, window_size)
     all_log_text += log_text
 
     painted_a, painted_b, log_text = \

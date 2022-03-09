@@ -44,10 +44,10 @@ def get_distribution(args, alignments):
     log_text = [f'  distances sampled from sliding windows:',
                 f'    window size: {window_size} bp',
                 f'    window count: {len(distances)}',
-                f'    mean distance: {mean_distance:.9f}',
+                f'    mean distance:   {mean_distance:.9f}',
                 f'    median distance: {median_distance:.9f}']
 
-    return masses, window_size, log_text
+    return masses, window_size, mean_distance, median_distance, log_text
 
 
 def get_vertical_horizontal_distributions(alignments):
@@ -112,8 +112,6 @@ def get_distance(masses, piece_size, method):
         d = get_interpolated_median(masses)
     elif method == 'mode':
         d = get_mode(masses)
-    elif method == 'peak':
-        d, _ = get_peak_distance(masses)
     else:
         assert False
     return d / piece_size
