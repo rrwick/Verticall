@@ -131,7 +131,7 @@ def check_args(args):
 
 
 def welcome_message():
-    section_header('Starting XXXXXXXXX align')
+    section_header('Starting XXXXXXXXX')
     explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
                 'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
                 'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
@@ -227,11 +227,11 @@ def process_one_pair(all_args, view=False):
     vertical_masses, horizontal_masses, log_text = paint_alignments(alignments, thresholds)
     all_log_text += log_text
 
-    painted_a, painted_b, log_text = paint_assemblies(name_a, name_b, filename_a, filename_b,
-                                                      alignments)
+    painted_a, painted_b, log_text = \
+        paint_assemblies(name_a, name_b, filename_a, filename_b, alignments)
     all_log_text += log_text
 
-    # TODO: get mean distance using non-recombinant regions
+    # TODO: get mean distance using vertical regions
     # TODO: save painting info to file
 
     if view:

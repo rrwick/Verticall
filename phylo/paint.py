@@ -65,10 +65,19 @@ def paint_assemblies(name_a, name_b, filename_a, filename_b, alignments):
         painted_a.add_alignment(a, AlignmentRole.QUERY)
         painted_b.add_alignment(a, AlignmentRole.TARGET)
 
-    log_text = [f'  painting {name_a}:',
-                f'  painting {name_b}:']
+    log_text = get_painting_log_text(name_a, painted_a)
+    log_text += get_painting_log_text(name_b, painted_b)
 
     return painted_a, painted_b, log_text
+
+
+def get_painting_log_text(name, painted):
+    vertical, horizontal, unaligned = painted.get_fractions()
+    log_text = [f'  painting {name}:',
+                f'    vertical:   {100.0 * vertical:.2f}%',
+                f'    horizontal: {100.0 * horizontal:.2f}%',
+                f'    unaligned:  {100.0 * unaligned:.2f}%']
+    return log_text
 
 
 class PaintedAssembly(object):
@@ -83,10 +92,27 @@ class PaintedAssembly(object):
         self.contigs[name].add_alignment(a, role)
 
     def get_max_differences(self):
+        """
+        Returns the largest number of differences in all of the alignment's sliding windows.
+        """
         if len(self.contigs) == 0:
             return 0
         else:
             return max(c.get_max_differences() for c in self.contigs.values())
+
+    def get_fractions(self):
+        """
+        Returns the vertical, horizontal and unaligned fractions of the assembly.
+        """
+        total, vertical, horizontal = 0, 0, 0
+        for c in self.contigs.values():
+            total += c.length
+            for start, end in c.get_vertical_blocks():
+                vertical += (end - start)
+            for start, end in c.get_horizontal_blocks():
+                horizontal += (end - start)
+        unaligned = total - vertical - horizontal
+        return vertical/total, horizontal/total, unaligned/total
 
 
 class PaintedContig(object):
@@ -101,18 +127,11 @@ class PaintedContig(object):
         points = []
         vertical_ranges = IntRange()
         horizontal_ranges = IntRange()
-        for i, window in enumerate(a.sliding_windows):
+        for i, window in enumerate(a.windows_no_overlap):
             differences = a.window_differences[i]
             classification = a.window_classifications[i]
             a_start, a_end = window
-
-            # First and last windows are extended to the edges of the alignment.
-            if i == 0:
-                a_start = 0
-            if i == len(a.sliding_windows) - 1:
-                a_end = len(a.simplified_cigar) - 1
-
-            seq_start, seq_end = cigar_to_seq[a_start], cigar_to_seq[a_end]
+            seq_start, seq_end = cigar_to_seq[a_start], cigar_to_seq[a_end-1]+1
             seq_centre = (seq_start + seq_end) / 2
             points.append((seq_centre, differences))
 
@@ -124,10 +143,10 @@ class PaintedContig(object):
                 assert False
 
         for start, end in horizontal_ranges.ranges:
-            for i in range(start, end+1):
+            for i in range(start, end):
                 self.paint_position(i, Paint.HORIZONTAL)
         for start, end in vertical_ranges.ranges:
-            for i in range(start, end+1):
+            for i in range(start, end):
                 self.paint_position(i, Paint.VERTICAL)
 
         self.alignment_points.append(points)

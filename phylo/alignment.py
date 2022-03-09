@@ -125,7 +125,8 @@ class Alignment(object):
         self.cigar_to_target = None   # relates positions of the simplified CIGAR to the target seq
         self.set_up_cigars(ignore_indels)
 
-        self.sliding_windows = []         # Start/end pos of each window in the simplified CIGAR
+        self.windows = []                 # Start/end pos of each window in the simplified CIGAR
+        self.windows_no_overlap = []      # Corresponding windows without overlap (for painting)
         self.window_differences = []      # The number of differences in each window
         self.window_classifications = []  # Vertical/horizontal call for each window
 
@@ -176,19 +177,33 @@ class Alignment(object):
     def set_up_sliding_windows(self, window_size, window_step):
         """
         This method defines the positions of the alignment's sliding windows and the number of
-        differences in each window.
+        differences in each window. Also sets up corresponding overlap-free versions of the windows
+        for use in painting the contigs.
         """
         if window_size > len(self.simplified_cigar):
             return
         window_count = get_window_count(len(self.simplified_cigar), window_size, window_step)
+
         window_coverage = get_window_coverage(window_size, window_step, window_count)
         start = (len(self.simplified_cigar) - window_coverage) // 2
         end = start + window_size
+
+        window_coverage_no_overlap = get_window_coverage(window_step, window_step, window_count)
+        start_no_overlap = (len(self.simplified_cigar) - window_coverage_no_overlap) // 2
+        end_no_overlap = start_no_overlap + window_step
+
         while end <= len(self.simplified_cigar):
-            self.sliding_windows.append((start, end))
+            self.windows.append((start, end))
+            self.windows_no_overlap.append((start_no_overlap, end_no_overlap))
             self.window_differences.append(get_difference_count(self.simplified_cigar[start:end]))
             start += window_step
             end += window_step
+            start_no_overlap += window_step
+            end_no_overlap += window_step
+
+        # First and last overlap-free windows extend to the ends of the alignment.
+        self.windows_no_overlap[0] = (0, self.windows_no_overlap[0][1])
+        self.windows_no_overlap[-1] = (self.windows_no_overlap[-1][0], len(self.simplified_cigar))
 
     def paint_sliding_windows(self, thresholds):
         """
