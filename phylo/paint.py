@@ -53,7 +53,7 @@ def paint_alignments(alignments, thresholds, window_size):
     total_horizontal_mass = sum(horizontal_masses)
     mean_vert_distance = get_distance(vertical_masses, window_size, 'mean')
     median_vert_distance = get_distance(vertical_masses, window_size, 'median')
-    log_text = ['  painting alignments:',
+    log_text = ['V  painting alignments:',
                 f'    vertical inheritance:   {100.0 * total_vertical_mass:6.2f}%',
                 f'    horizontal inheritance: {100.0 * total_horizontal_mass:6.2f}%',
                 f'    mean vertical distance:   {mean_vert_distance:.9f}',
@@ -77,10 +77,10 @@ def paint_assemblies(name_a, name_b, filename_a, filename_b, alignments):
 
 def get_painting_log_text(name, painted):
     vertical, horizontal, unaligned = painted.get_fractions()
-    log_text = [f'  painting {name} contigs:',
-                f'    vertical:   {100.0 * vertical:6.2f}%',
-                f'    horizontal: {100.0 * horizontal:6.2f}%',
-                f'    unaligned:  {100.0 * unaligned:6.2f}%']
+    log_text = [f'V  painting {name} contigs:',
+                f'V    vertical:   {100.0 * vertical:6.2f}%',
+                f'V    horizontal: {100.0 * horizontal:6.2f}%',
+                f'V    unaligned:  {100.0 * unaligned:6.2f}%']
     return log_text
 
 

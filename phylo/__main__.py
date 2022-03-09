@@ -179,17 +179,32 @@ def process_all_pairs(args, assemblies):
             if name_a != name_b:
                 arg_list.append((args, name_a, name_b, filename_a, filename_b))
 
+    all_distances = {}
+
     # If only using a single thread, do the alignment in a simple loop (easier for debugging).
     if args.threads == 1:
         for a in arg_list:
-            log_text = process_one_pair(a)
-            log('\n'.join(log_text), end='\n\n')
+            log_text, name_a, name_b, distances = process_one_pair(a)
+            log('\n'.join(prepare_log_text(log_text, args.verbose)), end='\n\n')
+            all_distances[(name_a, name_b)] = distances
 
     # If using multiple threads, use a process pool to work in parallel.
     else:
         with Pool(processes=args.threads) as pool:
-            for log_text in pool.imap(process_one_pair, arg_list):
-                log('\n'.join(log_text), end='\n\n')
+            for log_text, name_a, name_b, distances in pool.imap(process_one_pair, arg_list):
+                log('\n'.join(prepare_log_text(log_text, args.verbose)), end='\n\n')
+                all_distances[(name_a, name_b)] = distances
+
+
+def prepare_log_text(log_text, verbose):
+    prepared = []
+    for line in log_text:
+        if line.startswith('V'):
+            if verbose:
+                prepared.append(line[1:])
+        else:
+            prepared.append(line)
+    return prepared
 
 
 def view_one_pair(args, assemblies):
@@ -237,12 +252,13 @@ def process_one_pair(all_args, view=False):
     # TODO: save painting info to file
 
     if view:
-        log('\n'.join(all_log_text), end='\n\n')
+        log('\n'.join(prepare_log_text(all_log_text, True)), end='\n\n')
         show_plots(name_a, name_b, window_size, aligned_frac, masses, smoothed_masses, thresholds,
                    vertical_masses, horizontal_masses, painted_a, painted_b, args.sqrt_distance,
                    args.sqrt_mass)
 
-    return log_text
+    distances = mean_distance, median_distance, mean_vert_distance, median_vert_distance
+    return all_log_text, name_a, name_b, distances
 
 
 if __name__ == '__main__':

@@ -41,11 +41,11 @@ def get_distribution(args, alignments):
     mean_distance = get_distance(masses, window_size, 'mean')
     median_distance = get_distance(masses, window_size, 'median')
 
-    log_text = [f'  distances sampled from sliding windows:',
-                f'    window size: {window_size} bp',
-                f'    window count: {len(distances)}',
-                f'    mean distance:   {mean_distance:.9f}',
-                f'    median distance: {median_distance:.9f}']
+    log_text = [f'V  distances sampled from sliding windows:',
+                f'V    window size: {window_size} bp',
+                f'V    window count: {len(distances)}',
+                f'V    mean distance:   {mean_distance:.9f}',
+                f'V    median distance: {median_distance:.9f}']
 
     return masses, window_size, mean_distance, median_distance, log_text
 
@@ -233,13 +233,13 @@ def get_peak_distance(smoothed_masses, window_size):
 
     The final returned value is interpolated from the peak and its neighbours.
     """
-    log_text = ['  mass peaks:']
+    log_text = ['V  mass peaks:']
     peaks_with_total_mass = [(get_peak_total_mass(smoothed_masses, p), p)
                              for p in find_peaks(smoothed_masses)]
     most_massive_peak = sorted(peaks_with_total_mass)[-1][1]
     for mass, peak in peaks_with_total_mass:
         star = ' *' if peak == most_massive_peak else ''
-        log_text.append(f'    {peak/window_size:.9f} ({100.0 * mass:.1f}%){star}')
+        log_text.append(f'V    {peak/window_size:.9f} ({100.0 * mass:.1f}%){star}')
 
     thresholds = get_thresholds(smoothed_masses, most_massive_peak)
 
