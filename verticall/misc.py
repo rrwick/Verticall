@@ -1,13 +1,13 @@
 """
 Copyright 2022 Ryan Wick (rrwick@gmail.com)
-https://github.com/rrwick/XXXXXXXXX
+https://github.com/rrwick/Verticall
 
-This file is part of XXXXXXXXX. XXXXXXXXX is free software: you can redistribute it and/or modify
+This file is part of Verticall. Verticall is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by the Free Software Foundation,
-either version 3 of the License, or (at your option) any later version. XXXXXXXXX is distributed
+either version 3 of the License, or (at your option) any later version. Verticall is distributed
 in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-details. You should have received a copy of the GNU General Public License along with XXXXXXXXX.
+details. You should have received a copy of the GNU General Public License along with Verticall.
 If not, see <https://www.gnu.org/licenses/>.
 """
 
@@ -51,18 +51,16 @@ def get_open_func(filename):
 
 def check_python_version():
     if sys.version_info.major < 3 or sys.version_info.minor < 7:
-        sys.exit('\nError: XXXXXXXXX requires Python 3.7 or later')
+        sys.exit('\nError: Verticall requires Python 3.7 or later')
 
 
 def get_ascii_art():
-    ascii_art = (bold_yellow(r" _____   _             _        ") + '\n' +
-                 bold_yellow(r"|  __ \ | |           | |       ") + '\n' +
-                 bold_yellow(r"| |__) || |__   _   _ | |  ___  ") + '\n' +
-                 bold_yellow(r"|  ___/ | '_ \ | | | || | / _ \ ") + '\n' +
-                 bold_yellow(r"| |     | | | || |_| || || (_) |") + '\n' +
-                 bold_yellow(r"|_|     |_| |_| \__, ||_| \___/ ") + '\n' +
-                 bold_yellow(r"                 __/ |          ") + '\n' +
-                 bold_yellow(r"                |___/         ") + '\n')
+    ascii_art = (bold_yellow(r" __      __          _    _               _  _ ") + '\n' +
+                 bold_yellow(r" \ \    / /         | |  (_)             | || |") + '\n' +
+                 bold_yellow(r"  \ \  / /___  _ __ | |_  _   ___   __ _ | || |") + '\n' +
+                 bold_yellow(r"   \ \/ // _ \| '__|| __|| | / __| / _` || || |") + '\n' +
+                 bold_yellow(r"    \  /|  __/| |   | |_ | || (__ | (_| || || |") + '\n' +
+                 bold_yellow(r"     \/  \___||_|    \__||_| \___| \__,_||_||_|") + '\n')
     return ascii_art
 
 

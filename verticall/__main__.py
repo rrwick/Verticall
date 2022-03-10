@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
 Copyright 2022 Ryan Wick (rrwick@gmail.com)
-https://github.com/rrwick/XXXXXXXXX
+https://github.com/rrwick/Verticall
 
-This file is part of XXXXXXXXX. XXXXXXXXX is free software: you can redistribute it and/or modify
+This file is part of Verticall. Verticall is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by the Free Software Foundation,
-either version 3 of the License, or (at your option) any later version. XXXXXXXXX is distributed
+either version 3 of the License, or (at your option) any later version. Verticall is distributed
 in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-details. You should have received a copy of the GNU General Public License along with XXXXXXXXX.
+details. You should have received a copy of the GNU General Public License along with Verticall.
 If not, see <https://www.gnu.org/licenses/>.
 """
 
@@ -43,8 +43,7 @@ def main():
 
 def parse_args(args):
     description = 'R|' + get_ascii_art() + '\n' + \
-                  bold('XXXXXXXXX: a tool for finding recombination and generating '
-                       'recombination-free trees')
+                  bold('Verticall: a tool for finding distance by vertical inheritance')
     parser = MyParser(description=description, formatter_class=MyHelpFormatter, add_help=False)
 
     required_args = parser.add_argument_group('Required arguments')
@@ -100,7 +99,7 @@ def parse_args(args):
     help_args = parser.add_argument_group('Help')
     help_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
                            help='Show this help message and exit')
-    help_args.add_argument('--version', action='version', version='XXXXXXXXX v' + __version__,
+    help_args.add_argument('--version', action='version', version='Verticall v' + __version__,
                            help="Show program's version number and exit")
 
     # If no arguments were used, print the help.
@@ -131,7 +130,7 @@ def check_args(args):
 
 
 def welcome_message():
-    section_header('Starting XXXXXXXXX')
+    section_header('Starting Verticall')
     explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
                 'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
                 'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
