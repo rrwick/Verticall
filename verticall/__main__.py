@@ -69,6 +69,8 @@ def parse_args(args):
                                  'both mismatches and gap-compressed indels)')
 
     distance_args = parser.add_argument_group('Distance settings')
+    distance_args.add_argument('--smoothing_factor', type=float, default=0.8,
+                               help='Degree to which the distance distribution is smoothed')
     distance_args.add_argument('--method', type=str,
                                choices=['mean', 'median', 'mode', 'peak'], default='peak',
                                help='Method for converting distributions into a single distance')
@@ -235,7 +237,7 @@ def process_one_pair(all_args, view=False):
         get_distribution(args, alignments)
     all_log_text += log_text
 
-    smoothed_masses = smooth_distribution(masses)
+    smoothed_masses = smooth_distribution(masses, args.smoothing_factor)
     peak_distance, thresholds, log_text = get_peak_distance(smoothed_masses, window_size)
     all_log_text += log_text
 

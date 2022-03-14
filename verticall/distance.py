@@ -460,7 +460,7 @@ def find_local_maximum_to_left(masses, i):
     return i
 
 
-def smooth_distribution(masses, smoothing_factor=0.8):
+def smooth_distribution(masses, smoothing_factor):
     """
     Smooths the mass distribution with a force-directed approach. Each point is pulled by two
     forces:
