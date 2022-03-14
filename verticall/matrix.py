@@ -24,29 +24,43 @@ def save_all_matrices(args, sample_names, all_distances):
     explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
                 'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
                 'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
-    save_matrix(args, sample_names, all_distances, 'mean')
-    save_matrix(args, sample_names, all_distances, 'median')
-    save_matrix(args, sample_names, all_distances, 'mean_vertical')
-    save_matrix(args, sample_names, all_distances, 'median_vertical')
+
+    aligned_fractions = get_matrix(sample_names, all_distances, 'aligned_fraction')
+    mean_distances = get_matrix(sample_names, all_distances, 'mean')
+    median_distances = get_matrix(sample_names, all_distances, 'median')
+    mean_vertical_distances = get_matrix(sample_names, all_distances, 'mean_vertical')
+    median_vertical_distances = get_matrix(sample_names, all_distances, 'median_vertical')
+
+    save_matrix(args, sample_names, aligned_fractions, 'aligned_fraction')
+    save_matrix(args, sample_names, mean_distances, 'mean')
+    save_matrix(args, sample_names, median_distances, 'median')
+    save_matrix(args, sample_names, mean_vertical_distances, 'mean_vertical')
+    save_matrix(args, sample_names, median_vertical_distances, 'median_vertical')
+
+    correct_distances(median_vertical_distances, aligned_fractions, sample_names, args.correction)
+    if not args.asymmetrical:
+        make_symmetrical(median_vertical_distances, sample_names)
+
+    save_matrix(args, sample_names, median_vertical_distances, 'median_vertical_corrected')
     log()
 
 
-def save_matrix(args, sample_names, all_distances, distance_type):
-    distances, aligned_fractions = {}, {}
+def get_matrix(sample_names, all_distances, distance_type):
+    matrix = {}
     for a in sample_names:
         for b in sample_names:
             if a == b:
-                distances[(a, b)] = 0.0
-                aligned_fractions[(a, b)] = 1.0
+                if distance_type == 'aligned_fraction':
+                    matrix[(a, b)] = 1.0
+                else:
+                    matrix[(a, b)] = 0.0
             else:
-                distances[(a, b)] = all_distances[(a, b)][distance_type]
-                aligned_fractions[(a, b)] = all_distances[(a, b)]['aligned_frac']
+                matrix[(a, b)] = all_distances[(a, b)][distance_type]
+    return matrix
 
-    correct_distances(distances, aligned_fractions, sample_names, args.correction)
-    if not args.asymmetrical:
-        make_symmetrical(distances, sample_names)
 
-    output_filename = args.out_dir / (distance_type + '.phylip')
+def save_matrix(args, sample_names, matrix, file_prefix):
+    output_filename = args.out_dir / (file_prefix + '.phylip')
     log(f'Saving {output_filename}')
     with open(output_filename, 'wt') as f:
         f.write(str(len(sample_names)))
@@ -54,7 +68,7 @@ def save_matrix(args, sample_names, all_distances, distance_type):
         for a in sample_names:
             f.write(a)
             for b in sample_names:
-                f.write(f'\t{distances[(a, b)]:.8f}')
+                f.write(f'\t{matrix[(a, b)]:.8f}')
             f.write('\n')
 
 
@@ -87,12 +101,3 @@ def make_symmetrical(distances, sample_names):
         mean_distance = (d1 + d2) / 2.0
         distances[(a, b)] = mean_distance
         distances[(b, a)] = mean_distance
-
-
-def output_phylip_matrix(distances, sample_names):
-    print(len(sample_names))
-    for a in sample_names:
-        print(a, end='')
-        for b in sample_names:
-            print(f'\t{distances[(a, b)]:.8f}', end='')
-        print()

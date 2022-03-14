@@ -277,7 +277,7 @@ def process_one_pair(all_args, view=False):
                    vertical_masses, horizontal_masses, painted_a, painted_b, args.sqrt_distance,
                    args.sqrt_mass)
 
-    distances = {'aligned_frac': aligned_frac,
+    distances = {'aligned_fraction': aligned_frac,
                  'mean': mean_distance,
                  'median': median_distance,
                  'mean_vertical': mean_vert_distance,
