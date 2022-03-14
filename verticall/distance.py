@@ -15,11 +15,9 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 import collections
-import itertools
 import math
 import numpy as np
 import statistics
-import sys
 
 
 def get_distribution(args, alignments):
@@ -172,58 +170,6 @@ def get_mode(masses):
         return distances_with_max_mass[0]
     else:
         return statistics.mean(distances_with_max_mass)
-
-
-def add_self_distances(distances, aligned_fractions, sample_names):
-    for n in sample_names:
-        distances[(n, n)] = 0.0
-        aligned_fractions[(n, n)] = 1.0
-
-
-def check_matrix_size(distances, sample_names, alignment_results):
-    if len(distances) != len(sample_names)**2:
-        sys.exit(f'\nError: incorrect number of records in {alignment_results}'
-                 f' - rerun Verticall align')
-
-
-def correct_distances(distances, aligned_fractions, sample_names, correction):
-    if 'jukescantor' in correction:
-        for a in sample_names:
-            for b in sample_names:
-                distances[(a, b)] = jukes_cantor(distances[(a, b)])
-    if 'alignedfrac' in correction:
-        for a in sample_names:
-            for b in sample_names:
-                distances[(a, b)] = distances[(a, b)] / aligned_fractions[(a, b)]
-
-
-def jukes_cantor(d):
-    """
-    https://www.desmos.com/calculator/okovk3dipx
-    """
-    if d == 0.0:
-        return 0.0
-    if d >= 0.75:
-        return 25.0
-    return -0.75 * math.log(1.0 - 1.3333333333333 * d)
-
-
-def make_symmetrical(distances, sample_names):
-    for a, b in itertools.combinations(sample_names, 2):
-        d1 = distances[(a, b)]
-        d2 = distances[(b, a)]
-        mean_distance = (d1 + d2) / 2.0
-        distances[(a, b)] = mean_distance
-        distances[(b, a)] = mean_distance
-
-
-def output_phylip_matrix(distances, sample_names):
-    print(len(sample_names))
-    for a in sample_names:
-        print(a, end='')
-        for b in sample_names:
-            print(f'\t{distances[(a, b)]:.8f}', end='')
-        print()
 
 
 def get_peak_distance(smoothed_masses, window_size):

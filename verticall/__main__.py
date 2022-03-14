@@ -20,6 +20,7 @@ import sys
 from .alignment import build_indices, align_sample_pair
 from .distance import get_distribution, smooth_distribution, get_peak_distance
 from .help_formatter import MyParser, MyHelpFormatter
+from .matrix import save_all_matrices
 from .misc import check_python_version, get_ascii_art, get_default_thread_count
 from .log import bold, log, section_header, explanation
 from .paint import paint_alignments, paint_assemblies
@@ -33,11 +34,14 @@ def main():
     check_args(args)
     welcome_message()
     assemblies = find_assemblies(args.in_dir)
+    if not args.view:
+        check_output_directory(args.out_dir)
     build_indices(args, assemblies)
     if args.view is not None:
         view_one_pair(args, assemblies)
     else:
-        process_all_pairs(args, assemblies)
+        sample_names, distances = process_all_pairs(args, assemblies)
+        save_all_matrices(args, sample_names, distances)
     finished_message()
 
 
@@ -71,9 +75,6 @@ def parse_args(args):
     distance_args = parser.add_argument_group('Distance settings')
     distance_args.add_argument('--smoothing_factor', type=float, default=0.8,
                                help='Degree to which the distance distribution is smoothed')
-    distance_args.add_argument('--method', type=str,
-                               choices=['mean', 'median', 'mode', 'peak'], default='peak',
-                               help='Method for converting distributions into a single distance')
     distance_args.add_argument('--correction', type=str, default='jukescantor',
                                help='Distance correction technique(s) from "none", "jukescantor" '
                                     'and "alignedfrac"')
@@ -145,6 +146,21 @@ def finished_message():
                 'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
 
 
+def check_output_directory(directory: pathlib.Path):
+    if directory.is_file():
+        sys.exit(f'\nError: output directory ({directory}) already exists as a file')
+    if directory.is_dir():
+        if len(list(directory.iterdir())) > 0:
+            log(f'Output directory ({directory}) already exists and is not empty - files may be '
+                f'overwritten.')
+        else:
+            log(f'Output directory already exists: {directory}')
+    else:
+        log(f'Creating output directory: {directory}')
+        directory.mkdir(parents=True)
+    log()
+
+
 def find_assemblies(in_dir):
     """
     Returns assemblies in a (sample_name, filename) tuple.
@@ -174,8 +190,9 @@ def process_all_pairs(args, assemblies):
     explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
                 'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
                 'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
-    arg_list = []
+    arg_list, sample_names = [], set()
     for name_a, filename_a in assemblies:
+        sample_names.add(name_a)
         for name_b, filename_b in assemblies:
             if name_a != name_b:
                 arg_list.append((args, name_a, name_b, filename_a, filename_b))
@@ -195,6 +212,8 @@ def process_all_pairs(args, assemblies):
             for log_text, name_a, name_b, distances in pool.imap(process_one_pair, arg_list):
                 log('\n'.join(prepare_log_text(log_text, args.verbose)), end='\n\n')
                 all_distances[(name_a, name_b)] = distances
+
+    return sorted(sample_names), all_distances
 
 
 def prepare_log_text(log_text, verbose):
@@ -258,7 +277,11 @@ def process_one_pair(all_args, view=False):
                    vertical_masses, horizontal_masses, painted_a, painted_b, args.sqrt_distance,
                    args.sqrt_mass)
 
-    distances = mean_distance, median_distance, mean_vert_distance, median_vert_distance
+    distances = {'aligned_frac': aligned_frac,
+                 'mean': mean_distance,
+                 'median': median_distance,
+                 'mean_vertical': mean_vert_distance,
+                 'median_vertical': median_vert_distance}
     return all_log_text, name_a, name_b, distances
 
 
