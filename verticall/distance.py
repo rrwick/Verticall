@@ -273,41 +273,41 @@ def interpolate(low, peak, high):
         return 0.0
 
 
-def smooth_distribution(masses, iterations=1000):
-    """
-    Smooths the mass distribution with a force-directed approach. Each point is pulled by two
-    forces:
-    * Trying to get close to the empirical point
-    * Trying to get close to the neighbouring points.
-    """
-    smoothed = masses.copy()
-    for _ in range(iterations):
-        for i, m in enumerate(masses):
-
-            # The first force pulls the point back to the empirical distribution, but it's squared,
-            # so small deviations are okay.
-            difference = m - smoothed[i]
-            force_1 = difference * abs(difference)
-
-            # The second force
-            lower = smoothed[i-1] if i > 0 else None
-            upper = smoothed[i+1] if i < len(masses)-1 else None
-            if lower is not None and upper is not None:
-                mean_neighbour = (lower + upper) / 2.0
-                force_2 = mean_neighbour - smoothed[i]
-                force_2_scaling_factor = get_force_scaling_factor(i)
-                force_2 *= force_2_scaling_factor
-            else:
-                force_2 = 0.0
-
-            smoothed[i] += force_1
-            smoothed[i] += force_2
-
-    # Normalise to sum to one.
-    total = sum(smoothed)
-    smoothed = [s/total for s in smoothed]
-
-    return smoothed
+# def smooth_distribution(masses, iterations=1000):
+#     """
+#     Smooths the mass distribution with a force-directed approach. Each point is pulled by two
+#     forces:
+#     * Trying to get close to the empirical point
+#     * Trying to get close to the neighbouring points.
+#     """
+#     smoothed = masses.copy()
+#     for _ in range(iterations):
+#         for i, m in enumerate(masses):
+#
+#             # The first force pulls the point back to the empirical distribution, but it's squared,
+#             # so small deviations are okay.
+#             difference = m - smoothed[i]
+#             force_1 = difference * abs(difference)
+#
+#             # The second force
+#             lower = smoothed[i-1] if i > 0 else None
+#             upper = smoothed[i+1] if i < len(masses)-1 else None
+#             if lower is not None and upper is not None:
+#                 mean_neighbour = (lower + upper) / 2.0
+#                 force_2 = mean_neighbour - smoothed[i]
+#                 force_2_scaling_factor = get_force_scaling_factor(i)
+#                 force_2 *= force_2_scaling_factor
+#             else:
+#                 force_2 = 0.0
+#
+#             smoothed[i] += force_1
+#             smoothed[i] += force_2
+#
+#     # Normalise to sum to one.
+#     total = sum(smoothed)
+#     smoothed = [s/total for s in smoothed]
+#
+#     return smoothed
 
 
 def get_force_scaling_factor(i):
@@ -458,3 +458,47 @@ def find_local_maximum_to_left(masses, i):
         if i == 0:
             return None
     return i
+
+
+def smooth_distribution(masses, smoothing_factor=0.8):
+    """
+    Smooths the mass distribution with a force-directed approach. Each point is pulled by two
+    forces:
+    * Trying to get close to the empirical point
+    * Trying to get close to the neighbouring points.
+    """
+    smoothed = []
+    for i, _ in enumerate(masses):
+
+        kernel_width = i ** smoothing_factor
+        smoothed.append(get_smoothed_mass(masses, i, kernel_width))
+
+    # Normalise to sum to one.
+    total = sum(smoothed)
+    smoothed = [s/total for s in smoothed]
+
+    return smoothed
+
+
+def get_smoothed_mass(masses, i, kernel_width):
+    low_i = max(math.floor(i - kernel_width), 0)
+    high_i = math.ceil(i + kernel_width)
+    masses_to_average, weights = [], []
+    for j in range(low_i, high_i+1):
+        try:
+            masses_to_average.append(masses[j])
+        except IndexError:
+            masses_to_average.append(0.0)
+        weights.append(get_epanechnikov_weight(kernel_width, j-i))
+    return np.average(masses_to_average, weights=weights)
+
+
+def get_epanechnikov_weight(kernel_width, offset):
+    """
+    Returns the weight of an Epanechnikov kernel. Since these weights are just relative, we don't
+    bother normalising the kernel to an area of 1.
+    """
+    if kernel_width == 0.0:
+        return 1.0 if offset == 0.0 else 0.0
+    weight = 1.0 - ((offset / kernel_width) ** 2)
+    return max(0.0, weight)

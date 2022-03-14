@@ -301,3 +301,37 @@ def test_find_local_maximum_to_left():
     assert verticall.distance.find_local_maximum_to_left(masses, 1) is None
     masses = [0.20, 0.25, 0.10, 0.20, 0.25]
     assert verticall.distance.find_local_maximum_to_left(masses, 2) == 1
+
+
+def test_get_epanechnikov_weight():
+    assert verticall.distance.get_epanechnikov_weight(0.0, 0.0) == pytest.approx(1.0)
+    assert verticall.distance.get_epanechnikov_weight(0.0, 0.5) == pytest.approx(0.0)
+    assert verticall.distance.get_epanechnikov_weight(0.0, -0.5) == pytest.approx(0.0)
+    assert verticall.distance.get_epanechnikov_weight(0.0, 5.0) == pytest.approx(0.0)
+    assert verticall.distance.get_epanechnikov_weight(0.0, -5.0) == pytest.approx(0.0)
+
+    assert verticall.distance.get_epanechnikov_weight(1.0, 0.0) == pytest.approx(1.0)
+    assert verticall.distance.get_epanechnikov_weight(1.0, 0.5) == pytest.approx(0.75)
+    assert verticall.distance.get_epanechnikov_weight(1.0, 1.0) == pytest.approx(0.0)
+    assert verticall.distance.get_epanechnikov_weight(1.0, 5.0) == pytest.approx(0.0)
+    assert verticall.distance.get_epanechnikov_weight(1.0, -0.5) == pytest.approx(0.75)
+    assert verticall.distance.get_epanechnikov_weight(1.0, -1.0) == pytest.approx(0.0)
+    assert verticall.distance.get_epanechnikov_weight(1.0, -5.0) == pytest.approx(0.0)
+
+    assert verticall.distance.get_epanechnikov_weight(5.0, 0.0) == pytest.approx(1.0)
+    assert verticall.distance.get_epanechnikov_weight(5.0, 2.5) == pytest.approx(0.75)
+    assert verticall.distance.get_epanechnikov_weight(5.0, 5.0) == pytest.approx(0.0)
+    assert verticall.distance.get_epanechnikov_weight(5.0, 10.0) == pytest.approx(0.0)
+    assert verticall.distance.get_epanechnikov_weight(5.0, -2.5) == pytest.approx(0.75)
+    assert verticall.distance.get_epanechnikov_weight(5.0, -5.0) == pytest.approx(0.0)
+    assert verticall.distance.get_epanechnikov_weight(5.0, -10.0) == pytest.approx(0.0)
+
+
+def test_get_smoothed_mass():
+    masses = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+    assert verticall.distance.get_smoothed_mass(masses, 0, 0) == pytest.approx(0.1)
+    assert verticall.distance.get_smoothed_mass(masses, 0, 1) == pytest.approx(0.1)
+    assert verticall.distance.get_smoothed_mass(masses, 0, 5) == pytest.approx(0.1)
+    assert verticall.distance.get_smoothed_mass(masses, 3, 0) == pytest.approx(0.1)
+    assert verticall.distance.get_smoothed_mass(masses, 3, 1) == pytest.approx(0.1)
+    assert verticall.distance.get_smoothed_mass(masses, 3, 5) == pytest.approx(0.1)

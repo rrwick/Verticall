@@ -31,11 +31,41 @@ def show_plots(sample_name_a, sample_name_b, window_size, aligned_frac, masses, 
                sqrt_mass):
     fig_1 = distribution_plot_1(sample_name_a, sample_name_b, window_size, masses, smoothed_masses,
                                 thresholds, sqrt_distance, sqrt_mass)
+
+    # mass_prime = [smoothed_masses[i+1] - smoothed_masses[i] for i in range(len(smoothed_masses)-1)]
+    # fig_2 = distribution_plot_prime(sample_name_a, sample_name_b, window_size, mass_prime,
+    #                                 sqrt_distance)
+    # mass_double_prime = [mass_prime[i + 1] - mass_prime[i] for i in range(len(mass_prime)-1)]
+    # fig_3 = distribution_plot_prime(sample_name_a, sample_name_b, window_size, mass_double_prime,
+    #                                 sqrt_distance)
+
     fig_2 = distribution_plot_2(sample_name_a, sample_name_b, window_size, vertical_masses,
                                 horizontal_masses, sqrt_distance, sqrt_mass)
     fig_3 = contig_plot(sample_name_a, painted_a, window_size, sqrt_distance)
 
     plt.show()
+
+
+# def distribution_plot_prime(sample_name_a, sample_name_b, window_size, mass_changes, sqrt_distance):
+#     title = f'{sample_name_a} vs {sample_name_b} prime'
+#     x_max = len(mass_changes) / window_size
+#     distances = [i / window_size for i in range(len(mass_changes))]
+#
+#     df = pd.DataFrame(list(zip(distances, mass_changes)),
+#                       columns=['distance', 'mass_change'])
+#
+#     g = (ggplot(df) +
+#          geom_segment(aes(x='distance', xend='distance', y=0, yend='mass_change'), size=1,
+#                       color=VERTICAL_COLOUR) +
+#          theme_bw() +
+#          labs(title=title, x='distance', y='mass change'))
+#
+#     if sqrt_distance:
+#         g += scale_x_sqrt(limits=(0, x_max))
+#     else:
+#         g += scale_x_continuous(limits=(0, x_max))
+#
+#     return g.draw()
 
 
 def distribution_plot_1(sample_name_a, sample_name_b, window_size, masses,
