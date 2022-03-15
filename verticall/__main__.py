@@ -201,6 +201,7 @@ def process_all_pairs(args, assemblies, table_file):
             log('\n'.join(prepare_log_text(log_text, args.verbose)), end='\n\n')
             all_distances[(name_a, name_b)] = distances
             table_file.write(table_line)
+            table_file.flush()
 
     # If using multiple threads, use a process pool to work in parallel.
     else:
@@ -210,6 +211,7 @@ def process_all_pairs(args, assemblies, table_file):
                 log('\n'.join(prepare_log_text(log_text, args.verbose)), end='\n\n')
                 all_distances[(name_a, name_b)] = distances
                 table_file.write(table_line)
+                table_file.flush()
 
     return sorted(sample_names), all_distances
 
