@@ -98,29 +98,6 @@ def test_iterate_fasta_2():
     assert fasta == [('A', 'TTGCCTGTAGTCGGGACCCC'), ('B', 'ATTCTCAGAATGGCGTAGTA')]
 
 
-def test_check_assembly_file_type_1():
-    verticall.misc.check_assembly_file_type('test/test_misc/test.fasta')
-    verticall.misc.check_assembly_file_type('test/test_misc/test.fasta.gz')
-
-
-def test_check_assembly_file_type_2():
-    with pytest.raises(SystemExit) as e:
-        verticall.misc.check_assembly_file_type('test/test_misc/test.fastq')
-    assert 'is not in FASTA format' in str(e.value)
-    with pytest.raises(SystemExit) as e:
-        verticall.misc.check_assembly_file_type('test/test_misc/test.fastq.gz')
-    assert 'is not in FASTA format' in str(e.value)
-
-
-def test_check_assembly_file_type_3():
-    with pytest.raises(SystemExit) as e:
-        verticall.misc.check_assembly_file_type('test/test_misc/test.gfa')
-    assert 'is not in FASTA format' in str(e.value)
-    with pytest.raises(SystemExit) as e:
-        verticall.misc.check_assembly_file_type('test/test_misc/test.gfa.gz')
-    assert 'is not in FASTA format' in str(e.value)
-
-
 def test_get_default_thread_count():
     assert 1 <= verticall.misc.get_default_thread_count() <= 16
 
