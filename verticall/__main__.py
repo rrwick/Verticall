@@ -329,7 +329,7 @@ def get_table_line(name_a, name_b, alignment_count, n50_alignment_length, aligne
             f'{name_b}\t'
             f'{alignment_count}\t'
             f'{n50_alignment_length}\t'
-            f'{aligned_frac}\t'
+            f'{aligned_frac:.9f}\t'
             f'{window_size}\t'
             f'{window_count}\t'
             f'{mean_distance:.9f}\t'

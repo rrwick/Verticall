@@ -192,7 +192,7 @@ def get_peak_distance(masses, window_size):
 
     mass_below = masses[most_massive_peak-1] if most_massive_peak > 0 else 0.0
     mass_at = masses[most_massive_peak]
-    mass_above = masses[most_massive_peak+1] if most_massive_peak < len(masses) else 0.0
+    mass_above = masses[most_massive_peak+1] if most_massive_peak < len(masses)-1 else 0.0
     peak_distance = (most_massive_peak + interpolate(mass_below, mass_at, mass_above)) / window_size
     log_text.append(f'V    interpolated peak distance: {peak_distance:.9f}')
 
