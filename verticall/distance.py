@@ -172,24 +172,27 @@ def get_mode(masses):
         return statistics.mean(distances_with_max_mass)
 
 
-def get_peak_distance(smoothed_masses, window_size):
+def get_peak_distance(masses, window_size):
     """
-    Starts with the median and climb upwards, smoothing when a peak is reached. If a lot of
-    smoothing doesn't change the peak, the process stops.
-
-    The final returned value is interpolated from the peak and its neighbours.
+    Takes smoothed masses as input and finds the peak with the most mass.
     """
     log_text = ['V  mass peaks:']
-    peaks_with_total_mass = [(get_peak_total_mass(smoothed_masses, p), p)
-                             for p in find_peaks(smoothed_masses)]
+    peaks_with_total_mass = [(get_peak_total_mass(masses, p), p)
+                             for p in find_peaks(masses)]
     most_massive_peak = sorted(peaks_with_total_mass)[-1][1]
     for mass, peak in peaks_with_total_mass:
         star = ' *' if peak == most_massive_peak else ''
         log_text.append(f'V    {peak/window_size:.9f} ({100.0 * mass:.1f}%){star}')
 
-    thresholds = get_thresholds(smoothed_masses, most_massive_peak)
+    thresholds = get_thresholds(masses, most_massive_peak)
 
-    return most_massive_peak, thresholds, log_text
+    mass_below = masses[most_massive_peak-1] if most_massive_peak > 0 else 0.0
+    mass_at = masses[most_massive_peak]
+    mass_above = masses[most_massive_peak+1] if most_massive_peak < len(masses) else 0.0
+    peak_distance = (most_massive_peak + interpolate(mass_below, mass_at, mass_above)) / window_size
+    log_text.append(f'V    interpolated peak distance: {peak_distance:.9f}')
+
+    return peak_distance, thresholds, log_text
 
 
 def climb_to_peak(masses, starting_point):

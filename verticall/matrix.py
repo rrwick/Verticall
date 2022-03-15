@@ -28,12 +28,14 @@ def save_all_matrices(args, sample_names, all_distances):
     aligned_fractions = get_matrix(sample_names, all_distances, 'aligned_fraction')
     mean_distances = get_matrix(sample_names, all_distances, 'mean')
     median_distances = get_matrix(sample_names, all_distances, 'median')
+    peak_distances = get_matrix(sample_names, all_distances, 'peak')
     mean_vertical_distances = get_matrix(sample_names, all_distances, 'mean_vertical')
     median_vertical_distances = get_matrix(sample_names, all_distances, 'median_vertical')
 
     save_matrix(args, sample_names, aligned_fractions, 'aligned_fraction')
     save_matrix(args, sample_names, mean_distances, 'mean')
     save_matrix(args, sample_names, median_distances, 'median')
+    save_matrix(args, sample_names, peak_distances, 'peak')
     save_matrix(args, sample_names, mean_vertical_distances, 'mean_vertical')
     save_matrix(args, sample_names, median_vertical_distances, 'median_vertical')
 
@@ -41,7 +43,7 @@ def save_all_matrices(args, sample_names, all_distances):
     if not args.asymmetrical:
         make_symmetrical(median_vertical_distances, sample_names)
 
-    save_matrix(args, sample_names, median_vertical_distances, 'median_vertical_corrected')
+    save_matrix(args, sample_names, median_vertical_distances, 'final')
     log()
 
 

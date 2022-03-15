@@ -36,11 +36,15 @@ def main():
     assemblies = find_assemblies(args.in_dir)
     if not args.view:
         check_output_directory(args.out_dir)
+        table_file = create_table_file(args.out_dir)
+    else:
+        table_file = None
     build_indices(args, assemblies)
     if args.view is not None:
         view_one_pair(args, assemblies)
     else:
-        sample_names, distances = process_all_pairs(args, assemblies)
+        sample_names, distances = process_all_pairs(args, assemblies, table_file)
+        table_file.close()
         save_all_matrices(args, sample_names, distances)
     finished_message()
 
@@ -161,6 +165,21 @@ def check_output_directory(directory: pathlib.Path):
     log()
 
 
+def create_table_file(directory: pathlib.Path):
+    f = open(directory / 'pairwise.tsv', 'wt')
+    f.write('assembly_1\t'
+            'assembly_2\t'
+            'alignment_count\t'
+            'n50_alignment_length\t'
+            'aligned_fraction\t'
+            'window_size\t'
+            'window_count\t'
+            'mean_distance\t'
+            'median_distance\t'
+            '\n')
+    return f
+
+
 def find_assemblies(in_dir):
     """
     Returns assemblies in a (sample_name, filename) tuple.
@@ -185,7 +204,7 @@ def find_assemblies(in_dir):
     return assemblies
 
 
-def process_all_pairs(args, assemblies):
+def process_all_pairs(args, assemblies, table_file):
     section_header('Processing pairwise combinations')
     explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
                 'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
@@ -280,6 +299,7 @@ def process_one_pair(all_args, view=False):
     distances = {'aligned_fraction': aligned_frac,
                  'mean': mean_distance,
                  'median': median_distance,
+                 'peak': peak_distance,
                  'mean_vertical': mean_vert_distance,
                  'median_vertical': median_vert_distance}
     return all_log_text, name_a, name_b, distances
