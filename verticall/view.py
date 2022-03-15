@@ -16,8 +16,11 @@ import pandas as pd
 from plotnine import ggplot, aes, geom_segment, geom_line, geom_vline, labs, theme_bw, \
     scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt, scale_color_manual, \
     element_blank, theme, annotate
+import warnings
 
 from .distance import get_distance
+
+warnings.filterwarnings('ignore')
 
 VERTICAL_COLOUR = '#4859a0'
 VERTICAL_COLOUR_LIGHT = '#aabbf2'
