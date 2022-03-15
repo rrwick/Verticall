@@ -84,7 +84,7 @@ def align_sample_pair(args, assembly_filename_a, sample_name_b):
         log_text.append(f'V  {len(alignments)} alignments:')
         log_text.append(f'V    N50 alignment length: {n50_alignment_length}')
         log_text.append(f'V    aligned fraction: {100.0 * aligned_frac:.2f}%')
-    return alignments, aligned_frac, log_text
+    return alignments, n50_alignment_length, aligned_frac, log_text
 
 
 def cull_redundant_alignments(alignments, allowed_overlap):

@@ -167,16 +167,7 @@ def check_output_directory(directory: pathlib.Path):
 
 def create_table_file(directory: pathlib.Path):
     f = open(directory / 'pairwise.tsv', 'wt')
-    f.write('assembly_1\t'
-            'assembly_2\t'
-            'alignment_count\t'
-            'n50_alignment_length\t'
-            'aligned_fraction\t'
-            'window_size\t'
-            'window_count\t'
-            'mean_distance\t'
-            'median_distance\t'
-            '\n')
+    f.write(get_table_header())
     return f
 
 
@@ -221,16 +212,19 @@ def process_all_pairs(args, assemblies, table_file):
     # If only using a single thread, do the alignment in a simple loop (easier for debugging).
     if args.threads == 1:
         for a in arg_list:
-            log_text, name_a, name_b, distances = process_one_pair(a)
+            log_text, name_a, name_b, distances, table_line = process_one_pair(a)
             log('\n'.join(prepare_log_text(log_text, args.verbose)), end='\n\n')
             all_distances[(name_a, name_b)] = distances
+            table_file.write(table_line)
 
     # If using multiple threads, use a process pool to work in parallel.
     else:
         with Pool(processes=args.threads) as pool:
-            for log_text, name_a, name_b, distances in pool.imap(process_one_pair, arg_list):
+            for log_text, name_a, name_b, distances, table_line in pool.imap(process_one_pair,
+                                                                             arg_list):
                 log('\n'.join(prepare_log_text(log_text, args.verbose)), end='\n\n')
                 all_distances[(name_a, name_b)] = distances
+                table_file.write(table_line)
 
     return sorted(sample_names), all_distances
 
@@ -268,15 +262,17 @@ def process_one_pair(all_args, view=False):
     args, name_a, name_b, filename_a, filename_b = all_args
     all_log_text = [f'{name_a} vs {name_b}:']
 
-    alignments, aligned_frac, log_text = align_sample_pair(args, filename_a, name_b)
+    alignments, n50_alignment_length, aligned_frac, log_text = \
+        align_sample_pair(args, filename_a, name_b)
     all_log_text += log_text
 
-    masses, window_size, mean_distance, median_distance, log_text = \
+    masses, window_size, window_count, mean_distance, median_distance, log_text = \
         get_distribution(args, alignments)
     all_log_text += log_text
 
     smoothed_masses = smooth_distribution(masses, args.smoothing_factor)
-    peak_distance, thresholds, log_text = get_peak_distance(smoothed_masses, window_size)
+    mass_peaks, peak_distance, thresholds, log_text = \
+        get_peak_distance(smoothed_masses, window_size)
     all_log_text += log_text
 
     vertical_masses, horizontal_masses, mean_vert_distance, median_vert_distance, log_text = \
@@ -302,7 +298,67 @@ def process_one_pair(all_args, view=False):
                  'peak': peak_distance,
                  'mean_vertical': mean_vert_distance,
                  'median_vertical': median_vert_distance}
-    return all_log_text, name_a, name_b, distances
+
+    table_line = get_table_line(name_a, name_b, len(alignments), n50_alignment_length,
+                                aligned_frac, window_size, window_count, mean_distance,
+                                median_distance, mass_peaks, peak_distance, vertical_masses,
+                                horizontal_masses, mean_vert_distance, median_vert_distance,
+                                painted_a, painted_b)
+
+    return all_log_text, name_a, name_b, distances, table_line
+
+
+def get_table_header():
+    return ('assembly_a\t'
+            'assembly_b\t'
+            'alignment_count\t'
+            'n50_alignment_length\t'
+            'aligned_fraction\t'
+            'window_size\t'
+            'window_count\t'
+            'mean_distance\t'
+            'median_distance\t'
+            'mass_peaks\t'
+            'peak_distance\t'
+            'alignments_vertical\t'
+            'alignments_horizontal\t'
+            'mean_vertical_distance\t'
+            'median_vertical_distance\t'
+            'assembly_a_vertical\t'
+            'assembly_a_horizontal\t'
+            'assembly_a_unaligned\t'
+            'assembly_b_vertical\t'
+            'assembly_b_horizontal\t'
+            'assembly_b_unaligned\n')
+
+
+def get_table_line(name_a, name_b, alignment_count, n50_alignment_length, aligned_frac,
+                   window_size, window_count, mean_distance, median_distance, mass_peaks,
+                   peak_distance, vertical_masses, horizontal_masses, mean_vert_distance,
+                   median_vert_distance, painted_a, painted_b):
+    vertical_a, horizontal_a, unaligned_a = painted_a.get_fractions()
+    vertical_b, horizontal_b, unaligned_b = painted_b.get_fractions()
+    return (f'{name_a}\t'
+            f'{name_b}\t'
+            f'{alignment_count}\t'
+            f'{n50_alignment_length}\t'
+            f'{aligned_frac}\t'
+            f'{window_size}\t'
+            f'{window_count}\t'
+            f'{mean_distance:.9f}\t'
+            f'{median_distance:.9f}\t'
+            f'{mass_peaks}\t'
+            f'{peak_distance:.9f}\t'
+            f'{100.0 * sum(vertical_masses):.2f}%\t'
+            f'{100.0 * sum(horizontal_masses):.2f}%\t'
+            f'{mean_vert_distance:.9f}\t'
+            f'{median_vert_distance:.9f}\t'
+            f'{100.0 * vertical_a:.2f}%\t'
+            f'{100.0 * horizontal_a:.2f}%\t'
+            f'{100.0 * unaligned_a:.2f}%\t'
+            f'{100.0 * vertical_b:.2f}%\t'
+            f'{100.0 * horizontal_b:.2f}%\t'
+            f'{100.0 * unaligned_b:.2f}%\n')
 
 
 if __name__ == '__main__':

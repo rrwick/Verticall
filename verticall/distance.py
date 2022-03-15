@@ -45,7 +45,7 @@ def get_distribution(args, alignments):
                 f'V    mean distance:   {mean_distance:.9f}',
                 f'V    median distance: {median_distance:.9f}']
 
-    return masses, window_size, mean_distance, median_distance, log_text
+    return masses, window_size, len(distances), mean_distance, median_distance, log_text
 
 
 def get_vertical_horizontal_distributions(alignments):
@@ -180,9 +180,13 @@ def get_peak_distance(masses, window_size):
     peaks_with_total_mass = [(get_peak_total_mass(masses, p), p)
                              for p in find_peaks(masses)]
     most_massive_peak = sorted(peaks_with_total_mass)[-1][1]
+    mass_peaks = []
     for mass, peak in peaks_with_total_mass:
         star = ' *' if peak == most_massive_peak else ''
-        log_text.append(f'V    {peak/window_size:.9f} ({100.0 * mass:.1f}%){star}')
+        mass_peak = f'{peak/window_size:.9f}'
+        log_text.append(f'V    {mass_peak} ({100.0 * mass:.1f}%){star}')
+        mass_peaks.append(mass_peak)
+    mass_peaks = ','.join(mass_peaks)
 
     thresholds = get_thresholds(masses, most_massive_peak)
 
@@ -192,7 +196,7 @@ def get_peak_distance(masses, window_size):
     peak_distance = (most_massive_peak + interpolate(mass_below, mass_at, mass_above)) / window_size
     log_text.append(f'V    interpolated peak distance: {peak_distance:.9f}')
 
-    return peak_distance, thresholds, log_text
+    return mass_peaks, peak_distance, thresholds, log_text
 
 
 def climb_to_peak(masses, starting_point):
