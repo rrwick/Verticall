@@ -79,12 +79,9 @@ def parse_args(args):
     distance_args = parser.add_argument_group('Distance settings')
     distance_args.add_argument('--smoothing_factor', type=float, default=0.8,
                                help='Degree to which the distance distribution is smoothed')
-    distance_args.add_argument('--correction', type=str, default='jukescantor',
-                               help='Distance correction technique(s) from "none", "jukescantor" '
-                                    'and "alignedfrac"')
     distance_args.add_argument('--asymmetrical', action='store_true',
-                               help='Do not average pairs to make a symmetrical matrix (default: '
-                                    'make matrix symmetrical)')
+                               help='Do not average pairs to make symmetrical matrices (default: '
+                                    'make matrices symmetrical)')
 
     view_args = parser.add_argument_group('View settings')
     view_args.add_argument('--view', type=str,
@@ -118,18 +115,6 @@ def parse_args(args):
 
 
 def check_args(args):
-    # Check --correction
-    args.correction = set(args.correction.split(','))
-    if 'none' in args.correction and len(args.correction) > 1:
-        sys.exit('Error: --correction cannot contain "none" and additional values')
-    valid_removed = set(args.correction)
-    for c in ["none", "jukescantor", "alignedfrac"]:
-        valid_removed.discard(c)
-    if len(valid_removed) > 0:
-        sys.exit('Error: only "none", "jukescantor" and "alignedfrac" can be used in '
-                 '--correction')
-
-    # Check --view
     if args.view is not None:
         samples = args.view.split(',')
         if len(samples) != 2:

@@ -226,48 +226,6 @@ def interpolate(low, peak, high):
         return 0.0
 
 
-# def smooth_distribution(masses, iterations=1000):
-#     """
-#     Smooths the mass distribution with a force-directed approach. Each point is pulled by two
-#     forces:
-#     * Trying to get close to the empirical point
-#     * Trying to get close to the neighbouring points.
-#     """
-#     smoothed = masses.copy()
-#     for _ in range(iterations):
-#         for i, m in enumerate(masses):
-#
-#             # The first force pulls the point back to the empirical distribution, but it's squared,
-#             # so small deviations are okay.
-#             difference = m - smoothed[i]
-#             force_1 = difference * abs(difference)
-#
-#             # The second force
-#             lower = smoothed[i-1] if i > 0 else None
-#             upper = smoothed[i+1] if i < len(masses)-1 else None
-#             if lower is not None and upper is not None:
-#                 mean_neighbour = (lower + upper) / 2.0
-#                 force_2 = mean_neighbour - smoothed[i]
-#                 force_2_scaling_factor = get_force_scaling_factor(i)
-#                 force_2 *= force_2_scaling_factor
-#             else:
-#                 force_2 = 0.0
-#
-#             smoothed[i] += force_1
-#             smoothed[i] += force_2
-#
-#     # Normalise to sum to one.
-#     total = sum(smoothed)
-#     smoothed = [s/total for s in smoothed]
-#
-#     return smoothed
-
-
-def get_force_scaling_factor(i):
-    scaling_factor = 2.0 ** (-100.0 / (i + 10.0))
-    return max(scaling_factor, 0.0)
-
-
 def find_peaks(masses):
     """
     Given a mass distribution, this returns a list of all peaks indices.

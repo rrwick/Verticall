@@ -19,53 +19,38 @@ import pytest
 import verticall.matrix
 
 
-def test_correct_distances_1():
+def test_jukes_cantor_correction():
     sample_names = ['a', 'b']
     distances = {('a', 'a'): 0.0, ('a', 'b'): 0.2,
                  ('b', 'a'): 0.1, ('b', 'b'): 0.0}
-    aligned_fractions = {('a', 'a'): 1.0, ('a', 'b'): 0.8,
-                         ('b', 'a'): 0.9, ('b', 'b'): 1.0}
-    verticall.matrix.correct_distances(distances, aligned_fractions, sample_names, {'none'})
-    assert distances[('a', 'a')] == pytest.approx(0.0)
-    assert distances[('a', 'b')] == pytest.approx(0.2)
-    assert distances[('b', 'a')] == pytest.approx(0.1)
-    assert distances[('b', 'b')] == pytest.approx(0.0)
-
-
-def test_correct_distances_2():
-    sample_names = ['a', 'b']
-    distances = {('a', 'a'): 0.0, ('a', 'b'): 0.2,
-                 ('b', 'a'): 0.1, ('b', 'b'): 0.0}
-    aligned_fractions = {('a', 'a'): 1.0, ('a', 'b'): 0.8,
-                         ('b', 'a'): 0.9, ('b', 'b'): 1.0}
-    verticall.matrix.correct_distances(distances, aligned_fractions, sample_names, {'jukescantor'})
+    verticall.matrix.jukes_cantor_correction(distances, sample_names)
     assert distances[('a', 'a')] == pytest.approx(0.0)
     assert distances[('a', 'b')] == pytest.approx(0.23261619622788)
     assert distances[('b', 'a')] == pytest.approx(0.107325632730505)
     assert distances[('b', 'b')] == pytest.approx(0.0)
 
 
-def test_correct_distances_3():
+def test_aligned_fraction_correction():
     sample_names = ['a', 'b']
     distances = {('a', 'a'): 0.0, ('a', 'b'): 0.2,
                  ('b', 'a'): 0.1, ('b', 'b'): 0.0}
     aligned_fractions = {('a', 'a'): 1.0, ('a', 'b'): 0.8,
                          ('b', 'a'): 0.9, ('b', 'b'): 1.0}
-    verticall.matrix.correct_distances(distances, aligned_fractions, sample_names, {'alignedfrac'})
+    verticall.matrix.aligned_fraction_correction(distances, aligned_fractions, sample_names)
     assert distances[('a', 'a')] == pytest.approx(0.0)
     assert distances[('a', 'b')] == pytest.approx(0.2 / 0.8)
     assert distances[('b', 'a')] == pytest.approx(0.1 / 0.9)
     assert distances[('b', 'b')] == pytest.approx(0.0)
 
 
-def test_correct_distances_4():
+def test_both_corrections():
     sample_names = ['a', 'b']
     distances = {('a', 'a'): 0.0, ('a', 'b'): 0.2,
                  ('b', 'a'): 0.1, ('b', 'b'): 0.0}
     aligned_fractions = {('a', 'a'): 1.0, ('a', 'b'): 0.8,
                          ('b', 'a'): 0.9, ('b', 'b'): 1.0}
-    verticall.matrix.correct_distances(distances, aligned_fractions, sample_names,
-                                       {'jukescantor', 'alignedfrac'})
+    verticall.matrix.jukes_cantor_correction(distances, sample_names)
+    verticall.matrix.aligned_fraction_correction(distances, aligned_fractions, sample_names)
     assert distances[('a', 'a')] == pytest.approx(0.0)
     assert distances[('a', 'b')] == pytest.approx(0.23261619622788 / 0.8)
     assert distances[('b', 'a')] == pytest.approx(0.107325632730505 / 0.9)

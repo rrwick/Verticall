@@ -32,6 +32,14 @@ def save_all_matrices(args, sample_names, all_distances):
     mean_vertical_distances = get_matrix(sample_names, all_distances, 'mean_vertical')
     median_vertical_distances = get_matrix(sample_names, all_distances, 'median_vertical')
 
+    if not args.asymmetrical:
+        make_symmetrical(aligned_fractions, sample_names)
+        make_symmetrical(mean_distances, sample_names)
+        make_symmetrical(median_distances, sample_names)
+        make_symmetrical(peak_distances, sample_names)
+        make_symmetrical(mean_vertical_distances, sample_names)
+        make_symmetrical(median_vertical_distances, sample_names)
+
     save_matrix(args, sample_names, aligned_fractions, 'aligned_fraction')
     save_matrix(args, sample_names, mean_distances, 'mean')
     save_matrix(args, sample_names, median_distances, 'median')
@@ -39,11 +47,13 @@ def save_all_matrices(args, sample_names, all_distances):
     save_matrix(args, sample_names, mean_vertical_distances, 'mean_vertical')
     save_matrix(args, sample_names, median_vertical_distances, 'median_vertical')
 
-    correct_distances(median_vertical_distances, aligned_fractions, sample_names, args.correction)
-    if not args.asymmetrical:
-        make_symmetrical(median_vertical_distances, sample_names)
+    jukes_cantor_correction(median_vertical_distances, sample_names)
+    save_matrix(args, sample_names, median_vertical_distances, 'median_vertical_jukes_cantor')
 
-    save_matrix(args, sample_names, median_vertical_distances, 'final')
+    aligned_fraction_correction(median_vertical_distances, aligned_fractions, sample_names)
+    save_matrix(args, sample_names, median_vertical_distances,
+                'median_vertical_jukes_cantor_aligned_fraction')
+
     log()
 
 
@@ -74,15 +84,16 @@ def save_matrix(args, sample_names, matrix, file_prefix):
             f.write('\n')
 
 
-def correct_distances(distances, aligned_fractions, sample_names, correction):
-    if 'jukescantor' in correction:
-        for a in sample_names:
-            for b in sample_names:
-                distances[(a, b)] = jukes_cantor(distances[(a, b)])
-    if 'alignedfrac' in correction:
-        for a in sample_names:
-            for b in sample_names:
-                distances[(a, b)] = distances[(a, b)] / aligned_fractions[(a, b)]
+def jukes_cantor_correction(distances, sample_names):
+    for a in sample_names:
+        for b in sample_names:
+            distances[(a, b)] = jukes_cantor(distances[(a, b)])
+
+
+def aligned_fraction_correction(distances, aligned_fractions, sample_names):
+    for a in sample_names:
+        for b in sample_names:
+            distances[(a, b)] = distances[(a, b)] / aligned_fractions[(a, b)]
 
 
 def jukes_cantor(d):
