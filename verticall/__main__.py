@@ -233,8 +233,14 @@ def view_one_pair(args, assemblies):
                 'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
                 'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
     name_a, name_b = args.view.split(',')
-    filename_a = [filename for name, filename in assemblies if name == name_a][0]
-    filename_b = [filename for name, filename in assemblies if name == name_b][0]
+    try:
+        filename_a = [filename for name, filename in assemblies if name == name_a][0]
+    except IndexError:
+        sys.exit(f'Error: could not find {name_a} in assemblies')
+    try:
+        filename_b = [filename for name, filename in assemblies if name == name_b][0]
+    except IndexError:
+        sys.exit(f'Error: could not find {name_b} in assemblies')
     process_one_pair([args, name_a, name_b, filename_a, filename_b], view=True)
 
 
