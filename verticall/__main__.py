@@ -275,8 +275,8 @@ def process_one_pair(all_args, view=False):
 
     if view:
         log('\n'.join(prepare_log_text(all_log_text, True)), end='\n\n')
-        show_plots(name_a, name_b, window_size, aligned_frac, masses, smoothed_masses, thresholds,
-                   vertical_masses, horizontal_masses, painted_a, painted_b, args.sqrt_distance,
+        show_plots(name_a, name_b, alignments, window_size, masses, smoothed_masses, thresholds,
+                   vertical_masses, horizontal_masses, painted_a, args.sqrt_distance,
                    args.sqrt_mass)
 
     distances = {'aligned_fraction': aligned_frac,

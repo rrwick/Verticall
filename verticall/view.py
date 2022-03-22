@@ -29,14 +29,15 @@ HORIZONTAL_COLOUR_LIGHT = '#eac7c7'
 AMBIGUOUS_COLOUR = '#c9c9c9'
 
 
-def show_plots(sample_name_a, sample_name_b, window_size, aligned_frac, masses, smoothed_masses,
-               thresholds, vertical_masses, horizontal_masses, painted_a, painted_b, sqrt_distance,
+def show_plots(sample_name_a, sample_name_b, alignments, window_size, masses, smoothed_masses,
+               thresholds, vertical_masses, horizontal_masses, painted_a, sqrt_distance,
                sqrt_mass):
     fig_1 = distribution_plot_1(sample_name_a, sample_name_b, window_size, masses, smoothed_masses,
                                 thresholds, sqrt_distance, sqrt_mass)
     fig_2 = distribution_plot_2(sample_name_a, sample_name_b, window_size, vertical_masses,
                                 horizontal_masses, sqrt_distance, sqrt_mass)
-    fig_3 = contig_plot(sample_name_a, painted_a, window_size, sqrt_distance)
+    fig_3 = alignment_plot(sample_name_a, sample_name_b, alignments, window_size, sqrt_distance)
+    fig_4 = contig_plot(sample_name_a, painted_a, window_size, sqrt_distance)
 
     plt.show()
 
@@ -135,6 +136,52 @@ def group_using_thresholds(masses, thresholds):
         else:
             grouping.append('central')
     return grouping
+
+
+def alignment_plot(sample_name_a, sample_name_b, alignments, window_size, sqrt_distance):
+    title = f'{sample_name_a} vs {sample_name_b} painted alignments'
+
+    boundaries = [0]
+    x_max = 0
+    max_differences = 1
+    for a in alignments:
+        x_max += len(a.simplified_cigar)
+        boundaries.append(x_max)
+        max_differences = max(max_differences, a.get_max_differences())
+    y_max = 1.05 * (max_differences / window_size)
+
+    g = (ggplot() +
+         theme_bw() +
+         theme(panel_grid_major_x=element_blank(), panel_grid_minor_x=element_blank()) +
+         scale_x_continuous(expand=(0, 0), limits=(0, x_max)) +
+         labs(title=title, x='alignment position', y='distance'))
+
+    if sqrt_distance:
+        g += scale_y_sqrt(expand=(0, 0), limits=(0, y_max))
+    else:
+        g += scale_y_continuous(expand=(0, 0), limits=(0, y_max))
+
+    for b in boundaries:
+        g += geom_vline(xintercept=b, colour='#000000', size=0.5)
+
+    offset = 0
+    for a in alignments:
+        for start, end in a.get_vertical_blocks():
+            g += annotate('rect', xmin=start+offset, xmax=end+offset, ymin=0.0, ymax=y_max,
+                          fill=VERTICAL_COLOUR, alpha=0.25)
+        for start, end in a.get_horizontal_blocks():
+            g += annotate('rect', xmin=start+offset, xmax=end+offset, ymin=0.0, ymax=y_max,
+                          fill=HORIZONTAL_COLOUR, alpha=0.25)
+        for start, end in a.get_ambiguous_blocks():
+            g += annotate('rect', xmin=start+offset, xmax=end+offset, ymin=0.0, ymax=y_max,
+                          fill=AMBIGUOUS_COLOUR, alpha=0.25)
+        positions = [offset + ((w[0] + w[1]) / 2.0) for w in a.windows_no_overlap]
+        distances = [d / window_size for d in a.window_differences]
+        df = pd.DataFrame(list(zip(positions, distances)), columns=['pos', 'dist'])
+        g += geom_line(data=df, mapping=aes(x='pos', y='dist'), size=0.5)
+        offset += len(a.simplified_cigar)
+
+    return g.draw()
 
 
 def contig_plot(sample_name, painted, window_size, sqrt_distance):

@@ -272,6 +272,38 @@ class Alignment(object):
             return False
         return (this_start < other.query_end) and (other.query_start < this_end)
 
+    def get_max_differences(self):
+        if self.window_differences:
+            return max(self.window_differences)
+        else:
+            return 0
+
+    def get_vertical_blocks(self):
+        """
+        Returns a list of all ranges of the alignment which have been painted as vertical.
+        """
+        return self.get_blocks(Paint.VERTICAL)
+
+    def get_horizontal_blocks(self):
+        """
+        Returns a list of all ranges of the alignment which have been painted as horizontal.
+        """
+        return self.get_blocks(Paint.HORIZONTAL)
+
+    def get_ambiguous_blocks(self):
+        """
+        Returns a list of all ranges of the alignment which have been painted as ambiguous.
+        """
+        return self.get_blocks(Paint.AMBIGUOUS)
+
+    def get_blocks(self, classification):
+        blocks = IntRange()
+        for i, c in enumerate(self.window_classifications):
+            start, end = self.windows_no_overlap[i]
+            if c == classification:
+                blocks.add_range(start, end)
+        return blocks.ranges
+
 
 def get_expanded_cigar(cigar):
     expanded_cigar = []
