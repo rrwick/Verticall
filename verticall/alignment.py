@@ -129,6 +129,7 @@ class Alignment(object):
         self.windows_no_overlap = []      # Corresponding windows without overlap (for painting)
         self.window_differences = []      # The number of differences in each window
         self.window_classifications = []  # Vertical/horizontal call for each window
+        self.window_class_with_amb = []   # Vertical/horizontal/ambiguous call for each window
 
     @staticmethod
     def read_paf_columns(paf_line):
@@ -240,6 +241,7 @@ class Alignment(object):
             else:
                 self.window_classifications.append(Paint.VERTICAL)
 
+        self.window_class_with_amb = self.window_classifications.copy()
         self.window_classifications = remove_ambiguous(self.window_classifications)
 
     def get_all_vertical_distances(self):
@@ -278,27 +280,31 @@ class Alignment(object):
         else:
             return 0
 
-    def get_vertical_blocks(self):
+    def get_vertical_blocks(self, include_ambiguous=False):
         """
         Returns a list of all ranges of the alignment which have been painted as vertical.
         """
-        return self.get_blocks(Paint.VERTICAL)
+        return self.get_blocks(Paint.VERTICAL, include_ambiguous)
 
-    def get_horizontal_blocks(self):
+    def get_horizontal_blocks(self, include_ambiguous=False):
         """
         Returns a list of all ranges of the alignment which have been painted as horizontal.
         """
-        return self.get_blocks(Paint.HORIZONTAL)
+        return self.get_blocks(Paint.HORIZONTAL, include_ambiguous)
 
-    def get_ambiguous_blocks(self):
+    def get_ambiguous_blocks(self, include_ambiguous=False):
         """
         Returns a list of all ranges of the alignment which have been painted as ambiguous.
         """
-        return self.get_blocks(Paint.AMBIGUOUS)
+        return self.get_blocks(Paint.AMBIGUOUS, include_ambiguous)
 
-    def get_blocks(self, classification):
+    def get_blocks(self, classification, include_ambiguous=False):
         blocks = IntRange()
-        for i, c in enumerate(self.window_classifications):
+        if include_ambiguous:
+            classifications = self.window_class_with_amb
+        else:
+            classifications = self.window_classifications
+        for i, c in enumerate(classifications):
             start, end = self.windows_no_overlap[i]
             if c == classification:
                 blocks.add_range(start, end)

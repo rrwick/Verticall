@@ -138,7 +138,8 @@ def group_using_thresholds(masses, thresholds):
     return grouping
 
 
-def alignment_plot(sample_name_a, sample_name_b, alignments, window_size, sqrt_distance):
+def alignment_plot(sample_name_a, sample_name_b, alignments, window_size, sqrt_distance,
+                   include_ambiguous=False):
     title = f'{sample_name_a} vs {sample_name_b} painted alignments'
 
     boundaries = [0]
@@ -166,13 +167,13 @@ def alignment_plot(sample_name_a, sample_name_b, alignments, window_size, sqrt_d
 
     offset = 0
     for a in alignments:
-        for start, end in a.get_vertical_blocks():
+        for start, end in a.get_vertical_blocks(include_ambiguous):
             g += annotate('rect', xmin=start+offset, xmax=end+offset, ymin=0.0, ymax=y_max,
                           fill=VERTICAL_COLOUR, alpha=0.25)
-        for start, end in a.get_horizontal_blocks():
+        for start, end in a.get_horizontal_blocks(include_ambiguous):
             g += annotate('rect', xmin=start+offset, xmax=end+offset, ymin=0.0, ymax=y_max,
                           fill=HORIZONTAL_COLOUR, alpha=0.25)
-        for start, end in a.get_ambiguous_blocks():
+        for start, end in a.get_ambiguous_blocks(include_ambiguous):
             g += annotate('rect', xmin=start+offset, xmax=end+offset, ymin=0.0, ymax=y_max,
                           fill=AMBIGUOUS_COLOUR, alpha=0.25)
         positions = [offset + ((w[0] + w[1]) / 2.0) for w in a.windows_no_overlap]
