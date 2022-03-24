@@ -55,8 +55,8 @@ def paint_alignments(alignments, thresholds, window_size):
     median_vert_distance = get_distance(vertical_masses, window_size, 'median')
     log_text = ['V  painting alignments:',
                 f'    vertical inheritance:   {100.0 * total_vertical_mass:6.2f}%',
-                f'    horizontal inheritance: {100.0 * total_horizontal_mass:6.2f}%',
-                f'    mean vertical distance:   {mean_vert_distance:.9f}',
+                f'V    horizontal inheritance: {100.0 * total_horizontal_mass:6.2f}%',
+                f'V    mean vertical distance:   {mean_vert_distance:.9f}',
                 f'    median vertical distance: {median_vert_distance:.9f}']
     return vertical_masses, horizontal_masses, mean_vert_distance, median_vert_distance, log_text
 
@@ -117,6 +117,20 @@ class PaintedAssembly(object):
                 horizontal += (end - start)
         unaligned = total - vertical - horizontal
         return vertical/total, horizontal/total, unaligned/total
+
+    def get_regions(self):
+        """
+        Returns a string encoding the vertical, horizontal and unaligned regions of the assembly.
+        """
+        vertical, horizontal, unaligned = [], [], []
+        for name, c in self.contigs.items():
+            for start, end in c.get_vertical_blocks():
+                vertical.append(f'{name}:{start}-{end}')
+            for start, end in c.get_horizontal_blocks():
+                horizontal.append(f'{name}:{start}-{end}')
+            for start, end in c.get_unaligned_blocks():
+                unaligned.append(f'{name}:{start}-{end}')
+        return ','.join(vertical), ','.join(horizontal), ','.join(unaligned)
 
 
 class PaintedContig(object):
@@ -184,6 +198,12 @@ class PaintedContig(object):
         Returns a list of all ranges of the contig which have been painted as horizontal.
         """
         return get_blocks(self.paint, Paint.HORIZONTAL)
+
+    def get_unaligned_blocks(self):
+        """
+        Returns a list of all ranges of the contig which have been painted as unaligned.
+        """
+        return get_blocks(self.paint, Paint.UNALIGNED)
 
 
 def get_blocks(paint, classification):

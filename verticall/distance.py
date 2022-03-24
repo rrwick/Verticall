@@ -319,7 +319,7 @@ def find_local_minimum_to_right(masses, i):
     """
     if i == len(masses) - 1:
         return None
-    while masses[i+1] < masses[i]:
+    while masses[i+1] <= masses[i]:
         i += 1
         if i == len(masses)-1:
             return None
@@ -334,7 +334,7 @@ def find_local_minimum_to_left(masses, i):
     """
     if i == 0:
         return None
-    while masses[i-1] < masses[i]:
+    while masses[i-1] <= masses[i]:
         i -= 1
         if i == 0:
             return None

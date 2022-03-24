@@ -313,24 +313,32 @@ def get_table_header():
             'median_distance\t'
             'mass_peaks\t'
             'peak_distance\t'
-            'alignments_vertical\t'
-            'alignments_horizontal\t'
+            'alignments_vertical_fraction\t'
+            'alignments_horizontal_fraction\t'
             'mean_vertical_distance\t'
             'median_vertical_distance\t'
-            'assembly_a_vertical\t'
-            'assembly_a_horizontal\t'
-            'assembly_a_unaligned\t'
-            'assembly_b_vertical\t'
-            'assembly_b_horizontal\t'
-            'assembly_b_unaligned\n')
+            'assembly_a_vertical_fraction\t'
+            'assembly_a_horizontal_fraction\t'
+            'assembly_a_unaligned_fraction\t'
+            'assembly_b_vertical_fraction\t'
+            'assembly_b_horizontal_fraction\t'
+            'assembly_b_unaligned_fraction\t'
+            'assembly_a_vertical_regions\t'
+            'assembly_a_horizontal_regions\t'
+            'assembly_a_unaligned_regions\t'
+            'assembly_b_vertical_regions\t'
+            'assembly_b_horizontal_regions\t'
+            'assembly_b_unaligned_regions\n')
 
 
 def get_table_line(name_a, name_b, alignment_count, n50_alignment_length, aligned_frac,
                    window_size, window_count, mean_distance, median_distance, mass_peaks,
                    peak_distance, vertical_masses, horizontal_masses, mean_vert_distance,
                    median_vert_distance, painted_a, painted_b):
-    vertical_a, horizontal_a, unaligned_a = painted_a.get_fractions()
-    vertical_b, horizontal_b, unaligned_b = painted_b.get_fractions()
+    vertical_frac_a, horizontal_frac_a, unaligned_frac_a = painted_a.get_fractions()
+    vertical_frac_b, horizontal_frac_b, unaligned_frac_b = painted_b.get_fractions()
+    vertical_regions_a, horizontal_regions_a, unaligned_regions_a = painted_a.get_regions()
+    vertical_regions_b, horizontal_regions_b, unaligned_regions_b = painted_b.get_regions()
     return (f'{name_a}\t'
             f'{name_b}\t'
             f'{alignment_count}\t'
@@ -346,12 +354,18 @@ def get_table_line(name_a, name_b, alignment_count, n50_alignment_length, aligne
             f'{100.0 * sum(horizontal_masses):.2f}%\t'
             f'{mean_vert_distance:.9f}\t'
             f'{median_vert_distance:.9f}\t'
-            f'{100.0 * vertical_a:.2f}%\t'
-            f'{100.0 * horizontal_a:.2f}%\t'
-            f'{100.0 * unaligned_a:.2f}%\t'
-            f'{100.0 * vertical_b:.2f}%\t'
-            f'{100.0 * horizontal_b:.2f}%\t'
-            f'{100.0 * unaligned_b:.2f}%\n')
+            f'{100.0 * vertical_frac_a:.2f}%\t'
+            f'{100.0 * horizontal_frac_a:.2f}%\t'
+            f'{100.0 * unaligned_frac_a:.2f}%\t'
+            f'{100.0 * vertical_frac_b:.2f}%\t'
+            f'{100.0 * horizontal_frac_b:.2f}%\t'
+            f'{100.0 * unaligned_frac_b:.2f}%\t'
+            f'{vertical_regions_a}\t'
+            f'{horizontal_regions_a}\t'
+            f'{unaligned_regions_a}\t'
+            f'{vertical_regions_b}\t'
+            f'{horizontal_regions_b}\t'
+            f'{unaligned_regions_b}\n')
 
 
 if __name__ == '__main__':
