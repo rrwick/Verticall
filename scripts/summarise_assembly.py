@@ -20,11 +20,13 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 import argparse
-import collections
+import gzip
 import matplotlib.pyplot as plt
 import pandas as pd
+import pathlib
 from plotnine import ggplot, aes, geom_area, geom_vline, labs, theme_bw, scale_x_continuous, \
     scale_y_continuous, scale_fill_manual, element_blank, theme
+import sys
 
 VERTICAL_COLOUR = '#4859a0'
 HORIZONTAL_COLOUR = '#c47e7e'
@@ -34,10 +36,10 @@ UNALIGNED_COLOUR = '#eeeeee'
 def get_arguments():
     parser = argparse.ArgumentParser(description='Summarise positions of an assembly')
 
-    parser.add_argument('pairwise', type=str,
+    parser.add_argument('pairwise', type=pathlib.Path,
                         help='Vertical\'s pairwise.tsv file')
-    parser.add_argument('name', type=str,
-                        help='Sample name for the assembly to summarise')
+    parser.add_argument('assembly', type=pathlib.Path,
+                        help='Filename for the assembly to summarise')
 
     parser.add_argument('--all', action='store_true',
                         help='Output one line for all assembly positions (default: omit redundant '
@@ -50,16 +52,33 @@ def get_arguments():
 
 def main():
     args = get_arguments()
-    data = load_data(args.pairwise, args.name)
-    contig_lengths = get_contig_lengths(data)
+    contig_lengths, sample_name = get_contig_lengths(args.assembly)
+    data = load_data(args.pairwise, sample_name)
     summarised_data = summarise_data(data, contig_lengths, args.all)
     if args.plot:
-        plot = summary_plot(args.name, summarised_data, contig_lengths)
+        plot = summary_plot(sample_name, summarised_data, contig_lengths)
         plt.show()
     else:
         print('contig', 'position', 'vertical', 'horizontal', 'unaligned')
         for contig, position, vertical, horizontal, unaligned in summarised_data:
             print(f'{contig}\t{position}\t{vertical}\t{horizontal}\t{unaligned}')
+
+
+def get_contig_lengths(assembly_filename):
+    if str(assembly_filename).endswith('.fasta'):
+        extension_len = 6
+    elif str(assembly_filename).endswith('.fasta.gz'):
+        extension_len = 9
+    elif str(assembly_filename).endswith('.fna'):
+        extension_len = 4
+    elif str(assembly_filename).endswith('.fna.gz'):
+        extension_len = 7
+    sample_name = assembly_filename.name[:-extension_len]
+
+    contig_lengths = {}
+    for name, seq in iterate_fasta(assembly_filename):
+        contig_lengths[name] = len(seq)
+    return contig_lengths, sample_name
 
 
 def load_data(pairwise_filename, sample_name):
@@ -76,16 +95,6 @@ def load_data(pairwise_filename, sample_name):
                 unaligned_regions = parts[23].split(',') if parts[23] else []
                 data.append((vertical_regions, horizontal_regions, unaligned_regions))
     return data
-
-
-def get_contig_lengths(data):
-    contig_lengths = collections.defaultdict(int)
-    for vertical_regions, horizontal_regions, unaligned_regions in data:
-        all_regions = vertical_regions + horizontal_regions + unaligned_regions
-        for region in all_regions:
-            name, start, end = split_region_str(region)
-            contig_lengths[name] = max(contig_lengths[name], int(end))
-    return contig_lengths
 
 
 def split_region_str(region):
@@ -148,7 +157,7 @@ def summary_plot(sample_name, summarised_data, contig_lengths):
          theme(panel_grid_major_x=element_blank(), panel_grid_minor_x=element_blank()) +
          scale_x_continuous(expand=(0, 0), limits=(0, x_max)) +
          scale_y_continuous(expand=(0, 0), limits=(0, y_max)) +
-         labs(title=title, x='contig position', y='counts'))
+         labs(title=title, x='contig position', y='count'))
 
     df = pd.DataFrame(summarised_data,
                       columns=['contig', 'pos', 'vertical', 'horizontal', 'unaligned'])
@@ -160,9 +169,10 @@ def summary_plot(sample_name, summarised_data, contig_lengths):
 
     offset = 0
     for name, length in contig_lengths.items():
-        contig_df = df[df['contig'] == name]
-        contig_df['pos'] += offset
-        g += geom_area(data=contig_df, mapping=aes(x='pos', y='count', fill='classification'))
+        contig_df = df[df['contig'] == name].copy()
+        contig_df['offset_pos'] = contig_df['pos'] + offset
+        g += geom_area(data=contig_df,
+                       mapping=aes(x='offset_pos', y='count', fill='classification'))
         offset += length
 
     g += scale_fill_manual({'vertical': VERTICAL_COLOUR, 'horizontal': HORIZONTAL_COLOUR,
@@ -172,6 +182,58 @@ def summary_plot(sample_name, summarised_data, contig_lengths):
         g += geom_vline(xintercept=b, colour='#000000', size=0.5)
 
     return g.draw()
+
+
+def get_compression_type(filename):
+    """
+    Attempts to guess the compression (if any) on a file using the first few bytes.
+    https://stackoverflow.com/questions/13044562
+    """
+    magic_dict = {'gz': (b'\x1f', b'\x8b', b'\x08'),
+                  'bz2': (b'\x42', b'\x5a', b'\x68'),
+                  'zip': (b'\x50', b'\x4b', b'\x03', b'\x04')}
+    max_len = max(len(x) for x in magic_dict)
+    unknown_file = open(str(filename), 'rb')
+    file_start = unknown_file.read(max_len)
+    unknown_file.close()
+    compression_type = 'plain'
+    for file_type, magic_bytes in magic_dict.items():
+        if file_start.startswith(magic_bytes):
+            compression_type = file_type
+    if compression_type == 'bz2':
+        sys.exit('\nError: cannot use bzip2 format - use gzip instead')
+    if compression_type == 'zip':
+        sys.exit('\nError: cannot use zip format - use gzip instead')
+    return compression_type
+
+
+def get_open_func(filename):
+    if get_compression_type(filename) == 'gz':
+        return gzip.open
+    else:  # plain text
+        return open
+
+
+def iterate_fasta(filename):
+    """
+    Takes a FASTA file as input and yields the contents as (name, seq) tuples.
+    """
+    with get_open_func(filename)(filename, 'rt') as fasta_file:
+        name = ''
+        sequence = []
+        for line in fasta_file:
+            line = line.strip()
+            if not line:
+                continue
+            if line[0] == '>':  # Header line = start of new contig
+                if name:
+                    yield name.split()[0], ''.join(sequence)
+                    sequence = []
+                name = line[1:]
+            else:
+                sequence.append(line.upper())
+        if name:
+            yield name.split()[0], ''.join(sequence)
 
 
 if __name__ == '__main__':
