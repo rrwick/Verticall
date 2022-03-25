@@ -21,6 +21,14 @@ If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
 import collections
+import matplotlib.pyplot as plt
+import pandas as pd
+from plotnine import ggplot, aes, geom_area, geom_vline, labs, theme_bw, scale_x_continuous, \
+    scale_y_continuous, scale_fill_manual, element_blank, theme
+
+VERTICAL_COLOUR = '#4859a0'
+HORIZONTAL_COLOUR = '#c47e7e'
+UNALIGNED_COLOUR = '#eeeeee'
 
 
 def get_arguments():
@@ -34,6 +42,8 @@ def get_arguments():
     parser.add_argument('--all', action='store_true',
                         help='Output one line for all assembly positions (default: omit redundant '
                              'adjacent lines)')
+    parser.add_argument('--plot', action='store_true',
+                        help='Instead of outputting a table, display an interactive plot')
     args = parser.parse_args()
     return args
 
@@ -42,7 +52,14 @@ def main():
     args = get_arguments()
     data = load_data(args.pairwise, args.name)
     contig_lengths = get_contig_lengths(data)
-    summarise_data(data, contig_lengths, args.all)
+    summarised_data = summarise_data(data, contig_lengths, args.all)
+    if args.plot:
+        plot = summary_plot(args.name, summarised_data, contig_lengths)
+        plt.show()
+    else:
+        print('contig', 'position', 'vertical', 'horizontal', 'unaligned')
+        for contig, position, vertical, horizontal, unaligned in summarised_data:
+            print(f'{contig}\t{position}\t{vertical}\t{horizontal}\t{unaligned}')
 
 
 def load_data(pairwise_filename, sample_name):
@@ -94,14 +111,14 @@ def summarise_data(data, contig_lengths, output_all):
             name, start, end = split_region_str(region)
             for i in range(start, end):
                 unaligned_counts[name][i] += 1
-    print('contig', 'position', 'vertical', 'horizontal', 'unaligned')
+    summarised_data = []
     for name, length in contig_lengths.items():
         for i in range(length):
             vertical_count = vertical_counts[name][i]
             horizontal_count = horizontal_counts[name][i]
             unaligned_count = unaligned_counts[name][i]
             if i == 0 or i == length-1 or output_all:
-                print(f'{name}\t{i}\t{vertical_count}\t{horizontal_count}\t{unaligned_count}')
+                summarised_data.append((name, i, vertical_count, horizontal_count, unaligned_count))
             else:
                 prev_counts = (vertical_counts[name][i-1], horizontal_counts[name][i-1],
                                unaligned_counts[name][i-1])
@@ -109,7 +126,52 @@ def summarise_data(data, contig_lengths, output_all):
                 next_counts = (vertical_counts[name][i+1], horizontal_counts[name][i+1],
                                unaligned_counts[name][i+1])
                 if prev_counts != this_counts or next_counts != this_counts:
-                    print(f'{name}\t{i}\t{vertical_count}\t{horizontal_count}\t{unaligned_count}')
+                    summarised_data.append((name, i, vertical_count, horizontal_count,
+                                            unaligned_count))
+    return summarised_data
+
+
+def summary_plot(sample_name, summarised_data, contig_lengths):
+    title = f'{sample_name} painting summary'
+
+    boundaries = [0]
+    x_max = 0
+    for name, length in contig_lengths.items():
+        x_max += length
+        boundaries.append(x_max)
+    y_max = 0
+    for _, _, vertical, horizontal, unaligned in summarised_data:
+        y_max = max(y_max, vertical + horizontal + unaligned)
+
+    g = (ggplot() +
+         theme_bw() +
+         theme(panel_grid_major_x=element_blank(), panel_grid_minor_x=element_blank()) +
+         scale_x_continuous(expand=(0, 0), limits=(0, x_max)) +
+         scale_y_continuous(expand=(0, 0), limits=(0, y_max)) +
+         labs(title=title, x='contig position', y='counts'))
+
+    df = pd.DataFrame(summarised_data,
+                      columns=['contig', 'pos', 'vertical', 'horizontal', 'unaligned'])
+
+    # Make the data tidy.
+    df = pd.melt(df, id_vars=['contig', 'pos'],
+                 value_vars=['vertical', 'horizontal', 'unaligned'],
+                 var_name='classification', value_name='count')
+
+    offset = 0
+    for name, length in contig_lengths.items():
+        contig_df = df[df['contig'] == name]
+        contig_df['pos'] += offset
+        g += geom_area(data=contig_df, mapping=aes(x='pos', y='count', fill='classification'))
+        offset += length
+
+    g += scale_fill_manual({'vertical': VERTICAL_COLOUR, 'horizontal': HORIZONTAL_COLOUR,
+                            'unaligned': UNALIGNED_COLOUR}, guide=False)
+
+    for b in boundaries:
+        g += geom_vline(xintercept=b, colour='#000000', size=0.5)
+
+    return g.draw()
 
 
 if __name__ == '__main__':
