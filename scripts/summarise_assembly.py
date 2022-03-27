@@ -87,7 +87,7 @@ def load_data(pairwise_filename, sample_name):
         for i, line in enumerate(pairwise_file):
             if i == 0:
                 continue  # skip header line
-            parts = line.strip().split('\t')
+            parts = line.strip('\n').split('\t')
             assert len(parts) == 27
             if parts[0] == sample_name:
                 vertical_regions = parts[21].split(',') if parts[21] else []
@@ -166,6 +166,9 @@ def summary_plot(sample_name, summarised_data, contig_lengths):
     df = pd.melt(df, id_vars=['contig', 'pos'],
                  value_vars=['vertical', 'horizontal', 'unaligned'],
                  var_name='classification', value_name='count')
+    df['classification'] = df['classification'].astype('category')
+    df['classification'] = \
+        df['classification'].cat.reorder_categories(['unaligned', 'horizontal', 'vertical'])
 
     offset = 0
     for name, length in contig_lengths.items():
