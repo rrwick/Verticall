@@ -163,7 +163,7 @@ def alignment_plot(sample_name_a, sample_name_b, alignments, window_size, sqrt_d
         g += scale_y_continuous(expand=(0, 0), limits=(0, y_max))
 
     for b in boundaries:
-        g += geom_vline(xintercept=b, colour='#000000', size=0.5)
+        g += geom_vline(xintercept=b, colour='#555555', size=0.5)
 
     offset = 0
     for a in alignments:
@@ -207,7 +207,7 @@ def contig_plot(sample_name, painted, window_size, sqrt_distance):
         g += scale_y_continuous(expand=(0, 0), limits=(0, y_max))
 
     for b in boundaries:
-        g += geom_vline(xintercept=b, colour='#000000', size=0.5)
+        g += geom_vline(xintercept=b, colour='#555555', size=0.5)
 
     offset = 0
     for name, contig in painted.contigs.items():
