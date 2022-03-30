@@ -372,15 +372,8 @@ def find_local_maximum_to_left(masses, i):
 
 
 def smooth_distribution(masses, smoothing_factor):
-    """
-    Smooths the mass distribution with a force-directed approach. Each point is pulled by two
-    forces:
-    * Trying to get close to the empirical point
-    * Trying to get close to the neighbouring points.
-    """
     smoothed = []
     for i, _ in enumerate(masses):
-
         kernel_width = i ** smoothing_factor
         smoothed.append(get_smoothed_mass(masses, i, kernel_width))
 

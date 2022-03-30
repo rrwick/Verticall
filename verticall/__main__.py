@@ -57,8 +57,12 @@ def parse_args(args):
     required_args = parser.add_argument_group('Required arguments')
     required_args.add_argument('-i', '--in_dir', type=pathlib.Path, required=True,
                                help='Directory containing assemblies in FASTA format')
-    required_args.add_argument('-o', '--out_dir', type=pathlib.Path, required=True,
-                               help='Output directory where results will be saved')
+    required_args.add_argument('-o', '--out_dir', type=pathlib.Path,
+                               help='Output directory where results will be saved (either -o or '
+                                    '-v is required)')
+    required_args.add_argument('-v', '--view', type=str,
+                               help='Two assemblies (comma-separated) to view in plots (either -o '
+                                    'or -v is required)')
 
     align_args = parser.add_argument_group('Alignment settings')
     # TODO: explore different indexing options (e.g. -k and -w) to see how they affect the results.
@@ -84,8 +88,6 @@ def parse_args(args):
                                     'make matrices symmetrical)')
 
     view_args = parser.add_argument_group('View settings')
-    view_args.add_argument('--view', type=str,
-                           help='Two assemblies (comma-separated) to view in plots')
     view_args.add_argument('--sqrt_distance', action='store_true',
                            help='Use a square-root transform on the genomic distance axis '
                                 '(default: no distance axis transform)')
@@ -115,6 +117,10 @@ def parse_args(args):
 
 
 def check_args(args):
+    if args.out_dir is None and args.view is None:
+        sys.exit('Error: either --out_dir (-o) or --view (-v) must be used')
+    if args.out_dir is not None and args.view is not None:
+        sys.exit('Error: either --out_dir (-o) or --view (-v) must be used but not both')
     if args.view is not None:
         samples = args.view.split(',')
         if len(samples) != 2:
