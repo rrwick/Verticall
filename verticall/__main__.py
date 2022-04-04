@@ -21,6 +21,7 @@ from .misc import check_python_version, get_ascii_art, get_default_thread_count
 from .log import bold
 from .pairwise import pairwise
 from .version import __version__
+from .view import view
 
 
 def main():
@@ -30,9 +31,9 @@ def main():
     if args.subparser_name == 'pairwise':
         check_pairwise_args(args)
         pairwise(args)
-    # elif args.subparser_name == 'view':
-    #     check_view_args(args)
-    #     view(args)
+    elif args.subparser_name == 'view':
+        check_view_args(args)
+        view(args)
     # elif args.subparser_name == 'matrix':
     #     check_matrix_args(args)
     #     matrix(args)
@@ -89,28 +90,9 @@ def pairwise_subparser(subparsers):
     required_args.add_argument('-o', '--out_file', type=pathlib.Path, required=True,
                                help='Filename for tsv output')
 
-    setting_args = group.add_argument_group('Settings')
-    setting_args.add_argument('--window_count', type=int, default=50000,
-                              help='Aim to have at least this many comparison windows between '
-                                   'assemblies')
-    setting_args.add_argument('--ignore_indels', action='store_true',
-                              help='Only use mismatches to determine distance (default: use '
-                                   'both mismatches and gap-compressed indels)')
-    setting_args.add_argument('--smoothing_factor', type=float, default=0.8,
-                              help='Degree to which the distance distribution is smoothed')
-    setting_args.add_argument('--verbose', action='store_true',
-                              help='Output more detail to stderr for debugging (default: only '
-                                   'output basic information)')
+    # TODO: add and implement --reference option
 
-    alignment_args = group.add_argument_group('Alignment')
-    # TODO: explore different indexing options (e.g. -k and -w) to see how they affect the results.
-    alignment_args.add_argument('--index_options', type=str, default='-k15 -w10',
-                                help='Minimap2 options for assembly indexing')
-    # TODO: explore different alignment options (e.g. the things set by -x asm20).
-    alignment_args.add_argument('--align_options', type=str, default='-x asm20',
-                                help='Minimap2 options for assembly-to-assembly alignment')
-    alignment_args.add_argument('--allowed_overlap', type=int, default=100,
-                                help='Allow this much overlap between alignments')
+    pairwise_and_view_settings(group)
 
     performance_args = group.add_argument_group('Performance')
     performance_args.add_argument('-t', '--threads', type=int, default=get_default_thread_count(),
@@ -135,19 +117,51 @@ def view_subparser(subparsers):
     required_args.add_argument('-n', '--names', type=str, required=True,
                                help='Two sample names (comma-delimited) to be viewed')
 
-    settings_args = group.add_argument_group('Settings')
-    settings_args.add_argument('--sqrt_distance', action='store_true',
-                               help='Use a square-root transform on the genomic distance axis '
-                                    '(default: no distance axis transform)')
-    settings_args.add_argument('--sqrt_mass', action='store_true',
-                               help='Use a square-root transform on the probability mass axis '
-                                    '(default: no mass axis transform)')
+    pairwise_and_view_settings(group)
+
+    axis_args = group.add_argument_group('Axis transformations')
+    axis_args.add_argument('--sqrt_distance', action='store_true',
+                           help='Use a square-root transform on the genomic distance axis '
+                                '(default: no distance axis transform)')
+    axis_args.add_argument('--sqrt_mass', action='store_true',
+                           help='Use a square-root transform on the probability mass axis '
+                                '(default: no mass axis transform)')
+    # TODO: make colours adjustable via options
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
                             help='Show this help message and exit')
     other_args.add_argument('--version', action='version', version='Verticall v' + __version__,
                             help="Show program's version number and exit")
+
+
+def pairwise_and_view_settings(group):
+    """
+    The pairwise and view subcommands share a lot of settings in common, defined in this function.
+    """
+    setting_args = group.add_argument_group('Settings')
+    setting_args.add_argument('--window_count', type=int, default=50000,
+                              help='Aim to have at least this many comparison windows between '
+                                   'assemblies')
+    setting_args.add_argument('--ignore_indels', action='store_true',
+                              help='Only use mismatches to determine distance (default: use '
+                                   'both mismatches and gap-compressed indels)')
+    setting_args.add_argument('--smoothing_factor', type=float, default=0.8,
+                              help='Degree to which the distance distribution is smoothed')
+    setting_args.add_argument('--verbose', action='store_true',
+                              help='Output more detail to stderr for debugging (default: only '
+                                   'output basic information)')
+
+    alignment_args = group.add_argument_group('Alignment')
+    # TODO: explore different indexing options (e.g. -k and -w) to see how they affect the results.
+    alignment_args.add_argument('--index_options', type=str, default='-k15 -w10',
+                                help='Minimap2 options for assembly indexing')
+    # TODO: explore different alignment options (e.g. the things set by -x asm20).
+    alignment_args.add_argument('--align_options', type=str, default='-x asm20',
+                                help='Minimap2 options for assembly-to-assembly alignment')
+    alignment_args.add_argument('--allowed_overlap', type=int, default=100,
+                                help='Allow this much overlap between alignments')
+
 
 
 def matrix_subparser(subparsers):

@@ -17,8 +17,12 @@ from plotnine import ggplot, aes, geom_segment, geom_line, geom_vline, labs, the
     scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt, scale_color_manual, \
     element_blank, theme, annotate
 import warnings
+import sys
 
 from .distance import get_distance
+from .log import log, section_header, explanation
+from .pairwise import find_assemblies, build_indices, process_one_pair, prepare_log_text
+
 
 warnings.filterwarnings('ignore')
 
@@ -27,6 +31,50 @@ VERTICAL_COLOUR_LIGHT = '#aabbf2'
 HORIZONTAL_COLOUR = '#c47e7e'
 HORIZONTAL_COLOUR_LIGHT = '#eac7c7'
 AMBIGUOUS_COLOUR = '#c9c9c9'
+
+
+def view(args):
+    welcome_message()
+    assemblies = find_assemblies(args.in_dir)
+    name_a, name_b, filename_a, filename_b = get_sample_names_and_filenames(args, assemblies)
+    assemblies = [(name_a, filename_a), (name_b, filename_b)]
+    build_indices(args, assemblies)
+    section_header('Processing assembly pair')
+    all_args = args, name_a, name_b, filename_a, filename_b
+    alignments, window_size, masses, smoothed_masses, thresholds, vertical_masses, \
+        horizontal_masses, painted_a, log_text = process_one_pair(all_args, view=True)
+    log()
+    log('\n'.join(prepare_log_text(log_text, True)), end='\n\n')
+    show_plots(name_a, name_b, alignments, window_size, masses, smoothed_masses, thresholds,
+               vertical_masses, horizontal_masses, painted_a, args.sqrt_distance, args.sqrt_mass)
+    finished_message()
+
+
+def welcome_message():
+    section_header('Starting Verticall view')
+    explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
+                'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
+                'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
+
+
+def finished_message():
+    section_header('Finished!')
+    explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
+                'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
+                'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
+
+
+def get_sample_names_and_filenames(args, assemblies):
+    name_a, name_b = args.names.split(',')
+    try:
+        filename_a = [filename for name, filename in assemblies if name == name_a][0]
+    except IndexError:
+        sys.exit(f'Error: could not find {name_a} in assemblies')
+    try:
+        filename_b = [filename for name, filename in assemblies if name == name_b][0]
+    except IndexError:
+        sys.exit(f'Error: could not find {name_b} in assemblies')
+    return name_a, name_b, filename_a, filename_b
 
 
 def show_plots(sample_name_a, sample_name_b, alignments, window_size, masses, smoothed_masses,

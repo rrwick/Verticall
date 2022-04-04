@@ -15,7 +15,6 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 from multiprocessing import Pool
-import pathlib
 import sys
 
 from .alignment import build_indices, align_sample_pair
@@ -27,9 +26,9 @@ from .paint import paint_alignments, paint_assemblies
 def pairwise(args):
     welcome_message()
     assemblies = find_assemblies(args.in_dir)
+    build_indices(args, assemblies)
     with open(args.out_file, 'wt') as table_file:
         table_file.write(get_table_header())
-        build_indices(args, assemblies)
         process_all_pairs(args, assemblies, table_file)
     finished_message()
 
@@ -62,7 +61,7 @@ def find_assemblies(in_dir, extensions=None):
             all_assemblies[sample_name] = a
 
     if extensions is None:
-        extensions = ['fasta', 'fasta.gz', 'fna', 'fna.gz']
+        extensions = ['fasta', 'fasta.gz', 'fna', 'fna.gz', 'fa', 'fa.gz']
 
     assemblies = {}
     for e in extensions:
@@ -113,7 +112,7 @@ def prepare_log_text(log_text, verbose):
     return prepared
 
 
-def process_one_pair(all_args):
+def process_one_pair(all_args, view=False):
     """
     This is the master function for each pairwise comparison. It gets called once for each assembly
     pair and carries out all analysis on that pair.
@@ -144,6 +143,11 @@ def process_one_pair(all_args):
     painted_a, painted_b, log_text = \
         paint_assemblies(name_a, name_b, filename_a, filename_b, alignments)
     all_log_text += log_text
+
+    # If being called by the view subcommand, we return the results instead of making a table line.
+    if view:
+        return alignments, window_size, masses, smoothed_masses, thresholds, vertical_masses, \
+               horizontal_masses, painted_a, all_log_text
 
     distances = {'aligned_fraction': aligned_frac,
                  'mean': mean_distance,
