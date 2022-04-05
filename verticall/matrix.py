@@ -125,12 +125,6 @@ def jukes_cantor_correction(distances, sample_names):
             distances[(a, b)] = jukes_cantor(distances[(a, b)])
 
 
-def aligned_fraction_correction(distances, aligned_fractions, sample_names):
-    for a in sample_names:
-        for b in sample_names:
-            distances[(a, b)] = distances[(a, b)] / aligned_fractions[(a, b)]
-
-
 def jukes_cantor(d):
     """
     https://www.desmos.com/calculator/okovk3dipx

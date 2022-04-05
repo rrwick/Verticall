@@ -132,3 +132,12 @@ def test_get_window_count():
 
 def test_get_window_coverage():
     assert verticall.misc.get_window_coverage(10, 8, 5) == 42
+
+
+def test_split_list():
+    lst = [0, 1, 2, 3, 4, 5, 6, 7]
+    assert verticall.misc.split_list(lst, 1) == [[0, 1, 2, 3, 4, 5, 6, 7]]
+    assert verticall.misc.split_list(lst, 2) == [[0, 1, 2, 3], [4, 5, 6, 7]]
+    assert verticall.misc.split_list(lst, 3) == [[0, 1, 2], [3, 4, 5], [6, 7]]
+    assert verticall.misc.split_list(lst, 4) == [[0, 1], [2, 3], [4, 5], [6, 7]]
+    assert verticall.misc.split_list(lst, 8) == [[0], [1], [2], [3], [4], [5], [6], [7]]

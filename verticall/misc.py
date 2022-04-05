@@ -167,3 +167,11 @@ def check_file_exists(filename):
         sys.exit(f'Error: {filename} is a directory, not a file')
     if not filename.is_file():
         sys.exit(f'Error: {filename} does not exist')
+
+
+def split_list(a, n):
+    """
+    https://stackoverflow.com/questions/2130016
+    """
+    k, m = divmod(len(a), n)
+    return [a[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(n)]

@@ -99,7 +99,8 @@ def pairwise_subparser(subparsers):
     performance_args.add_argument('-t', '--threads', type=int, default=get_default_thread_count(),
                                   help='CPU threads for parallel processing')
     performance_args.add_argument('--part', type=str, default='1/1',
-                                  help='Fraction of the data to analyse')
+                                  help='Fraction of the data to analyse (for parallelisation, '
+                                       'default: DEFAULT)')
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,

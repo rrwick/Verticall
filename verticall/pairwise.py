@@ -20,6 +20,7 @@ import sys
 from .alignment import build_indices, align_sample_pair
 from .distance import get_distribution, smooth_distribution, get_peak_distance
 from .log import log, section_header, explanation
+from .misc import split_list
 from .paint import paint_alignments, paint_assemblies
 
 
@@ -28,16 +29,24 @@ def pairwise(args):
     assemblies = find_assemblies(args.in_dir)
     build_indices(args, assemblies)
     with open(args.out_file, 'wt') as table_file:
-        table_file.write(get_table_header())
+        if parse_part(args.part)[0] == 0:  # if first part
+            table_file.write(get_table_header())
         process_all_pairs(args, assemblies, table_file)
     finished_message()
 
 
 def welcome_message(args):
     section_header('Starting Verticall pairwise')
-    explanation('Vertical pairwise performs a pairwise analysis of all assemblies in the given '
-                'directory, outputting the results to a tab-delimited table.')
+    explanation_text = 'Vertical pairwise performs a pairwise analysis of all assemblies in the ' \
+                       'given directory, outputting the results to a tab-delimited table.'
     # TODO: make a different welcome message if --reference was used
+
+    part_num, part_total = parse_part(args.part)
+    if part_total > 1:
+        explanation_text += f' Because --part {args.part} was used, this command will only ' \
+                            f'analyse a fraction of the pairwise combinations.'
+
+    explanation(explanation_text)
 
 
 def finished_message():
@@ -79,11 +88,7 @@ def process_all_pairs(args, assemblies, table_file):
                 'differences in a sliding window, builds a distribution and categories regions '
                 'of the alignments as either vertical or horizontal. This allows for the '
                 'calculation of a vertical-only genomic distance.')
-    arg_list = []
-    for name_a, filename_a in assemblies:
-        for name_b, filename_b in assemblies:
-            if name_a != name_b:
-                arg_list.append((args, name_a, name_b, filename_a, filename_b))
+    arg_list = get_arg_list(args, assemblies)
 
     # If only using a single thread, do the alignment in a simple loop (easier for debugging).
     if args.threads == 1:
@@ -101,6 +106,44 @@ def process_all_pairs(args, assemblies, table_file):
                 log('\n'.join(prepare_log_text(log_text, args.verbose)), end='\n\n')
                 table_file.write(table_line)
                 table_file.flush()
+
+
+def get_arg_list(args, assemblies):
+    """
+    This function produces a list of arguments for the process_one_pair function. If --part 1/1 was
+    used (the default), this will include an entry for each pair of assemblies. If another value
+    for --part was used, this will include a subset of the pairs.
+    """
+    arg_list = []
+    for name_a, filename_a in assemblies:
+        for name_b, filename_b in assemblies:
+            if name_a != name_b:
+                arg_list.append((args, name_a, name_b, filename_a, filename_b))
+
+    part_num, part_total = parse_part(args.part)
+    if part_total > 1:
+        arg_list = split_list(arg_list, part_total)[part_num]
+
+    return arg_list
+
+
+def parse_part(part_str):
+    """
+    Returns the numerator and denominator from the --part argument. The numerator is returned as a
+    zero-based index, e.g. '1/1' -> (0, 1).
+    """
+    try:
+        numerator, denominator = part_str.split('/')
+        numerator, denominator = int(numerator)-1, int(denominator)
+    except ValueError:
+        sys.exit('Error: --part must be a fraction, e.g. 1/1, 1/10, 3/10, etc.')
+    if numerator < 0:
+        sys.exit('Error: the numerator of --part must be a positive integer')
+    if denominator < 1:
+        sys.exit('Error: the denominator of --part must be a positive integer')
+    if numerator >= denominator:
+        sys.exit('Error: the numerator of --part must be less than or equal to the denominator')
+    return numerator, denominator
 
 
 def prepare_log_text(log_text, verbose):

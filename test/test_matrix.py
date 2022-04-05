@@ -19,6 +19,18 @@ import pytest
 import verticall.matrix
 
 
+def test_welcome_message(capsys):
+    verticall.matrix.welcome_message()
+    _, err = capsys.readouterr()
+    assert 'Verticall matrix' in err
+
+
+def test_finished_message(capsys):
+    verticall.matrix.finished_message()
+    _, err = capsys.readouterr()
+    assert 'Finished' in err
+
+
 def test_jukes_cantor_correction():
     sample_names = ['a', 'b']
     distances = {('a', 'a'): 0.0, ('a', 'b'): 0.2,
@@ -27,33 +39,6 @@ def test_jukes_cantor_correction():
     assert distances[('a', 'a')] == pytest.approx(0.0)
     assert distances[('a', 'b')] == pytest.approx(0.23261619622788)
     assert distances[('b', 'a')] == pytest.approx(0.107325632730505)
-    assert distances[('b', 'b')] == pytest.approx(0.0)
-
-
-def test_aligned_fraction_correction():
-    sample_names = ['a', 'b']
-    distances = {('a', 'a'): 0.0, ('a', 'b'): 0.2,
-                 ('b', 'a'): 0.1, ('b', 'b'): 0.0}
-    aligned_fractions = {('a', 'a'): 1.0, ('a', 'b'): 0.8,
-                         ('b', 'a'): 0.9, ('b', 'b'): 1.0}
-    verticall.matrix.aligned_fraction_correction(distances, aligned_fractions, sample_names)
-    assert distances[('a', 'a')] == pytest.approx(0.0)
-    assert distances[('a', 'b')] == pytest.approx(0.2 / 0.8)
-    assert distances[('b', 'a')] == pytest.approx(0.1 / 0.9)
-    assert distances[('b', 'b')] == pytest.approx(0.0)
-
-
-def test_both_corrections():
-    sample_names = ['a', 'b']
-    distances = {('a', 'a'): 0.0, ('a', 'b'): 0.2,
-                 ('b', 'a'): 0.1, ('b', 'b'): 0.0}
-    aligned_fractions = {('a', 'a'): 1.0, ('a', 'b'): 0.8,
-                         ('b', 'a'): 0.9, ('b', 'b'): 1.0}
-    verticall.matrix.jukes_cantor_correction(distances, sample_names)
-    verticall.matrix.aligned_fraction_correction(distances, aligned_fractions, sample_names)
-    assert distances[('a', 'a')] == pytest.approx(0.0)
-    assert distances[('a', 'b')] == pytest.approx(0.23261619622788 / 0.8)
-    assert distances[('b', 'a')] == pytest.approx(0.107325632730505 / 0.9)
     assert distances[('b', 'b')] == pytest.approx(0.0)
 
 
