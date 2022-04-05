@@ -160,3 +160,10 @@ def get_window_coverage(window_size, window_step, window_count):
     XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     """
     return window_size + ((window_count-1) * window_step)
+
+
+def check_file_exists(filename):
+    if filename.is_dir():
+        sys.exit(f'Error: {filename} is a directory, not a file')
+    if not filename.is_file():
+        sys.exit(f'Error: {filename} does not exist')

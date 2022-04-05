@@ -19,6 +19,7 @@ import sys
 from .help_formatter import MyParser, MyHelpFormatter
 from .misc import check_python_version, get_ascii_art, get_default_thread_count
 from .log import bold
+from .matrix import matrix
 from .pairwise import pairwise
 from .version import __version__
 from .view import view
@@ -34,9 +35,9 @@ def main():
     elif args.subparser_name == 'view':
         check_view_args(args)
         view(args)
-    # elif args.subparser_name == 'matrix':
-    #     check_matrix_args(args)
-    #     matrix(args)
+    elif args.subparser_name == 'matrix':
+        check_matrix_args(args)
+        matrix(args)
     # elif args.subparser_name == 'mask':
     #     check_mask_args(args)
     #     filter(args)
@@ -163,7 +164,6 @@ def pairwise_and_view_settings(group):
                                 help='Allow this much overlap between alignments')
 
 
-
 def matrix_subparser(subparsers):
     group = subparsers.add_parser('matrix', description='produce a PHYLIP distance matrix',
                                   formatter_class=MyHelpFormatter, add_help=False)
@@ -175,8 +175,9 @@ def matrix_subparser(subparsers):
                                help='Filename for PHYLIP matrix output')
 
     settings_args = group.add_argument_group('Settings')
-    settings_args.add_argument('--distance_type', type=str, default='vert_median',
-                               choices=['mean', 'median', 'peak', 'vert_mean', 'vert_median'],
+    settings_args.add_argument('--distance_type', type=str, default='median_vertical',
+                               choices=['mean', 'median', 'peak', 'mean_vertical',
+                                        'median_vertical'],
                                help='Which distance to use in matrix (choose from mean, median, '
                                     'peak, vert_mean and vert_median, default: DEFAULT')
     settings_args.add_argument('--smoothing_factor', type=float, default=0.8,

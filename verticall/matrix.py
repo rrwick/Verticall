@@ -15,73 +15,108 @@ If not, see <https://www.gnu.org/licenses/>.
 
 import itertools
 import math
+import sys
 
-from .log import log, section_header, explanation
+from .log import log, section_header, explanation, bold_red
+from .misc import check_file_exists
 
 
-def save_all_matrices(args, sample_names, all_distances):
-    section_header('Saving distance matrices')
-    explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
-                'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
-                'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
-
-    aligned_fractions = get_matrix(sample_names, all_distances, 'aligned_fraction')
-    mean_distances = get_matrix(sample_names, all_distances, 'mean')
-    median_distances = get_matrix(sample_names, all_distances, 'median')
-    peak_distances = get_matrix(sample_names, all_distances, 'peak')
-    mean_vertical_distances = get_matrix(sample_names, all_distances, 'mean_vertical')
-    median_vertical_distances = get_matrix(sample_names, all_distances, 'median_vertical')
-
+def matrix(args):
+    welcome_message()
+    distances, sample_names = load_tsv_file(args.in_file, args.distance_type)
+    if not args.no_jukes_cantor:
+        jukes_cantor_correction(distances, sample_names)
     if not args.asymmetrical:
-        make_symmetrical(aligned_fractions, sample_names)
-        make_symmetrical(mean_distances, sample_names)
-        make_symmetrical(median_distances, sample_names)
-        make_symmetrical(peak_distances, sample_names)
-        make_symmetrical(mean_vertical_distances, sample_names)
-        make_symmetrical(median_vertical_distances, sample_names)
-
-    save_matrix(args, sample_names, aligned_fractions, 'aligned_fraction')
-    save_matrix(args, sample_names, mean_distances, 'mean')
-    save_matrix(args, sample_names, median_distances, 'median')
-    save_matrix(args, sample_names, peak_distances, 'peak')
-    save_matrix(args, sample_names, mean_vertical_distances, 'mean_vertical')
-    save_matrix(args, sample_names, median_vertical_distances, 'median_vertical')
-
-    jukes_cantor_correction(median_vertical_distances, sample_names)
-    save_matrix(args, sample_names, median_vertical_distances, 'median_vertical_jukes_cantor')
-
-    aligned_fraction_correction(median_vertical_distances, aligned_fractions, sample_names)
-    save_matrix(args, sample_names, median_vertical_distances,
-                'median_vertical_jukes_cantor_aligned_fraction')
-
-    log()
+        make_symmetrical(distances, sample_names)
+    save_matrix(args.out_file, distances, sample_names)
+    finished_message()
 
 
-def get_matrix(sample_names, all_distances, distance_type):
-    matrix = {}
-    for a in sample_names:
-        for b in sample_names:
-            if a == b:
-                if distance_type == 'aligned_fraction':
-                    matrix[(a, b)] = 1.0
-                else:
-                    matrix[(a, b)] = 0.0
+def welcome_message():
+    section_header('Starting Verticall matrix')
+    explanation('Verticall matrix extracts distances from the tab-delimited file made by Vertical '
+                'pairwise, producing a PHYLIP distance matrix suitable for use in distance-based '
+                'phylogeny algorithms (e.g. BioNJ or FastME).')
+
+
+def finished_message():
+    section_header('Finished!')
+    explanation('You can now use a distance-based algorithm (e.g. BioNJ or FastME) to produce a '
+                'phylogeny from the distance matrix.')
+
+
+def load_tsv_file(filename, distance_type):
+    # TODO: add --multi logic
+    check_file_exists(filename)
+    section_header('Loading distances')
+    distances, sample_names = {}, set()
+    column_index = None
+    with open(filename, 'rt') as f:
+        for i, line in enumerate(f):
+            parts = line.strip('\n').split('\t')
+            if i == 0:  # header line
+                column_index = get_column_index(parts, distance_type, filename)
             else:
-                matrix[(a, b)] = all_distances[(a, b)][distance_type]
-    return matrix
+                assembly_a, assembly_b = parts[0], parts[1]
+                try:
+                    distance = float(parts[column_index])
+                except ValueError:
+                    sys.exit(f'Error: could not convert {parts[column_index]} to a number')
+                sample_names.add(assembly_a)
+                sample_names.add(assembly_b)
+                distances[(assembly_a, assembly_b)] = distance
+    sample_names = sorted(sample_names)
+    log(f'{len(distances)} distances loaded for {len(sample_names)} assemblies')
+    for sample_name in sample_names:
+        distances[(sample_name, sample_name)] = 0.0
+    check_for_missing_distances(distances, sample_names)
+    log()
+    return distances, sorted(sample_names)
 
 
-def save_matrix(args, sample_names, matrix, file_prefix):
-    output_filename = args.out_dir / (file_prefix + '.phylip')
-    log(f'Saving {output_filename}')
-    with open(output_filename, 'wt') as f:
+def check_for_missing_distances(distances, sample_names):
+    any_missing = False
+    for sample_a in sample_names:
+        for sample_b in sample_names:
+            if (sample_a, sample_b) not in distances:
+                any_missing = True
+                distances[(sample_a, sample_b)] = None
+    if any_missing:
+        log(bold_red('WARNING: some pairwise distances were not found - matrix will contain '
+                     'empty cells'))
+
+
+def get_column_index(header_parts, distance_type, filename):
+    if header_parts[0] != 'assembly_a':
+        sys.exit(f'Error: first column in {filename} is not labelled "assembly_a" - is the file '
+                 f'formatted correctly?')
+    if header_parts[1] != 'assembly_b':
+        sys.exit(f'Error: second column in {filename} is not labelled "assembly_b" - is the file '
+                 f'formatted correctly?')
+    target_header = distance_type + '_distance'
+    for i, header in enumerate(header_parts):
+        if target_header == header:
+            return i
+    sys.exit(f'Error: could not find {target_header} column in {filename}.')
+
+
+def save_matrix(filename, distances, sample_names):
+    section_header('Saving matrix to file')
+    with open(filename, 'wt') as f:
         f.write(str(len(sample_names)))
         f.write('\n')
         for a in sample_names:
             f.write(a)
             for b in sample_names:
-                f.write(f'\t{matrix[(a, b)]:.8f}')
+                distance = distances[(a, b)]
+                if distance is None:
+                    distance = ''
+                else:
+                    distance = f'{distance:.9f}'
+                f.write(f'\t{distance}')
             f.write('\n')
+    log(f'{filename.resolve()}')
+    log()
 
 
 def jukes_cantor_correction(distances, sample_names):
@@ -111,6 +146,13 @@ def make_symmetrical(distances, sample_names):
     for a, b in itertools.combinations(sample_names, 2):
         d1 = distances[(a, b)]
         d2 = distances[(b, a)]
-        mean_distance = (d1 + d2) / 2.0
+        if d1 is not None and d2 is not None:
+            mean_distance = (d1 + d2) / 2.0
+        elif d1 is None and d2 is None:
+            mean_distance = None
+        elif d1 is None:
+            mean_distance = d2
+        else:
+            mean_distance = d1
         distances[(a, b)] = mean_distance
         distances[(b, a)] = mean_distance
