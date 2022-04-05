@@ -45,23 +45,22 @@ def view(args):
         horizontal_masses, painted_a, log_text = process_one_pair(all_args, view=True)
     log()
     log('\n'.join(prepare_log_text(log_text, True)), end='\n\n')
+    finished_message()
     show_plots(name_a, name_b, alignments, window_size, masses, smoothed_masses, thresholds,
                vertical_masses, horizontal_masses, painted_a, args.sqrt_distance, args.sqrt_mass)
-    finished_message()
 
 
 def welcome_message():
     section_header('Starting Verticall view')
-    explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
-                'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
-                'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
+    explanation('Verticall view performs the same analysis as Vertical pairwise, but only for a '
+                'single assembly pair. The results of the analysis are then visualised in '
+                'interactive plots.')
 
 
 def finished_message():
     section_header('Finished!')
-    explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
-                'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
-                'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
+    explanation('The plot will now be displayed. To complete the process, close the interactive '
+                'plot windows.')
 
 
 def get_sample_names_and_filenames(args, assemblies):

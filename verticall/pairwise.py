@@ -24,7 +24,7 @@ from .paint import paint_alignments, paint_assemblies
 
 
 def pairwise(args):
-    welcome_message()
+    welcome_message(args)
     assemblies = find_assemblies(args.in_dir)
     build_indices(args, assemblies)
     with open(args.out_file, 'wt') as table_file:
@@ -33,18 +33,19 @@ def pairwise(args):
     finished_message()
 
 
-def welcome_message():
+def welcome_message(args):
     section_header('Starting Verticall pairwise')
-    explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
-                'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
-                'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
+    explanation('Vertical pairwise performs a pairwise analysis of all assemblies in the given '
+                'directory, outputting the results to a tab-delimited table.')
+    # TODO: make a different welcome message if --reference was used
 
 
 def finished_message():
     section_header('Finished!')
-    explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
-                'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
-                'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
+    explanation('You can now use the resulting tab-delimited file to produce a distance matrix '
+                '(using Vertical matrix), summarise an assembly\'s vertical-vs-horizontal regions '
+                '(using Vertical summary) or mask horizontal regions from a SNV matrix (using '
+                'Vertical mask).')
 
 
 def find_assemblies(in_dir, extensions=None):
@@ -74,9 +75,10 @@ def find_assemblies(in_dir, extensions=None):
 
 def process_all_pairs(args, assemblies, table_file):
     section_header('Processing pairwise combinations')
-    explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
-                'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
-                'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
+    explanation('For each assembly pair, Verticall pairwise aligns the assemblies, counts '
+                'differences in a sliding window, builds a distribution and categories regions '
+                'of the alignments as either vertical or horizontal. This allows for the '
+                'calculation of a vertical-only genomic distance.')
     arg_list = []
     for name_a, filename_a in assemblies:
         for name_b, filename_b in assemblies:

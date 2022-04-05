@@ -26,9 +26,8 @@ from .paint import Paint
 
 def build_indices(args, assemblies):
     section_header('Building alignment indices')
-    explanation('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor '
-                'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis '
-                'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')
+    explanation('To facilitate faster alignments, Verticall pre-builds a minimap2 index for each '
+                'assembly, if such an index does not already exist.')
     index_options = args.index_options.split()
     if not args.verbose:
         log(f'0 / {len(assemblies)}', end='')
