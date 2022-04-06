@@ -34,6 +34,8 @@ def get_distribution(args, alignments):
         distances += a.window_differences
     distance_counts = collections.Counter(distances)
 
+    # TODO: this crashes if there are no alignments - need to handle that gracefully
+
     masses = [0 if distance_counts[i] == 0 else distance_counts[i] / len(distances)
               for i in range(max(distances) + 1)]
     mean_distance = get_distance(masses, window_size, 'mean')

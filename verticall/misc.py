@@ -175,3 +175,8 @@ def split_list(a, n):
     """
     k, m = divmod(len(a), n)
     return [a[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(n)]
+
+
+def contains_ambiguous_bases(seq):
+    unambiguous_bases = {'A', 'C', 'G', 'T'}
+    return not all(base in unambiguous_bases for base in seq.upper())

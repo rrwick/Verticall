@@ -141,3 +141,14 @@ def test_split_list():
     assert verticall.misc.split_list(lst, 3) == [[0, 1, 2], [3, 4, 5], [6, 7]]
     assert verticall.misc.split_list(lst, 4) == [[0, 1], [2, 3], [4, 5], [6, 7]]
     assert verticall.misc.split_list(lst, 8) == [[0], [1], [2], [3], [4], [5], [6], [7]]
+
+
+def test_contains_ambiguous_bases():
+    assert not verticall.misc.contains_ambiguous_bases('ACGATCGACTACG')
+    assert not verticall.misc.contains_ambiguous_bases('acgatcgacgac')
+    assert not verticall.misc.contains_ambiguous_bases('AAAAcccccTTTTggg')
+    assert verticall.misc.contains_ambiguous_bases('ACGACTAGCNACTAGCACT')
+    assert verticall.misc.contains_ambiguous_bases('ACGACTAGCMACTAGCACT')
+    assert verticall.misc.contains_ambiguous_bases('ACGACTAGCRACTAGCACT')
+    assert verticall.misc.contains_ambiguous_bases('NNNNNNNN')
+    assert verticall.misc.contains_ambiguous_bases('DSHIFUSDJFSDOFJ')

@@ -20,7 +20,7 @@ import sys
 from .alignment import build_indices, align_sample_pair
 from .distance import get_distribution, smooth_distribution, get_peak_distance
 from .log import log, section_header, explanation
-from .misc import split_list
+from .misc import split_list, iterate_fasta, contains_ambiguous_bases
 from .paint import paint_alignments, paint_assemblies
 
 
@@ -79,7 +79,53 @@ def find_assemblies(in_dir, extensions=None):
     assemblies = sorted(assemblies.items())
 
     log(f'Found {len(assemblies):,} samples in {in_dir.resolve()}\n')
+    check_assemblies(assemblies)
     return assemblies
+
+
+def check_assemblies(assemblies):
+    """
+    Checks to make sure the assemblies look good: no duplicate contig names, no ambiguous bases.
+    """
+    files_with_duplicate_contig_names, files_with_ambiguous_bases = [], []
+    log(f'Checking assemblies: 0 / {len(assemblies)}', end='')
+    for i, a in enumerate(assemblies):
+        sample_name, filename = a
+        duplicate_contig_names, ambiguous_bases = check_one_assembly(filename)
+        if duplicate_contig_names:
+            files_with_duplicate_contig_names.append(filename)
+        if ambiguous_bases:
+            files_with_ambiguous_bases.append(filename)
+        log(f'\rChecking assemblies: {i + 1} / {len(assemblies)}', end='')
+    log('\n')
+    if not files_with_duplicate_contig_names and not files_with_ambiguous_bases:
+        return
+    error_message = []
+    if files_with_duplicate_contig_names:
+        file_list = ', '.join([f.name for f in files_with_duplicate_contig_names])
+        error_message.append(f'The following assemblies have duplicate contig names: {file_list}\n')
+    if files_with_ambiguous_bases:
+        file_list = ', '.join([f.name for f in files_with_ambiguous_bases])
+        error_message.append(f'The following assemblies have ambiguous bases: {file_list}\n')
+    error_message.append('Error: You must run verticall repair to fix assembly problems before '
+                         'these assemblies can be used.')
+    sys.exit('\n'.join(error_message))
+
+
+def check_one_assembly(filename):
+    """
+    Returns a tuple of two booleans:
+    * True if there are duplicates contig names, False if the contig names are okay.
+    * True if there are ambiguous bases, False if the sequences are okay.
+    """
+    contig_names = []
+    ambiguous_bases = False
+    for name, seq in iterate_fasta(filename):
+        contig_names.append(name)
+        if ambiguous_bases or contains_ambiguous_bases(seq):
+            ambiguous_bases = True
+    duplicate_contig_names = len(contig_names) > len(set(contig_names))
+    return duplicate_contig_names, ambiguous_bases
 
 
 def process_all_pairs(args, assemblies, table_file):
