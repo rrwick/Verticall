@@ -86,9 +86,10 @@ def get_sequence_file_type(filename):
         return 'unknown'
 
 
-def iterate_fasta(filename):
+def iterate_fasta(filename, include_info=False):
     """
-    Takes a FASTA file as input and yields the contents as (name, seq) tuples.
+    Takes a FASTA file as input and yields the contents as (name, seq) tuples. If include_info is
+    set, it will yield (name, info, seq) tuples, where info is whatever follows the name.
     """
     with get_open_func(filename)(filename, 'rt') as fasta_file:
         name = ''
@@ -99,13 +100,25 @@ def iterate_fasta(filename):
                 continue
             if line[0] == '>':  # Header line = start of new contig
                 if name:
-                    yield name.split()[0], ''.join(sequence)
+                    if include_info:
+                        name_parts = name.split(maxsplit=1)
+                        contig_name = name_parts[0]
+                        info = '' if len(name_parts) == 1 else name_parts[1]
+                        yield contig_name, info, ''.join(sequence)
+                    else:
+                        yield name.split()[0], ''.join(sequence)
                     sequence = []
                 name = line[1:]
             else:
                 sequence.append(line.upper())
         if name:
-            yield name.split()[0], ''.join(sequence)
+            if include_info:
+                name_parts = name.split(maxsplit=1)
+                contig_name = name_parts[0]
+                info = '' if len(name_parts) == 1 else name_parts[1]
+                yield contig_name, info, ''.join(sequence)
+            else:
+                yield name.split()[0], ''.join(sequence)
 
 
 def get_fasta_size(filename):

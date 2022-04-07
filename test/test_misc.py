@@ -90,12 +90,22 @@ def test_get_sequence_file_type_10():
 
 def test_iterate_fasta_1():
     fasta = list(verticall.misc.iterate_fasta('test/test_misc/test.fasta'))
-    assert fasta == [('A', 'TTGCCTGTAGTCGGGACCCC'), ('B', 'ATTCTCAGAATGGCGTAGTA')]
+    assert fasta == [('A', 'TTGCCTGTAGTCGGGACCCC'), ('B', 'ATTCTCAGAATGGCGTAGTA'),
+                     ('C', 'TACGCAGCTACG')]
+    fasta = list(verticall.misc.iterate_fasta('test/test_misc/test.fasta', include_info=True))
+    assert fasta == [('A', 'info', 'TTGCCTGTAGTCGGGACCCC'),
+                     ('B', 'stuff and more stuff', 'ATTCTCAGAATGGCGTAGTA'),
+                     ('C', '', 'TACGCAGCTACG')]
 
 
 def test_iterate_fasta_2():
     fasta = list(verticall.misc.iterate_fasta('test/test_misc/test.fasta.gz'))
-    assert fasta == [('A', 'TTGCCTGTAGTCGGGACCCC'), ('B', 'ATTCTCAGAATGGCGTAGTA')]
+    assert fasta == [('A', 'TTGCCTGTAGTCGGGACCCC'), ('B', 'ATTCTCAGAATGGCGTAGTA'),
+                     ('C', 'TACGCAGCTACG')]
+    fasta = list(verticall.misc.iterate_fasta('test/test_misc/test.fasta.gz', include_info=True))
+    assert fasta == [('A', 'info', 'TTGCCTGTAGTCGGGACCCC'),
+                     ('B', 'stuff and more stuff', 'ATTCTCAGAATGGCGTAGTA'),
+                     ('C', '', 'TACGCAGCTACG')]
 
 
 def test_get_default_thread_count():

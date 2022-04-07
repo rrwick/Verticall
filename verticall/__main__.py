@@ -21,6 +21,7 @@ from .misc import check_python_version, get_ascii_art, get_default_thread_count
 from .log import bold
 from .matrix import matrix
 from .pairwise import pairwise
+from .repair import repair
 from .version import __version__
 from .view import view
 
@@ -44,6 +45,9 @@ def main():
     # elif args.subparser_name == 'summary':
     #     check_summary_args(args)
     #     summary(args)
+    elif args.subparser_name == 'repair':
+        check_repair_args(args)
+        repair(args)
 
 
 def parse_args(args):
@@ -57,6 +61,7 @@ def parse_args(args):
     matrix_subparser(subparsers)
     mask_subparser(subparsers)
     summary_subparser(subparsers)
+    repair_subparser(subparsers)
 
     longest_choice_name = max(len(c) for c in subparsers.choices)
     subparsers.help = 'R|'
@@ -251,6 +256,24 @@ def summary_subparser(subparsers):
                             help="Show program's version number and exit")
 
 
+def repair_subparser(subparsers):
+    group = subparsers.add_parser('repair', description='repair assembly for use in Verticall',
+                                  formatter_class=MyHelpFormatter, add_help=False)
+
+    required_args = group.add_argument_group('Required arguments')
+    required_args.add_argument('-i', '--in_file', type=pathlib.Path, required=True,
+                               help='Filename of assembly in need of repair')
+    required_args.add_argument('-o', '--out_file', type=pathlib.Path, required=True,
+                               help='Filename for repaired assembly output (if the same as -i, '
+                                    'the input file will be overwritten)')
+
+    other_args = group.add_argument_group('Other')
+    other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
+                            help='Show this help message and exit')
+    other_args.add_argument('--version', action='version', version='Verticall v' + __version__,
+                            help="Show program's version number and exit")
+
+
 def check_pairwise_args(args):
     pass
 
@@ -270,6 +293,10 @@ def check_mask_args(args):
 
 
 def check_summary_args(args):
+    pass
+
+
+def check_repair_args(args):
     pass
 
 
