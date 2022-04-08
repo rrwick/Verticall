@@ -80,3 +80,14 @@ def test_check_for_missing_distances():
     assert distances[('c', 'a')] is None
     assert distances[('c', 'b')] == 0.1
     assert distances[('c', 'c')] == 0.0
+
+
+def test_filter_names():
+    all_names = ['a', 'b', 'c', 'd', 'e', 'f']
+    assert verticall.matrix.filter_names(all_names, 'b,c') == ['b', 'c']
+    assert verticall.matrix.filter_names(all_names, 'f,c') == ['c', 'f']
+    assert verticall.matrix.filter_names(all_names, 'e') == ['e']
+    assert verticall.matrix.filter_names(all_names, 'a,b,c,d,e,f') == ['a', 'b', 'c', 'd', 'e', 'f']
+    with pytest.raises(SystemExit) as e:
+        verticall.matrix.filter_names(all_names, 'a,b,c,q,e,f')
+    assert 'could not find sample' in str(e.value)

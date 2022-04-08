@@ -97,6 +97,7 @@ def pairwise_subparser(subparsers):
                                help='Filename for tsv output')
 
     # TODO: add and implement --reference option
+    # TODO: add and implement --recursive option
 
     pairwise_and_view_settings(group)
 
@@ -186,8 +187,6 @@ def matrix_subparser(subparsers):
                                         'median_vertical'],
                                help='Which distance to use in matrix (choose from mean, median, '
                                     'peak, vert_mean and vert_median, default: DEFAULT')
-    settings_args.add_argument('--smoothing_factor', type=float, default=0.8,
-                               help='Degree to which the distance distribution is smoothed')
     settings_args.add_argument('--asymmetrical', action='store_true',
                                help='Do not average pairs to make symmetrical matrices (default: '
                                     'make matrices symmetrical)')

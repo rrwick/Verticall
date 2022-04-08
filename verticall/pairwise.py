@@ -27,6 +27,7 @@ from .paint import paint_alignments, paint_assemblies
 def pairwise(args):
     welcome_message(args)
     assemblies = find_assemblies(args.in_dir)
+    check_assemblies(assemblies)
     build_indices(args, assemblies)
     with open(args.out_file, 'wt') as table_file:
         if parse_part(args.part)[0] == 0:  # if first part
@@ -79,7 +80,6 @@ def find_assemblies(in_dir, extensions=None):
     assemblies = sorted(assemblies.items())
 
     log(f'Found {len(assemblies):,} samples in {in_dir.resolve()}\n')
-    check_assemblies(assemblies)
     return assemblies
 
 

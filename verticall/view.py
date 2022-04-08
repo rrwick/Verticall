@@ -21,7 +21,8 @@ import sys
 
 from .distance import get_distance
 from .log import log, section_header, explanation
-from .pairwise import find_assemblies, build_indices, process_one_pair, prepare_log_text
+from .pairwise import find_assemblies, check_assemblies, build_indices, process_one_pair, \
+    prepare_log_text
 
 
 warnings.filterwarnings('ignore')
@@ -38,6 +39,7 @@ def view(args):
     assemblies = find_assemblies(args.in_dir)
     name_a, name_b, filename_a, filename_b = get_sample_names_and_filenames(args, assemblies)
     assemblies = [(name_a, filename_a), (name_b, filename_b)]
+    check_assemblies(assemblies)
     build_indices(args, assemblies)
     section_header('Processing assembly pair')
     all_args = args, name_a, name_b, filename_a, filename_b

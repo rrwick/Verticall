@@ -24,6 +24,8 @@ from .misc import check_file_exists
 def matrix(args):
     welcome_message()
     distances, sample_names = load_tsv_file(args.in_file, args.distance_type)
+    if args.names is not None:
+        sample_names = filter_names(sample_names, args.names)
     if not args.no_jukes_cantor:
         jukes_cantor_correction(distances, sample_names)
     if not args.asymmetrical:
@@ -37,6 +39,7 @@ def welcome_message():
     explanation('Verticall matrix extracts distances from the tab-delimited file made by Vertical '
                 'pairwise, producing a PHYLIP distance matrix suitable for use in distance-based '
                 'phylogeny algorithms (e.g. BioNJ or FastME).')
+    # TODO: display the options used here
 
 
 def finished_message():
@@ -74,6 +77,17 @@ def load_tsv_file(filename, distance_type):
     return distances, sorted(sample_names)
 
 
+def filter_names(all_names, specified_names):
+    all_names = set(all_names)
+    filtered_names = set()
+    for name in specified_names.split(','):
+        if name in all_names:
+            filtered_names.add(name)
+        else:
+            sys.exit(f'Error: could not find sample {name}')
+    return sorted(filtered_names)
+
+
 def check_for_missing_distances(distances, sample_names):
     any_missing = False
     for sample_a in sample_names:
@@ -97,7 +111,7 @@ def get_column_index(header_parts, distance_type, filename):
     for i, header in enumerate(header_parts):
         if target_header == header:
             return i
-    sys.exit(f'Error: could not find {target_header} column in {filename}.')
+    sys.exit(f'Error: could not find {target_header} column in {filename}')
 
 
 def save_matrix(filename, distances, sample_names):
