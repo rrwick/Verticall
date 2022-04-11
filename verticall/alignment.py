@@ -78,7 +78,7 @@ def align_sample_pair(args, assembly_filename_a, sample_name_b):
     aligned_frac = get_query_coverage(alignments, assembly_filename_a)
 
     if not alignments:
-        log_text.append('  no alignments found')
+        log_text.append('    no alignments found')
     else:
         log_text.append(f'V  {len(alignments)} alignments:')
         log_text.append(f'V    N50 alignment length: {n50_alignment_length}')

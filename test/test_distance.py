@@ -140,21 +140,6 @@ def test_climb_to_peak_4():
     assert verticall.distance.climb_to_peak([0.10, 0.35, 0.35, 0.15, 0.05], 4) == 1
 
 
-# def test_get_peak_distance_1():
-#     assert verticall.distance.get_peak_distance([1.0, 0.0, 0.0, 0.0, 0.0], 1)[0] == 0
-#     assert verticall.distance.get_peak_distance([0.0, 1.0, 0.0, 0.0, 0.0], 1)[0] == 1
-#     assert verticall.distance.get_peak_distance([0.0, 0.0, 1.0, 0.0, 0.0], 1)[0] == 2
-#     assert verticall.distance.get_peak_distance([0.0, 0.0, 0.0, 1.0, 0.0], 1)[0] == 3
-#     assert verticall.distance.get_peak_distance([0.0, 0.0, 0.0, 0.0, 1.0], 1)[0] == 4
-#
-#
-# def test_get_peak_distance_2():
-#     assert verticall.distance.get_peak_distance([0.7, 0.2, 0.1, 0.0, 0.0], 1)[0] == 0
-#     assert verticall.distance.get_peak_distance([0.1, 0.7, 0.2, 0.0, 0.0], 1)[0] == 1
-#     assert verticall.distance.get_peak_distance([0.0, 0.1, 0.7, 0.2, 0.0], 1)[0] == 2
-#     assert verticall.distance.get_peak_distance([0.0, 0.0, 0.1, 0.7, 0.2], 1)[0] == 3
-
-
 def test_find_peaks_1():
     # Easy cases with single-point peaks.
     assert verticall.distance.find_peaks([1.0, 0.0, 0.0, 0.0]) == [0]

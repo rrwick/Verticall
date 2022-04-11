@@ -46,6 +46,9 @@ class Paint(enum.Enum):
 
 
 def paint_alignments(alignments, thresholds, window_size):
+    if len(alignments) == 0:
+        return None, None, None, None, []
+
     for a in alignments:
         a.paint_sliding_windows(thresholds)
     vertical_masses, horizontal_masses = get_vertical_horizontal_distributions(alignments)
@@ -116,6 +119,8 @@ class PaintedAssembly(object):
             for start, end in c.get_horizontal_blocks():
                 horizontal += (end - start)
         unaligned = total - vertical - horizontal
+        if total == 0:
+            return 0.0, 0.0, 0.0
         return vertical/total, horizontal/total, unaligned/total
 
     def get_regions(self):

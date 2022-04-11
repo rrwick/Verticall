@@ -131,7 +131,7 @@ def check_one_assembly(filename):
 def process_all_pairs(args, assemblies, table_file):
     section_header('Processing pairwise combinations')
     explanation('For each assembly pair, Verticall pairwise aligns the assemblies, counts '
-                'differences in a sliding window, builds a distribution and categories regions '
+                'differences in a sliding window, builds a distribution and categorises regions '
                 'of the alignments as either vertical or horizontal. This allows for the '
                 'calculation of a vertical-only genomic distance.')
     arg_list = get_arg_list(args, assemblies)
@@ -294,6 +294,19 @@ def get_table_line(name_a, name_b, alignment_count, n50_alignment_length, aligne
     vertical_frac_b, horizontal_frac_b, unaligned_frac_b = painted_b.get_fractions()
     vertical_regions_a, horizontal_regions_a, unaligned_regions_a = painted_a.get_regions()
     vertical_regions_b, horizontal_regions_b, unaligned_regions_b = painted_b.get_regions()
+
+    n50_alignment_length = '' if n50_alignment_length == 0 else n50_alignment_length
+    window_size = '' if window_count == 0 else window_size
+    mean_distance = '' if mean_distance is None else f'{mean_distance:.9f}'
+    median_distance = '' if median_distance is None else f'{median_distance:.9f}'
+    mass_peaks = '' if mass_peaks is None else mass_peaks
+    peak_distance = '' if peak_distance is None else f'{peak_distance:.9f}'
+    vertical_mass_frac = '' if vertical_masses is None else f'{100.0 * sum(vertical_masses):.2f}%'
+    horizontal_mass_frac = '' if horizontal_masses is None \
+        else f'{100.0 * sum(horizontal_masses):.2f}%'
+    mean_vert_distance = '' if mean_vert_distance is None else f'{mean_vert_distance:.9f}'
+    median_vert_distance = '' if median_vert_distance is None else f'{median_vert_distance:.9f}'
+
     return (f'{name_a}\t'
             f'{name_b}\t'
             f'{alignment_count}\t'
@@ -301,14 +314,14 @@ def get_table_line(name_a, name_b, alignment_count, n50_alignment_length, aligne
             f'{aligned_frac:.9f}\t'
             f'{window_size}\t'
             f'{window_count}\t'
-            f'{mean_distance:.9f}\t'
-            f'{median_distance:.9f}\t'
+            f'{mean_distance}\t'
+            f'{median_distance}\t'
             f'{mass_peaks}\t'
-            f'{peak_distance:.9f}\t'
-            f'{100.0 * sum(vertical_masses):.2f}%\t'
-            f'{100.0 * sum(horizontal_masses):.2f}%\t'
-            f'{mean_vert_distance:.9f}\t'
-            f'{median_vert_distance:.9f}\t'
+            f'{peak_distance}\t'
+            f'{vertical_mass_frac}\t'
+            f'{horizontal_mass_frac}\t'
+            f'{mean_vert_distance}\t'
+            f'{median_vert_distance}\t'
             f'{100.0 * vertical_frac_a:.2f}%\t'
             f'{100.0 * horizontal_frac_a:.2f}%\t'
             f'{100.0 * unaligned_frac_a:.2f}%\t'

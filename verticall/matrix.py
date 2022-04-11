@@ -62,7 +62,10 @@ def load_tsv_file(filename, distance_type):
             else:
                 assembly_a, assembly_b = parts[0], parts[1]
                 try:
-                    distance = float(parts[column_index])
+                    if parts[column_index] == '':
+                        distance = None
+                    else:
+                        distance = float(parts[column_index])
                 except ValueError:
                     sys.exit(f'Error: could not convert {parts[column_index]} to a number')
                 sample_names.add(assembly_a)
@@ -116,6 +119,9 @@ def get_column_index(header_parts, distance_type, filename):
 
 def save_matrix(filename, distances, sample_names):
     section_header('Saving matrix to file')
+    log(f'{filename.resolve()}')
+
+    distance_count, missing_distances = 0, False
     with open(filename, 'wt') as f:
         f.write(str(len(sample_names)))
         f.write('\n')
@@ -125,12 +131,19 @@ def save_matrix(filename, distances, sample_names):
                 distance = distances[(a, b)]
                 if distance is None:
                     distance = ''
+                    missing_distances = True
                 else:
                     distance = f'{distance:.9f}'
+                    distance_count += 1
                 f.write(f'\t{distance}')
             f.write('\n')
-    log(f'{filename.resolve()}')
+
+    log(f'{len(sample_names)} samples, {distance_count} distances')
     log()
+    if missing_distances:
+        log(bold_red('WARNING: '
+                     'one or more distances are missing resulting in an incomplete matrix'))
+        log()
 
 
 def jukes_cantor_correction(distances, sample_names):
@@ -143,6 +156,8 @@ def jukes_cantor(d):
     """
     https://www.desmos.com/calculator/okovk3dipx
     """
+    if d is None:
+        return None
     if d == 0.0:
         return 0.0
     if d >= 0.75:

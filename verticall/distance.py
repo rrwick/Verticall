@@ -32,10 +32,12 @@ def get_distribution(args, alignments):
     distances = []
     for a in alignments:
         distances += a.window_differences
+
+    if len(distances) == 0:
+        log_text = [f'V  no distances sampled']
+        return None, window_size, len(distances), None, None, log_text
+
     distance_counts = collections.Counter(distances)
-
-    # TODO: this crashes if there are no alignments - need to handle that gracefully
-
     masses = [0 if distance_counts[i] == 0 else distance_counts[i] / len(distances)
               for i in range(max(distances) + 1)]
     mean_distance = get_distance(masses, window_size, 'mean')
@@ -178,6 +180,9 @@ def get_peak_distance(masses, window_size):
     """
     Takes smoothed masses as input and finds the peak with the most mass.
     """
+    if masses is None:
+        return None, None, None, []
+
     log_text = ['V  mass peaks:']
     peaks_with_total_mass = [(get_peak_total_mass(masses, p), p)
                              for p in find_peaks(masses)]
@@ -374,6 +379,9 @@ def find_local_maximum_to_left(masses, i):
 
 
 def smooth_distribution(masses, smoothing_factor):
+    if masses is None:
+        return None
+
     smoothed = []
     for i, _ in enumerate(masses):
         kernel_width = i ** smoothing_factor
@@ -381,9 +389,7 @@ def smooth_distribution(masses, smoothing_factor):
 
     # Normalise to sum to one.
     total = sum(smoothed)
-    smoothed = [s/total for s in smoothed]
-
-    return smoothed
+    return [s/total for s in smoothed]
 
 
 def get_smoothed_mass(masses, i, kernel_width):
