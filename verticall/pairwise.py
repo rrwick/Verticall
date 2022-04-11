@@ -139,18 +139,20 @@ def process_all_pairs(args, assemblies, table_file):
     # If only using a single thread, do the alignment in a simple loop (easier for debugging).
     if args.threads == 1:
         for a in arg_list:
-            log_text, name_a, name_b, distances, table_line = process_one_pair(a)
+            log_text, name_a, name_b, distances, table_lines = process_one_pair(a)
             log('\n'.join(prepare_log_text(log_text, args.verbose)), end='\n\n')
-            table_file.write(table_line)
+            for table_line in table_lines:
+                table_file.write(table_line)
             table_file.flush()
 
     # If using multiple threads, use a process pool to work in parallel.
     else:
         with Pool(processes=args.threads) as pool:
-            for log_text, name_a, name_b, distances, table_line in pool.imap(process_one_pair,
-                                                                             arg_list):
+            for log_text, name_a, name_b, distances, table_lines in pool.imap(process_one_pair,
+                                                                              arg_list):
                 log('\n'.join(prepare_log_text(log_text, args.verbose)), end='\n\n')
-                table_file.write(table_line)
+                for table_line in table_lines:
+                    table_file.write(table_line)
                 table_file.flush()
 
 
@@ -223,37 +225,44 @@ def process_one_pair(all_args, view=False):
     all_log_text += log_text
 
     smoothed_masses = smooth_distribution(masses, args.smoothing_factor)
-    mass_peaks, peak_distance, thresholds, log_text = \
-        get_peak_distance(smoothed_masses, window_size)
+
+    mass_peaks, results, log_text = get_peak_distance(smoothed_masses, window_size, args.secondary)
     all_log_text += log_text
 
-    vertical_masses, horizontal_masses, mean_vert_distance, median_vert_distance, log_text = \
-        paint_alignments(alignments, thresholds, window_size)
-    all_log_text += log_text
+    if results is None:
+        results = [(None, None, None)]
 
-    painted_a, painted_b, log_text = \
-        paint_assemblies(name_a, name_b, filename_a, filename_b, alignments)
-    all_log_text += log_text
+    # Most pairs will just have a single result (primary), but when there is a close call (e.g.
+    # 55:45), there can also be one or more secondary results.
+    table_lines = []
+    for result_level, peak_distance, thresholds in results:
+        vertical_masses, horizontal_masses, mean_vert_distance, median_vert_distance, log_text = \
+            paint_alignments(alignments, thresholds, window_size)
+        all_log_text += log_text
 
-    # If being called by the view subcommand, we return the results instead of making a table line.
-    if view:
-        return alignments, window_size, masses, smoothed_masses, thresholds, vertical_masses, \
-               horizontal_masses, painted_a, all_log_text
+        painted_a, painted_b, log_text = \
+            paint_assemblies(name_a, name_b, filename_a, filename_b, alignments)
+        all_log_text += log_text
 
-    distances = {'aligned_fraction': aligned_frac,
-                 'mean': mean_distance,
-                 'median': median_distance,
-                 'peak': peak_distance,
-                 'mean_vertical': mean_vert_distance,
-                 'median_vertical': median_vert_distance}
+        # If called by the view subcommand, we return the results instead of making a table line.
+        if view:
+            return alignments, window_size, masses, smoothed_masses, thresholds, vertical_masses, \
+                   horizontal_masses, painted_a, all_log_text
 
-    table_line = get_table_line(name_a, name_b, len(alignments), n50_alignment_length,
-                                aligned_frac, window_size, window_count, mean_distance,
-                                median_distance, mass_peaks, peak_distance, vertical_masses,
-                                horizontal_masses, mean_vert_distance, median_vert_distance,
-                                painted_a, painted_b)
+        distances = {'aligned_fraction': aligned_frac,
+                     'mean': mean_distance,
+                     'median': median_distance,
+                     'peak': peak_distance,
+                     'mean_vertical': mean_vert_distance,
+                     'median_vertical': median_vert_distance}
 
-    return all_log_text, name_a, name_b, distances, table_line
+        table_lines.append(get_table_line(name_a, name_b, len(alignments), n50_alignment_length,
+                                          aligned_frac, window_size, window_count, mean_distance,
+                                          median_distance, mass_peaks, result_level, peak_distance,
+                                          vertical_masses, horizontal_masses, mean_vert_distance,
+                                          median_vert_distance, painted_a, painted_b))
+
+    return all_log_text, name_a, name_b, distances, table_lines
 
 
 def get_table_header():
@@ -267,6 +276,7 @@ def get_table_header():
             'mean_distance\t'
             'median_distance\t'
             'mass_peaks\t'
+            'result_level\t'
             'peak_distance\t'
             'alignments_vertical_fraction\t'
             'alignments_horizontal_fraction\t'
@@ -288,7 +298,7 @@ def get_table_header():
 
 def get_table_line(name_a, name_b, alignment_count, n50_alignment_length, aligned_frac,
                    window_size, window_count, mean_distance, median_distance, mass_peaks,
-                   peak_distance, vertical_masses, horizontal_masses, mean_vert_distance,
+                   result_level, peak_distance, vertical_masses, horizontal_masses, mean_vert_distance,
                    median_vert_distance, painted_a, painted_b):
     vertical_frac_a, horizontal_frac_a, unaligned_frac_a = painted_a.get_fractions()
     vertical_frac_b, horizontal_frac_b, unaligned_frac_b = painted_b.get_fractions()
@@ -300,6 +310,7 @@ def get_table_line(name_a, name_b, alignment_count, n50_alignment_length, aligne
     mean_distance = '' if mean_distance is None else f'{mean_distance:.9f}'
     median_distance = '' if median_distance is None else f'{median_distance:.9f}'
     mass_peaks = '' if mass_peaks is None else mass_peaks
+    result_level = '' if result_level is None else result_level
     peak_distance = '' if peak_distance is None else f'{peak_distance:.9f}'
     vertical_mass_frac = '' if vertical_masses is None else f'{100.0 * sum(vertical_masses):.2f}%'
     horizontal_mass_frac = '' if horizontal_masses is None \
@@ -317,6 +328,7 @@ def get_table_line(name_a, name_b, alignment_count, n50_alignment_length, aligne
             f'{mean_distance}\t'
             f'{median_distance}\t'
             f'{mass_peaks}\t'
+            f'{result_level}\t'
             f'{peak_distance}\t'
             f'{vertical_mass_frac}\t'
             f'{horizontal_mass_frac}\t'

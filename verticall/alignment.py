@@ -218,6 +218,8 @@ class Alignment(object):
         windows is horizontal. Ambiguous windows surrounded by both are conservatively called as
         horizontal.
         """
+        self.window_classifications = []  # clear any existing painting
+
         very_low, low = thresholds['very_low'], thresholds['low']
         high, very_high = thresholds['high'], thresholds['very_high']
 
