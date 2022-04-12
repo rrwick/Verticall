@@ -27,3 +27,13 @@ def test_finished_message(capsys):
     verticall.view.finished_message()
     _, err = capsys.readouterr()
     assert 'Finished' in err
+
+
+def test_check_hex_colour():
+    assert verticall.view.check_hex_colour('#000000')
+    assert verticall.view.check_hex_colour('#123456')
+    assert verticall.view.check_hex_colour('#abcdef')
+    assert not verticall.view.check_hex_colour('123456')
+    assert not verticall.view.check_hex_colour('1234567')
+    assert not verticall.view.check_hex_colour('#abc')
+    assert not verticall.view.check_hex_colour('#12q456')

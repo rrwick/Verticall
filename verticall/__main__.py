@@ -23,7 +23,7 @@ from .matrix import matrix
 from .pairwise import pairwise
 from .repair import repair
 from .version import __version__
-from .view import view
+from .view import view, check_hex_colour
 
 
 def main():
@@ -293,7 +293,12 @@ def check_view_args(args):
         sys.exit('Error: two sample names (comma-delimited) must be supplied to --names')
     if args.result < 1:
         sys.exit('Error: --result must be a positive integer')
-    # TODO: check that the colour values are valid hex colours
+    if not check_hex_colour(args.vertical_colour):
+        sys.exit('Error: --vertical_colour must be a valid hex colour code (with leading #)')
+    if not check_hex_colour(args.horizontal_colour):
+        sys.exit('Error: --horizontal_colour must be a valid hex colour code (with leading #)')
+    if not check_hex_colour(args.ambiguous_colour):
+        sys.exit('Error: --ambiguous_colour must be a valid hex colour code (with leading #)')
 
 
 def check_matrix_args(args):

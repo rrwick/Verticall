@@ -277,3 +277,16 @@ def contig_plot(sample_name, painted, window_size, sqrt_distance, vertical_colou
         offset += contig.length
 
     return g.draw()
+
+
+def check_hex_colour(colour):
+    if len(colour) != 7:
+        return False
+    if colour[0] != '#':
+        return False
+    colour = colour.lower()
+    good_chars = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'}
+    for i in range(1, 7):
+        if colour[i] not in good_chars:
+            return False
+    return True
