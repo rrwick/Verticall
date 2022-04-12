@@ -19,7 +19,7 @@ import sys
 
 from .alignment import build_indices, align_sample_pair
 from .distance import get_distribution, smooth_distribution, get_peak_distance
-from .log import log, section_header, explanation
+from .log import log, section_header, explanation, warning
 from .misc import split_list, iterate_fasta, contains_ambiguous_bases
 from .paint import paint_alignments, paint_assemblies
 
@@ -135,11 +135,14 @@ def process_all_pairs(args, assemblies, table_file):
                 'of the alignments as either vertical or horizontal. This allows for the '
                 'calculation of a vertical-only genomic distance.')
     arg_list = get_arg_list(args, assemblies)
+    multi_results = False
 
     # If only using a single thread, do the alignment in a simple loop (easier for debugging).
     if args.threads == 1:
         for a in arg_list:
             log_text, table_lines = process_one_pair(a)
+            if len(table_lines) > 1:
+                multi_results = True
             log('\n'.join(prepare_log_text(log_text, args.verbose)), end='\n\n')
             for table_line in table_lines:
                 table_file.write(table_line)
@@ -149,10 +152,15 @@ def process_all_pairs(args, assemblies, table_file):
     else:
         with Pool(processes=args.threads) as pool:
             for log_text, table_lines in pool.imap(process_one_pair, arg_list):
+                if len(table_lines) > 1:
+                    multi_results = True
                 log('\n'.join(prepare_log_text(log_text, args.verbose)), end='\n\n')
                 for table_line in table_lines:
                     table_file.write(table_line)
                 table_file.flush()
+
+    if multi_results:
+        warning('one or more assembly pairs produced multiple results.')
 
 
 def get_arg_list(args, assemblies):
@@ -231,19 +239,19 @@ def process_one_pair(all_args, view=False):
     smoothed_masses = smooth_distribution(masses, args.smoothing_factor)
     mass_peaks, results, log_text = get_peak_distance(smoothed_masses, window_size, args.secondary)
     all_log_text += log_text
-    if results is None:
-        results = [(None, None, None)]
 
     # Step 4: paint alignments and assemblies using the distance thresholds.
     table_lines = []
     for _, result_level, peak_distance, thresholds in results:
         vertical_masses, horizontal_masses, mean_vert_distance, median_vert_distance, log_text = \
             paint_alignments(alignments, thresholds, window_size)
-        all_log_text += log_text
+        if result_level == 'primary' or args.verbose:
+            all_log_text += log_text
 
         painted_a, painted_b, log_text = \
             paint_assemblies(name_a, name_b, filename_a, filename_b, alignments)
-        all_log_text += log_text
+        if result_level == 'primary' or args.verbose:
+            all_log_text += log_text
 
         # If called by the view subcommand, we return the results instead of making a table line.
         if view:

@@ -191,7 +191,7 @@ def get_peak_distance(masses, window_size, secondary_ratio):
     * a list of log text
     """
     if masses is None:
-        return None, None, []
+        return None, [(None, None, None, None)], []
 
     log_text = ['V  mass peaks:']
     peaks_with_mass = [(get_peak_total_mass(masses, p), p) for p in find_peaks(masses)]

@@ -304,7 +304,7 @@ def test_get_peak_distance_3():
     mass_peaks, results, _ = \
         verticall.distance.get_peak_distance(masses, window_size, secondary_ratio)
     assert mass_peaks is None
-    assert results is None
+    assert results == [(None, None, None, None)]
 
 
 def test_smooth_distribution():

@@ -71,6 +71,14 @@ def explanation(text, indent_size=4):
     log()
 
 
+def warning(text):
+    text = 'WARNING: ' + text
+    terminal_width, _ = get_terminal_size_stderr()
+    for line in textwrap.wrap(text, width=terminal_width - 1):
+        log(bold_red(line))
+    log()
+
+
 def quit_with_error(text):
     terminal_width, _ = get_terminal_size_stderr()
     log()

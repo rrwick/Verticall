@@ -17,7 +17,7 @@ import itertools
 import math
 import sys
 
-from .log import log, section_header, explanation, bold_red
+from .log import log, section_header, explanation, warning
 from .misc import check_file_exists
 
 
@@ -99,8 +99,7 @@ def check_for_missing_distances(distances, sample_names):
                 any_missing = True
                 distances[(sample_a, sample_b)] = None
     if any_missing:
-        log(bold_red('WARNING: some pairwise distances were not found - matrix will contain '
-                     'empty cells'))
+        warning('some pairwise distances were not found - matrix will contain empty cells.')
 
 
 def get_column_index(header_parts, distance_type, filename):
