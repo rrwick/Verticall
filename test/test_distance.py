@@ -15,6 +15,7 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 import pytest
+import statistics
 
 import verticall.distance
 
@@ -41,6 +42,7 @@ def test_get_median():
     assert verticall.distance.get_median([0.4, 0.0, 0.0, 0.6]) == 3
     assert verticall.distance.get_median([0.1, 0.2, 0.3, 0.4]) == 2
     assert verticall.distance.get_median([0.4, 0.3, 0.2, 0.1]) == 1
+    assert verticall.distance.get_median([]) == 0
 
 
 def test_get_interpolated_median():
@@ -91,6 +93,7 @@ def test_interpolate():
     assert verticall.distance.interpolate(0.0, 0.5, 0.0) == pytest.approx(0.0)
     assert verticall.distance.interpolate(0.1, 0.5, 0.1) == pytest.approx(0.0)
     assert verticall.distance.interpolate(0.2, 0.5, 0.2) == pytest.approx(0.0)
+    assert verticall.distance.interpolate(0.3, 0.3, 0.3) == pytest.approx(0.0)
     assert verticall.distance.interpolate(0.0, 0.1, 0.1) == pytest.approx(0.5)
     assert verticall.distance.interpolate(0.1, 0.4, 0.4) == pytest.approx(0.5)
     assert verticall.distance.interpolate(0.1, 0.1, 0.0) == pytest.approx(-0.5)
@@ -174,7 +177,7 @@ def test_get_peak_total_mass():
     assert verticall.distance.get_peak_total_mass(masses, 6) == pytest.approx(0.3)
 
 
-def test_get_sliding_window_count_1():
+def test_get_sliding_window_count():
     # Test get_window_count() by checking the numbers directly.
     cigars = ['='*1000, '='*100, '='*10]
     assert verticall.distance.get_sliding_window_count(cigars, 1000, 100) == 1
@@ -193,6 +196,8 @@ def test_find_local_minimum_to_right():
     assert verticall.distance.find_local_minimum_to_right(masses, 0) == 1
     masses = [0.26, 0.24, 0.21, 0.19, 0.10]
     assert verticall.distance.find_local_minimum_to_right(masses, 0) is None
+    masses = [0.10, 0.19, 0.21, 0.24, 0.26]
+    assert verticall.distance.find_local_minimum_to_right(masses, 4) is None
 
 
 def test_find_local_minimum_to_left():
@@ -204,6 +209,8 @@ def test_find_local_minimum_to_left():
     assert verticall.distance.find_local_minimum_to_left(masses, 4) == 1
     masses = [0.10, 0.19, 0.21, 0.24, 0.26]
     assert verticall.distance.find_local_minimum_to_left(masses, 4) is None
+    masses = [0.26, 0.24, 0.21, 0.19, 0.10]
+    assert verticall.distance.find_local_minimum_to_left(masses, 0) is None
 
 
 def test_find_local_maximum_to_right():
@@ -213,11 +220,13 @@ def test_find_local_maximum_to_right():
     assert verticall.distance.find_local_maximum_to_right(masses, 2) == 3
     masses = [0.20, 0.25, 0.10, 0.20, 0.25]
     assert verticall.distance.find_local_maximum_to_right(masses, 2) is None
+    assert verticall.distance.find_local_maximum_to_right(masses, 4) is None
 
 
 def test_find_local_maximum_to_left():
     masses = [0.25, 0.10, 0.20, 0.25, 0.20]
     assert verticall.distance.find_local_maximum_to_left(masses, 1) is None
+    assert verticall.distance.find_local_maximum_to_left(masses, 0) is None
     masses = [0.20, 0.25, 0.10, 0.20, 0.25]
     assert verticall.distance.find_local_maximum_to_left(masses, 2) == 1
 
@@ -254,3 +263,66 @@ def test_get_smoothed_mass():
     assert verticall.distance.get_smoothed_mass(masses, 3, 0) == pytest.approx(0.1)
     assert verticall.distance.get_smoothed_mass(masses, 3, 1) == pytest.approx(0.1)
     assert verticall.distance.get_smoothed_mass(masses, 3, 5) == pytest.approx(0.1)
+
+
+def test_get_peak_distance_1():
+    masses = [0.0, 0.1, 0.25, 0.1, 0.0, 0.0, 0.1, 0.35, 0.1]
+    window_size = 1000
+    secondary_ratio = 1.0  # only return the primary result
+    mass_peaks, results, _ = \
+        verticall.distance.get_peak_distance(masses, window_size, secondary_ratio)
+    assert mass_peaks == '0.002000000,0.007000000'
+    assert len(results) == 1
+    mass, result_level, peak_distance, thresholds = results[0]
+    assert result_level == 'primary'
+    assert peak_distance == pytest.approx(0.007000000)
+    assert mass == pytest.approx(0.55)
+
+
+def test_get_peak_distance_2():
+    masses = [0.0, 0.1, 0.25, 0.1, 0.0, 0.0, 0.1, 0.35, 0.1]
+    window_size = 1000
+    secondary_ratio = 0.8  # low enough to also return the secondary peak
+    mass_peaks, results, _ = \
+        verticall.distance.get_peak_distance(masses, window_size, secondary_ratio)
+    assert mass_peaks == '0.002000000,0.007000000'
+    assert len(results) == 2
+    mass, result_level, peak_distance, thresholds = results[0]
+    assert result_level == 'primary'
+    assert peak_distance == pytest.approx(0.007000000)
+    assert mass == pytest.approx(0.55)
+    mass, result_level, peak_distance, thresholds = results[1]
+    assert result_level == 'secondary'
+    assert peak_distance == pytest.approx(0.002000000)
+    assert mass == pytest.approx(0.45)
+
+
+def test_get_peak_distance_3():
+    masses = None
+    window_size = None
+    secondary_ratio = 0.8
+    mass_peaks, results, _ = \
+        verticall.distance.get_peak_distance(masses, window_size, secondary_ratio)
+    assert mass_peaks is None
+    assert results is None
+
+
+def test_smooth_distribution():
+    masses = [0.0000, 0.0006, 0.0009, 0.0012, 0.0017, 0.0023, 0.0033, 0.0044, 0.0056, 0.0059,
+              0.0084, 0.0110, 0.0127, 0.0170, 0.0194, 0.0241, 0.0298, 0.0257, 0.0386, 0.0378,
+              0.0448, 0.0401, 0.0536, 0.0429, 0.0447, 0.0503, 0.0508, 0.0477, 0.0533, 0.0401,
+              0.0481, 0.0360, 0.0341, 0.0280, 0.0224, 0.0199, 0.0186, 0.0166, 0.0145, 0.0092,
+              0.0097, 0.0060, 0.0060, 0.0040, 0.0026, 0.0023, 0.0014, 0.0010, 0.0009, 0.0000]
+    smoothed_01 = verticall.distance.smooth_distribution(masses, 0.1)
+    smoothed_03 = verticall.distance.smooth_distribution(masses, 0.3)
+    smoothed_05 = verticall.distance.smooth_distribution(masses, 0.5)
+
+    def delta(data):
+        return sum(abs(data[i + 1] - data[i]) for i in range(len(data) - 1))
+
+    assert delta(masses) > delta(smoothed_01) > delta(smoothed_03) > delta(smoothed_05)
+
+    assert verticall.distance.smooth_distribution([], 0.1) == []
+    assert verticall.distance.smooth_distribution([], 0.5) == []
+    assert verticall.distance.smooth_distribution(None, 0.1) is None
+    assert verticall.distance.smooth_distribution(None, 0.5) is None

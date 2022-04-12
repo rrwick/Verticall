@@ -180,6 +180,15 @@ def get_peak_distance(masses, window_size, secondary_ratio):
     """
     Takes smoothed masses as input and finds the peak with the most mass. If there are multiple
     peaks closest to the most massive, then other peaks will also be outputted as secondary peaks.
+
+    Returns:
+    * a string listing all mass peaks (comma-delimited)
+    * a list of results, each item a tuple of:
+       * mass of the peak
+       * result level (primary or secondary)
+       * interpolated peak distance
+       * thresholds for alignment painting
+    * a list of log text
     """
     if masses is None:
         return None, None, []
