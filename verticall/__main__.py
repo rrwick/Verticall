@@ -136,7 +136,12 @@ def view_subparser(subparsers):
     view_args.add_argument('--result', type=int, default=1,
                            help='Number of result to view (useful for when there are multiple '
                                 'possible results for the pair, default: DEFAULT)')
-    # TODO: make colours adjustable via options
+    view_args.add_argument('--vertical_colour', type=str, default='#4859a0',
+                           help='Hex colour for vertical inheritance')
+    view_args.add_argument('--horizontal_colour', type=str, default='#c47e7e',
+                           help='Hex colour for horizontal inheritance')
+    view_args.add_argument('--ambiguous_colour', type=str, default='#c9c9c9',
+                           help='Hex colour for ambiguous inheritance')
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
@@ -288,6 +293,7 @@ def check_view_args(args):
         sys.exit('Error: two sample names (comma-delimited) must be supplied to --names')
     if args.result < 1:
         sys.exit('Error: --result must be a positive integer')
+    # TODO: check that the colour values are valid hex colours
 
 
 def check_matrix_args(args):

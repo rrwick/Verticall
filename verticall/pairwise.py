@@ -225,6 +225,8 @@ def process_one_pair(all_args, view=False, view_num=1):
 
     Since this function can be run in parallel, it doesn't log text directly, but instead collects
     the text to be logged in a list which is returned.
+
+    This function behave
     """
     args, name_a, name_b, filename_a, filename_b = all_args  # unpack the arguments
     all_log_text = [f'{name_a} vs {name_b}:']  # text logged to console will be stored in this list
