@@ -14,21 +14,47 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 
+import collections
 import pytest
 
 import verticall.matrix
 
 
 def test_welcome_message(capsys):
-    verticall.matrix.welcome_message()
+    Args = collections.namedtuple('Args', ['distance_type', 'asymmetrical', 'no_jukes_cantor',
+                                           'multi'])
+
+    verticall.matrix.welcome_message(Args(distance_type=None, asymmetrical=False,
+                                          no_jukes_cantor=False, multi='first'))
     _, err = capsys.readouterr()
     assert 'Verticall matrix' in err
+    assert 'will be symmetrical' in err
+    assert 'will be applied' in err
+    assert 'first value' in err
+
+    verticall.matrix.welcome_message(Args(distance_type=None, asymmetrical=True,
+                                          no_jukes_cantor=True, multi='low'))
+    _, err = capsys.readouterr()
+    assert 'will be asymmetrical' in err
+    assert 'will not be applied' in err
+    assert 'lowest value' in err
+
+    verticall.matrix.welcome_message(Args(distance_type=None, asymmetrical=True,
+                                          no_jukes_cantor=True, multi='high'))
+    _, err = capsys.readouterr()
+    assert 'highest value' in err
 
 
 def test_finished_message(capsys):
     verticall.matrix.finished_message()
     _, err = capsys.readouterr()
     assert 'Finished' in err
+
+
+def test_jukes_cantor():
+    assert verticall.matrix.jukes_cantor(0.0) == 0.0
+    assert verticall.matrix.jukes_cantor(0.9) == 25.0
+    assert verticall.matrix.jukes_cantor(None) is None
 
 
 def test_jukes_cantor_correction():
@@ -42,7 +68,7 @@ def test_jukes_cantor_correction():
     assert distances[('b', 'b')] == pytest.approx(0.0)
 
 
-def test_make_symmetrical():
+def test_make_symmetrical_1():
     sample_names = ['a', 'b']
     distances = {('a', 'a'): 0.0, ('a', 'b'): 0.2,
                  ('b', 'a'): 0.1, ('b', 'b'): 0.0}
@@ -53,7 +79,40 @@ def test_make_symmetrical():
     assert distances[('b', 'b')] == pytest.approx(0.0)
 
 
-def test_get_column_index():
+def test_make_symmetrical_2():
+    sample_names = ['a', 'b']
+    distances = {('a', 'a'): 0.0, ('a', 'b'): None,
+                 ('b', 'a'): 0.1, ('b', 'b'): 0.0}
+    verticall.matrix.make_symmetrical(distances, sample_names)
+    assert distances[('a', 'a')] == pytest.approx(0.0)
+    assert distances[('a', 'b')] == pytest.approx(0.1)
+    assert distances[('b', 'a')] == pytest.approx(0.1)
+    assert distances[('b', 'b')] == pytest.approx(0.0)
+
+
+def test_make_symmetrical_3():
+    sample_names = ['a', 'b']
+    distances = {('a', 'a'): 0.0,  ('a', 'b'): 0.2,
+                 ('b', 'a'): None, ('b', 'b'): 0.0}
+    verticall.matrix.make_symmetrical(distances, sample_names)
+    assert distances[('a', 'a')] == pytest.approx(0.0)
+    assert distances[('a', 'b')] == pytest.approx(0.2)
+    assert distances[('b', 'a')] == pytest.approx(0.2)
+    assert distances[('b', 'b')] == pytest.approx(0.0)
+
+
+def test_make_symmetrical_4():
+    sample_names = ['a', 'b']
+    distances = {('a', 'a'): 0.0,  ('a', 'b'): None,
+                 ('b', 'a'): None, ('b', 'b'): 0.0}
+    verticall.matrix.make_symmetrical(distances, sample_names)
+    assert distances[('a', 'a')] == pytest.approx(0.0)
+    assert distances[('a', 'b')] is None
+    assert distances[('b', 'a')] is None
+    assert distances[('b', 'b')] == pytest.approx(0.0)
+
+
+def test_get_column_index_1():
     header_parts = ['assembly_a', 'assembly_b', 'alignment_count', 'aligned_fraction',
                     'window_size', 'window_count', 'mean_distance', 'median_distance',
                     'mass_peaks', 'peak_distance', 'mean_vertical_distance',
@@ -63,6 +122,20 @@ def test_get_column_index():
     assert verticall.matrix.get_column_index(header_parts, 'peak', 'filename') == 9
     assert verticall.matrix.get_column_index(header_parts, 'mean_vertical', 'filename') == 10
     assert verticall.matrix.get_column_index(header_parts, 'median_vertical', 'filename') == 11
+    with pytest.raises(SystemExit) as e:
+        verticall.matrix.get_column_index(header_parts, 'bad', 'filename')
+    assert 'could not find' in str(e.value)
+
+
+def test_get_column_index_2():
+    header_parts = ['bad_column_name', 'assembly_b']
+    with pytest.raises(SystemExit) as e:
+        verticall.matrix.get_column_index(header_parts, 'mean', 'filename')
+    assert 'is not labelled' in str(e.value)
+    header_parts = ['assembly_a', 'bad_column_name']
+    with pytest.raises(SystemExit) as e:
+        verticall.matrix.get_column_index(header_parts, 'mean', 'filename')
+    assert 'is not labelled' in str(e.value)
 
 
 def test_check_for_missing_distances():
@@ -91,3 +164,27 @@ def test_filter_names():
     with pytest.raises(SystemExit) as e:
         verticall.matrix.filter_names(all_names, 'a,b,c,q,e,f')
     assert 'could not find sample' in str(e.value)
+
+
+def test_multi_distance():
+    assert verticall.matrix.multi_distance(0.4, 0.3, 'first') == 0.4
+    assert verticall.matrix.multi_distance(0.4, 0.5, 'first') == 0.4
+    assert verticall.matrix.multi_distance(0.4, 0.3, 'low') == 0.3
+    assert verticall.matrix.multi_distance(0.4, 0.5, 'low') == 0.4
+    assert verticall.matrix.multi_distance(0.4, 0.3, 'high') == 0.4
+    assert verticall.matrix.multi_distance(0.4, 0.5, 'high') == 0.5
+    with pytest.raises(AssertionError):
+        verticall.matrix.multi_distance(0.4, 0.5, 'bad')
+
+
+def test_get_distance_from_line_parts():
+    parts = ['a', 'b', '0.0002', '', '0.0001', 'not_a_num']
+    assert verticall.matrix.get_distance_from_line_parts(parts, 2) == pytest.approx(0.0002)
+    assert verticall.matrix.get_distance_from_line_parts(parts, 3) is None
+    assert verticall.matrix.get_distance_from_line_parts(parts, 4) == pytest.approx(0.0001)
+    with pytest.raises(SystemExit) as e:
+        verticall.matrix.get_distance_from_line_parts(parts, 5)
+    assert 'could not convert' in str(e.value)
+    with pytest.raises(SystemExit) as e:
+        verticall.matrix.get_distance_from_line_parts(parts, 6)
+    assert 'column' in str(e.value)

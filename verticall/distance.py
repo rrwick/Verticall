@@ -190,9 +190,6 @@ def get_peak_distance(masses, window_size, secondary_ratio):
        * thresholds for alignment painting
     * a list of log text
     """
-    if masses is None:
-        return None, [(None, None, None, None)], []
-
     log_text = ['V  mass peaks:']
     peaks_with_mass = [(get_peak_total_mass(masses, p), p) for p in find_peaks(masses)]
     largest_mass, most_massive_peak = sorted(peaks_with_mass)[-1]
@@ -401,9 +398,6 @@ def find_local_maximum_to_left(masses, i):
 
 
 def smooth_distribution(masses, smoothing_factor):
-    if masses is None:
-        return None
-
     smoothed = []
     for i, _ in enumerate(masses):
         kernel_width = i ** smoothing_factor

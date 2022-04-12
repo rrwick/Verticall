@@ -297,16 +297,6 @@ def test_get_peak_distance_2():
     assert mass == pytest.approx(0.45)
 
 
-def test_get_peak_distance_3():
-    masses = None
-    window_size = None
-    secondary_ratio = 0.8
-    mass_peaks, results, _ = \
-        verticall.distance.get_peak_distance(masses, window_size, secondary_ratio)
-    assert mass_peaks is None
-    assert results == [(None, None, None, None)]
-
-
 def test_smooth_distribution():
     masses = [0.0000, 0.0006, 0.0009, 0.0012, 0.0017, 0.0023, 0.0033, 0.0044, 0.0056, 0.0059,
               0.0084, 0.0110, 0.0127, 0.0170, 0.0194, 0.0241, 0.0298, 0.0257, 0.0386, 0.0378,
@@ -324,5 +314,3 @@ def test_smooth_distribution():
 
     assert verticall.distance.smooth_distribution([], 0.1) == []
     assert verticall.distance.smooth_distribution([], 0.5) == []
-    assert verticall.distance.smooth_distribution(None, 0.1) is None
-    assert verticall.distance.smooth_distribution(None, 0.5) is None

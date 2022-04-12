@@ -44,7 +44,8 @@ def view(args):
     section_header('Processing assembly pair')
     all_args = args, name_a, name_b, filename_a, filename_b
     alignments, window_size, masses, smoothed_masses, thresholds, vertical_masses, \
-        horizontal_masses, painted_a, log_text = process_one_pair(all_args, view=True)
+        horizontal_masses, painted_a, log_text = process_one_pair(all_args, view=True,
+                                                                  view_num=args.result)
     log()
     log('\n'.join(prepare_log_text(log_text, True)), end='\n\n')
     finished_message()

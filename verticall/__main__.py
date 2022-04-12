@@ -126,13 +126,16 @@ def view_subparser(subparsers):
 
     pairwise_and_view_settings(group)
 
-    axis_args = group.add_argument_group('Axis transformations')
-    axis_args.add_argument('--sqrt_distance', action='store_true',
+    view_args = group.add_argument_group('View settings')
+    view_args.add_argument('--sqrt_distance', action='store_true',
                            help='Use a square-root transform on the genomic distance axis '
                                 '(default: no distance axis transform)')
-    axis_args.add_argument('--sqrt_mass', action='store_true',
+    view_args.add_argument('--sqrt_mass', action='store_true',
                            help='Use a square-root transform on the probability mass axis '
                                 '(default: no mass axis transform)')
+    view_args.add_argument('--result', type=int, default=1,
+                           help='Number of result to view (useful for when there are multiple '
+                                'possible results for the pair, default: DEFAULT)')
     # TODO: make colours adjustable via options
 
     other_args = group.add_argument_group('Other')
@@ -195,8 +198,8 @@ def matrix_subparser(subparsers):
     settings_args.add_argument('--no_jukes_cantor', action='store_true',
                                help='Do not apply Jukes-Cantor correction (default: apply '
                                     'Jukes-Cantor correction)')
-    settings_args.add_argument('--multi', type=str, default='primary',
-                               choices=['primary', 'high', 'low'],
+    settings_args.add_argument('--multi', type=str, default='first',
+                               choices=['first', 'low', 'high'],
                                help='Behaviour when there are multiple results for a sample pair')
     settings_args.add_argument('--names', type=str,
                                help='Samples names to include in matrix (comma-delimited, '
@@ -222,8 +225,8 @@ def mask_subparser(subparsers):
                                help='Filename for masked SNV matrix output')
 
     settings_args = group.add_argument_group('Settings')
-    settings_args.add_argument('--multi', type=str, default='primary',
-                               choices=['primary', 'high', 'low'],
+    settings_args.add_argument('--multi', type=str, default='first',
+                               choices=['first', 'low', 'high'],
                                help='Behaviour when there are multiple results for a sample pair')
 
     other_args = group.add_argument_group('Other')
@@ -283,6 +286,8 @@ def check_view_args(args):
     samples = args.names.split(',')
     if len(samples) != 2:
         sys.exit('Error: two sample names (comma-delimited) must be supplied to --names')
+    if args.result < 1:
+        sys.exit('Error: --result must be a positive integer')
 
 
 def check_matrix_args(args):

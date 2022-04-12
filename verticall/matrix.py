@@ -22,8 +22,8 @@ from .misc import check_file_exists
 
 
 def matrix(args):
-    welcome_message()
-    distances, sample_names = load_tsv_file(args.in_file, args.distance_type)
+    welcome_message(args)
+    distances, sample_names = load_tsv_file(args.in_file, args.distance_type, args.multi)
     if args.names is not None:
         sample_names = filter_names(sample_names, args.names)
     if not args.no_jukes_cantor:
@@ -34,12 +34,30 @@ def matrix(args):
     finished_message()
 
 
-def welcome_message():
+def welcome_message(args):
     section_header('Starting Verticall matrix')
     explanation('Verticall matrix extracts distances from the tab-delimited file made by Vertical '
                 'pairwise, producing a PHYLIP distance matrix suitable for use in distance-based '
                 'phylogeny algorithms (e.g. BioNJ or FastME).')
-    # TODO: display the options used here
+    log('Options:')
+    log(f'  distance type: {args.distance_type}')
+    if args.asymmetrical:
+        log('  matrix will be asymmetrical (a,b ≠ b,a)')
+    else:
+        log('  matrix will be symmetrical (a,b = b,a)')
+    if args.no_jukes_cantor:
+        log('  Jukes-Cantor correction will not be applied')
+    else:
+        log('  Jukes-Cantor correction will be applied')
+    if args.multi == 'first':
+        log('  when multiple distances exist, the first value will be used')
+    elif args.multi == 'low':
+        log('  when multiple distances exist, the lowest value will be used')
+    elif args.multi == 'high':
+        log('  when multiple distances exist, the highest value will be used')
+
+
+    log()
 
 
 def finished_message():
@@ -48,8 +66,7 @@ def finished_message():
                 'phylogeny from the distance matrix.')
 
 
-def load_tsv_file(filename, distance_type):
-    # TODO: add --multi logic
+def load_tsv_file(filename, distance_type, multi):
     check_file_exists(filename)
     section_header('Loading distances')
     distances, sample_names = {}, set()
@@ -61,16 +78,14 @@ def load_tsv_file(filename, distance_type):
                 column_index = get_column_index(parts, distance_type, filename)
             else:
                 assembly_a, assembly_b = parts[0], parts[1]
-                try:
-                    if parts[column_index] == '':
-                        distance = None
-                    else:
-                        distance = float(parts[column_index])
-                except ValueError:
-                    sys.exit(f'Error: could not convert {parts[column_index]} to a number')
+                distance = get_distance_from_line_parts(parts, column_index)
                 sample_names.add(assembly_a)
                 sample_names.add(assembly_b)
-                distances[(assembly_a, assembly_b)] = distance
+                if (assembly_a, assembly_b) in distances:
+                    existing = distances[(assembly_a, assembly_b)]
+                    distances[(assembly_a, assembly_b)] = multi_distance(existing, distance, multi)
+                else:
+                    distances[(assembly_a, assembly_b)] = distance
     sample_names = sorted(sample_names)
     log(f'{len(distances)} distances loaded for {len(sample_names)} assemblies')
     for sample_name in sample_names:
@@ -78,6 +93,36 @@ def load_tsv_file(filename, distance_type):
     check_for_missing_distances(distances, sample_names)
     log()
     return distances, sorted(sample_names)
+
+
+def get_distance_from_line_parts(parts, column_index):
+    try:
+        distance = parts[column_index]
+    except IndexError:
+        sys.exit(f'Error: column {column_index+1} missing from tsv file')
+    try:
+        if distance == '':
+            return None
+        else:
+            return float(distance)
+    except ValueError:
+        sys.exit(f'Error: could not convert {distance} to a number')
+
+
+def multi_distance(existing_distance, new_distance, multi):
+    """
+    This code handles the case when a distance is seen a subsequent time for a single assembly pair.
+    Given the existing distance (earlier in the tsv), a new distance (later in the tsv) and multi
+    logic, it returns the distance that should be used in the matrix.
+    """
+    if multi == 'first':
+        return existing_distance
+    elif multi == 'low':
+        return min(existing_distance, new_distance)
+    elif multi == 'high':
+        return max(existing_distance, new_distance)
+    else:
+        assert False
 
 
 def filter_names(all_names, specified_names):
@@ -140,12 +185,13 @@ def save_matrix(filename, distances, sample_names):
     log(f'{len(sample_names)} samples, {distance_count} distances')
     log()
     if missing_distances:
-        log(bold_red('WARNING: '
-                     'one or more distances are missing resulting in an incomplete matrix'))
-        log()
+        warning('one or more distances are missing resulting in an incomplete matrix')
 
 
 def jukes_cantor_correction(distances, sample_names):
+    """
+    Applies Jukes-Cantor correction in-place to the entire distance matrix.
+    """
     for a in sample_names:
         for b in sample_names:
             distances[(a, b)] = jukes_cantor(distances[(a, b)])
@@ -153,6 +199,7 @@ def jukes_cantor_correction(distances, sample_names):
 
 def jukes_cantor(d):
     """
+    Applies Jukes-Cantor correction to a single distance, returning the corrected value.
     https://www.desmos.com/calculator/okovk3dipx
     """
     if d is None:
@@ -165,6 +212,9 @@ def jukes_cantor(d):
 
 
 def make_symmetrical(distances, sample_names):
+    """
+    Makes the distance matrix symmetrical, changing it in-place.
+    """
     for a, b in itertools.combinations(sample_names, 2):
         d1 = distances[(a, b)]
         d2 = distances[(b, a)]

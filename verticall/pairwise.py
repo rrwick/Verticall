@@ -135,12 +135,14 @@ def process_all_pairs(args, assemblies, table_file):
                 'of the alignments as either vertical or horizontal. This allows for the '
                 'calculation of a vertical-only genomic distance.')
     arg_list = get_arg_list(args, assemblies)
-    multi_results = False
+    empty_results, multi_results = False, False
 
     # If only using a single thread, do the alignment in a simple loop (easier for debugging).
     if args.threads == 1:
         for a in arg_list:
             log_text, table_lines = process_one_pair(a)
+            if len(table_lines) == 0:
+                empty_results = True
             if len(table_lines) > 1:
                 multi_results = True
             log('\n'.join(prepare_log_text(log_text, args.verbose)), end='\n\n')
@@ -152,6 +154,8 @@ def process_all_pairs(args, assemblies, table_file):
     else:
         with Pool(processes=args.threads) as pool:
             for log_text, table_lines in pool.imap(process_one_pair, arg_list):
+                if len(table_lines) == 0:
+                    empty_results = True
                 if len(table_lines) > 1:
                     multi_results = True
                 log('\n'.join(prepare_log_text(log_text, args.verbose)), end='\n\n')
@@ -159,8 +163,10 @@ def process_all_pairs(args, assemblies, table_file):
                     table_file.write(table_line)
                 table_file.flush()
 
+    if empty_results:
+        warning('one or more assembly pairs failed to align sufficiently to produce results')
     if multi_results:
-        warning('one or more assembly pairs produced multiple results.')
+        warning('one or more assembly pairs produced multiple results')
 
 
 def get_arg_list(args, assemblies):
@@ -212,13 +218,13 @@ def prepare_log_text(log_text, verbose):
     return prepared
 
 
-def process_one_pair(all_args, view=False):
+def process_one_pair(all_args, view=False, view_num=1):
     """
     This is the master function for each pairwise comparison. It gets called once for each assembly
     pair and carries out all analysis on that pair.
 
-    Since this function can be called in parallel, it doesn't log text directly, but instead
-    collects the text to be logged in a list which is returned.
+    Since this function can be run in parallel, it doesn't log text directly, but instead collects
+    the text to be logged in a list which is returned.
     """
     args, name_a, name_b, filename_a, filename_b = all_args  # unpack the arguments
     all_log_text = [f'{name_a} vs {name_b}:']  # text logged to console will be stored in this list
@@ -233,24 +239,35 @@ def process_one_pair(all_args, view=False):
         get_distribution(args, alignments)
     all_log_text += log_text
 
+    # If there are no sliding windows, then the two assemblies didn't sufficiently align to do any
+    # further analysis.
+    if window_count == 0:
+        return all_log_text, []
+
     # Step 3: smooth the distribution and find peaks with their corresponding thresholds. When
     #         there is a close call, this can return multiple results (a primary result and one or
     #         more secondary results).
     smoothed_masses = smooth_distribution(masses, args.smoothing_factor)
     mass_peaks, results, log_text = get_peak_distance(smoothed_masses, window_size, args.secondary)
     all_log_text += log_text
+    check_view_num(view, view_num, len(results))
 
     # Step 4: paint alignments and assemblies using the distance thresholds.
     table_lines = []
-    for _, result_level, peak_distance, thresholds in results:
+    for i, result in enumerate(results):
+        if view and i+1 != view_num:
+            continue
+
+        _, result_level, peak_distance, thresholds = result
+
         vertical_masses, horizontal_masses, mean_vert_distance, median_vert_distance, log_text = \
             paint_alignments(alignments, thresholds, window_size)
-        if result_level == 'primary' or args.verbose:
+        if result_level == 'primary' or args.verbose or view:
             all_log_text += log_text
 
         painted_a, painted_b, log_text = \
             paint_assemblies(name_a, name_b, filename_a, filename_b, alignments)
-        if result_level == 'primary' or args.verbose:
+        if result_level == 'primary' or args.verbose or view:
             all_log_text += log_text
 
         # If called by the view subcommand, we return the results instead of making a table line.
@@ -265,6 +282,17 @@ def process_one_pair(all_args, view=False):
                                           median_vert_distance, painted_a, painted_b))
 
     return all_log_text, table_lines
+
+
+def check_view_num(view, view_num, result_count):
+    if not view:
+        return
+    if result_count == 0:
+        sys.exit(f'Error: this pair has no results and cannot be viewed')
+    if view_num > result_count:
+        result_str = 'result' if result_count == 1 else 'results'
+        sys.exit(f'Error: this pair only has {result_count} {result_str} but --result {view_num} '
+                 f'was used')
 
 
 def get_table_header():
@@ -306,21 +334,6 @@ def get_table_line(name_a, name_b, alignment_count, n50_alignment_length, aligne
     vertical_frac_b, horizontal_frac_b, unaligned_frac_b = painted_b.get_fractions()
     vertical_regions_a, horizontal_regions_a, unaligned_regions_a = painted_a.get_regions()
     vertical_regions_b, horizontal_regions_b, unaligned_regions_b = painted_b.get_regions()
-
-    # Some values can be None when there are no alignments for a pair.
-    n50_alignment_length = '' if n50_alignment_length == 0 else n50_alignment_length
-    window_size = '' if window_count == 0 else window_size
-    mean_distance = '' if mean_distance is None else f'{mean_distance:.9f}'
-    median_distance = '' if median_distance is None else f'{median_distance:.9f}'
-    mass_peaks = '' if mass_peaks is None else mass_peaks
-    result_level = '' if result_level is None else result_level
-    peak_distance = '' if peak_distance is None else f'{peak_distance:.9f}'
-    vertical_mass_frac = '' if vertical_masses is None else f'{100.0 * sum(vertical_masses):.2f}%'
-    horizontal_mass_frac = '' if horizontal_masses is None \
-        else f'{100.0 * sum(horizontal_masses):.2f}%'
-    mean_vert_distance = '' if mean_vert_distance is None else f'{mean_vert_distance:.9f}'
-    median_vert_distance = '' if median_vert_distance is None else f'{median_vert_distance:.9f}'
-
     return (f'{name_a}\t'
             f'{name_b}\t'
             f'{alignment_count}\t'
@@ -328,15 +341,15 @@ def get_table_line(name_a, name_b, alignment_count, n50_alignment_length, aligne
             f'{aligned_frac:.9f}\t'
             f'{window_size}\t'
             f'{window_count}\t'
-            f'{mean_distance}\t'
-            f'{median_distance}\t'
+            f'{mean_distance:.9f}\t'
+            f'{median_distance:.9f}\t'
             f'{mass_peaks}\t'
             f'{result_level}\t'
-            f'{peak_distance}\t'
-            f'{vertical_mass_frac}\t'
-            f'{horizontal_mass_frac}\t'
-            f'{mean_vert_distance}\t'
-            f'{median_vert_distance}\t'
+            f'{peak_distance:.9f}\t'
+            f'{100.0 * sum(vertical_masses):.2f}%\t'
+            f'{100.0 * sum(horizontal_masses):.2f}%\t'
+            f'{mean_vert_distance:.9f}\t'
+            f'{median_vert_distance:.9f}\t'
             f'{100.0 * vertical_frac_a:.2f}%\t'
             f'{100.0 * horizontal_frac_a:.2f}%\t'
             f'{100.0 * unaligned_frac_a:.2f}%\t'
