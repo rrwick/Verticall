@@ -30,7 +30,7 @@ def pairwise(args):
     check_assemblies(assemblies)
     build_indices(args, assemblies)
     with open(args.out_file, 'wt') as table_file:
-        if parse_part(args.part)[0] == 0:  # if first part
+        if parse_part(args.part)[0] == 0:  # only include the header in the first part
             table_file.write(get_table_header())
         process_all_pairs(args, assemblies, table_file)
     finished_message()
@@ -139,7 +139,7 @@ def process_all_pairs(args, assemblies, table_file):
     # If only using a single thread, do the alignment in a simple loop (easier for debugging).
     if args.threads == 1:
         for a in arg_list:
-            log_text, name_a, name_b, distances, table_lines = process_one_pair(a)
+            log_text, table_lines = process_one_pair(a)
             log('\n'.join(prepare_log_text(log_text, args.verbose)), end='\n\n')
             for table_line in table_lines:
                 table_file.write(table_line)
@@ -148,8 +148,7 @@ def process_all_pairs(args, assemblies, table_file):
     # If using multiple threads, use a process pool to work in parallel.
     else:
         with Pool(processes=args.threads) as pool:
-            for log_text, name_a, name_b, distances, table_lines in pool.imap(process_one_pair,
-                                                                              arg_list):
+            for log_text, table_lines in pool.imap(process_one_pair, arg_list):
                 log('\n'.join(prepare_log_text(log_text, args.verbose)), end='\n\n')
                 for table_line in table_lines:
                     table_file.write(table_line)
@@ -213,29 +212,31 @@ def process_one_pair(all_args, view=False):
     Since this function can be called in parallel, it doesn't log text directly, but instead
     collects the text to be logged in a list which is returned.
     """
-    args, name_a, name_b, filename_a, filename_b = all_args
-    all_log_text = [f'{name_a} vs {name_b}:']
+    args, name_a, name_b, filename_a, filename_b = all_args  # unpack the arguments
+    all_log_text = [f'{name_a} vs {name_b}:']  # text logged to console will be stored in this list
 
+    # Step 1: align the two assemblies to each other.
     alignments, n50_alignment_length, aligned_frac, log_text = \
         align_sample_pair(args, filename_a, name_b)
     all_log_text += log_text
 
+    # Step 2: produce a distance distribution from sliding windows across the alignments.
     masses, window_size, window_count, mean_distance, median_distance, log_text = \
         get_distribution(args, alignments)
     all_log_text += log_text
 
+    # Step 3: smooth the distribution and find peaks with their corresponding thresholds. When
+    #         there is a close call, this can return multiple results (a primary result and one or
+    #         more secondary results).
     smoothed_masses = smooth_distribution(masses, args.smoothing_factor)
-
     mass_peaks, results, log_text = get_peak_distance(smoothed_masses, window_size, args.secondary)
     all_log_text += log_text
-
     if results is None:
         results = [(None, None, None)]
 
-    # Most pairs will just have a single result (primary), but when there is a close call (e.g.
-    # 55:45), there can also be one or more secondary results.
+    # Step 4: paint alignments and assemblies using the distance thresholds.
     table_lines = []
-    for result_level, peak_distance, thresholds in results:
+    for _, result_level, peak_distance, thresholds in results:
         vertical_masses, horizontal_masses, mean_vert_distance, median_vert_distance, log_text = \
             paint_alignments(alignments, thresholds, window_size)
         all_log_text += log_text
@@ -249,20 +250,13 @@ def process_one_pair(all_args, view=False):
             return alignments, window_size, masses, smoothed_masses, thresholds, vertical_masses, \
                    horizontal_masses, painted_a, all_log_text
 
-        distances = {'aligned_fraction': aligned_frac,
-                     'mean': mean_distance,
-                     'median': median_distance,
-                     'peak': peak_distance,
-                     'mean_vertical': mean_vert_distance,
-                     'median_vertical': median_vert_distance}
-
         table_lines.append(get_table_line(name_a, name_b, len(alignments), n50_alignment_length,
                                           aligned_frac, window_size, window_count, mean_distance,
                                           median_distance, mass_peaks, result_level, peak_distance,
                                           vertical_masses, horizontal_masses, mean_vert_distance,
                                           median_vert_distance, painted_a, painted_b))
 
-    return all_log_text, name_a, name_b, distances, table_lines
+    return all_log_text, table_lines
 
 
 def get_table_header():
@@ -298,13 +292,14 @@ def get_table_header():
 
 def get_table_line(name_a, name_b, alignment_count, n50_alignment_length, aligned_frac,
                    window_size, window_count, mean_distance, median_distance, mass_peaks,
-                   result_level, peak_distance, vertical_masses, horizontal_masses, mean_vert_distance,
-                   median_vert_distance, painted_a, painted_b):
+                   result_level, peak_distance, vertical_masses, horizontal_masses,
+                   mean_vert_distance, median_vert_distance, painted_a, painted_b):
     vertical_frac_a, horizontal_frac_a, unaligned_frac_a = painted_a.get_fractions()
     vertical_frac_b, horizontal_frac_b, unaligned_frac_b = painted_b.get_fractions()
     vertical_regions_a, horizontal_regions_a, unaligned_regions_a = painted_a.get_regions()
     vertical_regions_b, horizontal_regions_b, unaligned_regions_b = painted_b.get_regions()
 
+    # Some values can be None when there are no alignments for a pair.
     n50_alignment_length = '' if n50_alignment_length == 0 else n50_alignment_length
     window_size = '' if window_count == 0 else window_size
     mean_distance = '' if mean_distance is None else f'{mean_distance:.9f}'

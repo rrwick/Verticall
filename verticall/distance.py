@@ -195,10 +195,10 @@ def get_peak_distance(masses, window_size, secondary_ratio):
         mass_peaks.append(mass_peak)
         if peak == most_massive_peak:
             result_level = 'primary'
-            used_peaks.append((peak, result_level))
+            used_peaks.append((mass, peak, result_level))
         elif mass >= secondary_threshold:
             result_level = 'secondary'
-            used_peaks.append((peak, result_level))
+            used_peaks.append((mass, peak, result_level))
         else:
             result_level = ''
         note = '' if not result_level else f' <- {result_level}'
@@ -206,16 +206,17 @@ def get_peak_distance(masses, window_size, secondary_ratio):
     mass_peaks = ','.join(mass_peaks)
 
     results = []
-    for peak_count, result_level in used_peaks:
+    for mass, peak_count, result_level in used_peaks:
         thresholds = get_thresholds(masses, peak_count)
         mass_below = masses[peak_count-1] if peak_count > 0 else 0.0
         mass_at = masses[peak_count]
         mass_above = masses[peak_count+1] if peak_count < len(masses)-1 else 0.0
         peak_distance = (peak_count + interpolate(mass_below, mass_at, mass_above)) / window_size
         log_text.append(f'V    interpolated peak distance: {peak_distance:.9f} <- {result_level}')
-        results.append((result_level, peak_distance, thresholds))
+        results.append((mass, result_level, peak_distance, thresholds))
 
-    return mass_peaks, sorted(results), log_text
+    results = sorted(results, reverse=True)  # sort results from most to least massive
+    return mass_peaks, results, log_text
 
 
 def climb_to_peak(masses, starting_point):

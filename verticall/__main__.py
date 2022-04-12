@@ -97,7 +97,6 @@ def pairwise_subparser(subparsers):
                                help='Filename for tsv output')
 
     # TODO: add and implement --reference option
-    # TODO: add and implement --recursive option
 
     pairwise_and_view_settings(group)
 

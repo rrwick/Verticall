@@ -15,6 +15,7 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 import collections
+import pathlib
 import pytest
 
 import verticall.pairwise
@@ -97,3 +98,36 @@ def test_get_arg_list():
     arg_list_5_5 = verticall.pairwise.get_arg_list(Args(part='5/5'), assemblies)
     arg_list_5 = arg_list_1_5 + arg_list_2_5 + arg_list_3_5 + arg_list_4_5 + arg_list_5_5
     assert [a[1:] for a in arg_list_1] == [a[1:] for a in arg_list_5]
+
+
+def test_find_assemblies_1():
+    assembly_dir = pathlib.Path('test/test_pairwise/assemblies')
+    assemblies = verticall.pairwise.find_assemblies(assembly_dir)
+    assert [a[0] for a in assemblies] == ['a', 'b', 'c', 'd', 'e', 'f']
+    assemblies = verticall.pairwise.find_assemblies(assembly_dir, extensions=['fasta', 'fasta.gz'])
+    assert [a[0] for a in assemblies] == ['a', 'b']
+    assemblies = verticall.pairwise.find_assemblies(assembly_dir, extensions=['other'])
+    assert [a[0] for a in assemblies] == ['g']
+
+
+def test_find_assemblies_2():
+    assembly_dir = pathlib.Path('test/test_pairwise/assemblies_dup_name')
+    with pytest.raises(SystemExit) as e:
+        verticall.pairwise.find_assemblies(assembly_dir)
+    assert 'duplicate' in str(e.value)
+
+
+def test_check_assemblies():
+    assemblies = [('a', pathlib.Path('test/test_pairwise/assemblies/a.fasta'))]
+    verticall.pairwise.check_assemblies(assemblies)
+
+    assemblies = [('b', pathlib.Path('test/test_pairwise/assemblies/b.fasta.gz'))]
+    with pytest.raises(SystemExit) as e:
+        verticall.pairwise.check_assemblies(assemblies)
+    assert 'duplicate contig names' in str(e.value)
+
+    assemblies = [('c', pathlib.Path('test/test_pairwise/assemblies/c.fna'))]
+    with pytest.raises(SystemExit) as e:
+        verticall.pairwise.check_assemblies(assemblies)
+    assert 'ambiguous' in str(e.value)
+
