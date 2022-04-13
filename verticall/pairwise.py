@@ -96,7 +96,7 @@ def find_reference(reference, extensions=None):
         if str(reference).endswith(extension):
             sample_name = reference.name[:-len(extension)]
             return sample_name, reference
-    sys.exit('Error: reference assembly filename does not end in a FASTA file extension')
+    sys.exit(f'Error: {reference} does not end in a FASTA file extension')
 
 
 def get_default_assembly_extensions():

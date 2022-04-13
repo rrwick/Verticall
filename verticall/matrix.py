@@ -75,7 +75,7 @@ def load_tsv_file(filename, distance_type, multi):
         for i, line in enumerate(f):
             parts = line.strip('\n').split('\t')
             if i == 0:  # header line
-                column_index = get_column_index(parts, distance_type, filename)
+                column_index = get_column_index(parts, distance_type + '_distance', filename)
             else:
                 assembly_a, assembly_b = parts[0], parts[1]
                 distance = get_distance_from_line_parts(parts, column_index)
@@ -147,14 +147,13 @@ def check_for_missing_distances(distances, sample_names):
         warning('some pairwise distances were not found - matrix will contain empty cells.')
 
 
-def get_column_index(header_parts, distance_type, filename):
+def get_column_index(header_parts, target_header, filename):
     if header_parts[0] != 'assembly_a':
         sys.exit(f'Error: first column in {filename} is not labelled "assembly_a" - is the file '
                  f'formatted correctly?')
     if header_parts[1] != 'assembly_b':
         sys.exit(f'Error: second column in {filename} is not labelled "assembly_b" - is the file '
                  f'formatted correctly?')
-    target_header = distance_type + '_distance'
     for i, header in enumerate(header_parts):
         if target_header == header:
             return i

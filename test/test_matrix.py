@@ -117,11 +117,13 @@ def test_get_column_index_1():
                     'window_size', 'window_count', 'mean_distance', 'median_distance',
                     'mass_peaks', 'peak_distance', 'mean_vertical_distance',
                     'median_vertical_distance']
-    assert verticall.matrix.get_column_index(header_parts, 'mean', 'filename') == 6
-    assert verticall.matrix.get_column_index(header_parts, 'median', 'filename') == 7
-    assert verticall.matrix.get_column_index(header_parts, 'peak', 'filename') == 9
-    assert verticall.matrix.get_column_index(header_parts, 'mean_vertical', 'filename') == 10
-    assert verticall.matrix.get_column_index(header_parts, 'median_vertical', 'filename') == 11
+    assert verticall.matrix.get_column_index(header_parts, 'mean_distance', 'filename') == 6
+    assert verticall.matrix.get_column_index(header_parts, 'median_distance', 'filename') == 7
+    assert verticall.matrix.get_column_index(header_parts, 'peak_distance', 'filename') == 9
+    assert verticall.matrix.get_column_index(header_parts,
+                                             'mean_vertical_distance', 'filename') == 10
+    assert verticall.matrix.get_column_index(header_parts,
+                                             'median_vertical_distance', 'filename') == 11
     with pytest.raises(SystemExit) as e:
         verticall.matrix.get_column_index(header_parts, 'bad', 'filename')
     assert 'could not find' in str(e.value)
@@ -130,11 +132,11 @@ def test_get_column_index_1():
 def test_get_column_index_2():
     header_parts = ['bad_column_name', 'assembly_b']
     with pytest.raises(SystemExit) as e:
-        verticall.matrix.get_column_index(header_parts, 'mean', 'filename')
+        verticall.matrix.get_column_index(header_parts, 'mean_distance', 'filename')
     assert 'is not labelled' in str(e.value)
     header_parts = ['assembly_a', 'bad_column_name']
     with pytest.raises(SystemExit) as e:
-        verticall.matrix.get_column_index(header_parts, 'mean', 'filename')
+        verticall.matrix.get_column_index(header_parts, 'mean_distance', 'filename')
     assert 'is not labelled' in str(e.value)
 
 

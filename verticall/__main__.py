@@ -22,6 +22,7 @@ from .log import bold
 from .matrix import matrix
 from .pairwise import pairwise
 from .repair import repair
+from .summary import summary
 from .version import __version__
 from .view import view, check_hex_colour
 
@@ -42,9 +43,9 @@ def main():
     # elif args.subparser_name == 'mask':
     #     check_mask_args(args)
     #     filter(args)
-    # elif args.subparser_name == 'summary':
-    #     check_summary_args(args)
-    #     summary(args)
+    elif args.subparser_name == 'summary':
+        check_summary_args(args)
+        summary(args)
     elif args.subparser_name == 'repair':
         check_repair_args(args)
         repair(args)
@@ -138,12 +139,8 @@ def view_subparser(subparsers):
     view_args.add_argument('--result', type=int, default=1,
                            help='Number of result to plot (used when there are multiple '
                                 'possible results for the pair, default: DEFAULT)')
-    view_args.add_argument('--vertical_colour', type=str, default='#4859a0',
-                           help='Hex colour for vertical inheritance')
-    view_args.add_argument('--horizontal_colour', type=str, default='#c47e7e',
-                           help='Hex colour for horizontal inheritance')
-    view_args.add_argument('--ambiguous_colour', type=str, default='#c9c9c9',
-                           help='Hex colour for ambiguous inheritance')
+
+    colour_settings(group)
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
@@ -181,6 +178,19 @@ def pairwise_and_view_settings(group):
                                 help='Minimap2 options for assembly-to-assembly alignment')
     alignment_args.add_argument('--allowed_overlap', type=int, default=100,
                                 help='Allow this much overlap between alignments')
+
+
+def colour_settings(group):
+    """
+    The view and summary subcommands share colour settings in common, defined in this function.
+    """
+    colour_args = group.add_argument_group('Colours')
+    colour_args.add_argument('--vertical_colour', type=str, default='#4859a0',
+                             help='Hex colour for vertical inheritance')
+    colour_args.add_argument('--horizontal_colour', type=str, default='#c47e7e',
+                             help='Hex colour for horizontal inheritance')
+    colour_args.add_argument('--ambiguous_colour', type=str, default='#c9c9c9',
+                             help='Hex colour for ambiguous inheritance')
 
 
 def matrix_subparser(subparsers):
@@ -259,6 +269,8 @@ def summary_subparser(subparsers):
                                     'redundant adjacent lines)')
     settings_args.add_argument('--plot', action='store_true',
                                help='Instead of outputting a table, display an interactive plot')
+
+    colour_settings(group)
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,

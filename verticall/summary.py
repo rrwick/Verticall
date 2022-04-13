@@ -19,44 +19,23 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 
-import argparse
-import gzip
 import matplotlib.pyplot as plt
 import pandas as pd
-import pathlib
 from plotnine import ggplot, aes, geom_area, geom_vline, labs, theme_bw, scale_x_continuous, \
     scale_y_continuous, scale_fill_manual, element_blank, theme
 import sys
 
-VERTICAL_COLOUR = '#4859a0'
-HORIZONTAL_COLOUR = '#c47e7e'
-UNALIGNED_COLOUR = '#eeeeee'
+from .matrix import get_column_index
+from .misc import iterate_fasta
 
 
-def get_arguments():
-    parser = argparse.ArgumentParser(description='Summarise positions of an assembly')
-
-    parser.add_argument('pairwise', type=pathlib.Path,
-                        help='Vertical\'s pairwise.tsv file')
-    parser.add_argument('assembly', type=pathlib.Path,
-                        help='Filename for the assembly to summarise')
-
-    parser.add_argument('--all', action='store_true',
-                        help='Output one line for all assembly positions (default: omit redundant '
-                             'adjacent lines)')
-    parser.add_argument('--plot', action='store_true',
-                        help='Instead of outputting a table, display an interactive plot')
-    args = parser.parse_args()
-    return args
-
-
-def main():
-    args = get_arguments()
+def summary(args):
     contig_lengths, sample_name = get_contig_lengths(args.assembly)
-    data = load_data(args.pairwise, sample_name)
+    data = load_data(args.in_file, sample_name)
     summarised_data = summarise_data(data, contig_lengths, args.all)
     if args.plot:
-        plot = summary_plot(sample_name, summarised_data, contig_lengths)
+        plot = summary_plot(sample_name, summarised_data, contig_lengths, args.vertical_colour,
+                            args.horizontal_colour, args.ambiguous_colour)
         plt.show()
     else:
         print('contig', 'position', 'vertical', 'horizontal', 'unaligned')
@@ -65,6 +44,7 @@ def main():
 
 
 def get_contig_lengths(assembly_filename):
+    extension_len = None
     if str(assembly_filename).endswith('.fasta'):
         extension_len = 6
     elif str(assembly_filename).endswith('.fasta.gz'):
@@ -73,26 +53,33 @@ def get_contig_lengths(assembly_filename):
         extension_len = 4
     elif str(assembly_filename).endswith('.fna.gz'):
         extension_len = 7
+    elif str(assembly_filename).endswith('.fa'):
+        extension_len = 3
+    elif str(assembly_filename).endswith('.fa.gz'):
+        extension_len = 6
+    if extension_len is None:
+        sys.exit(f'Error: {assembly_filename} does not end in a FASTA file extension')
     sample_name = assembly_filename.name[:-extension_len]
-
     contig_lengths = {}
     for name, seq in iterate_fasta(assembly_filename):
         contig_lengths[name] = len(seq)
     return contig_lengths, sample_name
 
 
-def load_data(pairwise_filename, sample_name):
+def load_data(filename, sample_name):
     data = []
-    with open(pairwise_filename, 'rt') as pairwise_file:
+    v_column, h_column, u_column = None, None, None
+    with open(filename, 'rt') as pairwise_file:
         for i, line in enumerate(pairwise_file):
-            if i == 0:
-                continue  # skip header line
             parts = line.strip('\n').split('\t')
-            assert len(parts) == 27
-            if parts[0] == sample_name:
-                vertical_regions = parts[21].split(',') if parts[21] else []
-                horizontal_regions = parts[22].split(',') if parts[22] else []
-                unaligned_regions = parts[23].split(',') if parts[23] else []
+            if i == 0:
+                v_column = get_column_index(parts, 'assembly_a_vertical_regions', filename)
+                h_column = get_column_index(parts, 'assembly_a_horizontal_regions', filename)
+                u_column = get_column_index(parts, 'assembly_a_unaligned_regions', filename)
+            elif parts[0] == sample_name:
+                vertical_regions = parts[v_column].split(',') if parts[v_column] else []
+                horizontal_regions = parts[h_column].split(',') if parts[h_column] else []
+                unaligned_regions = parts[u_column].split(',') if parts[u_column] else []
                 data.append((vertical_regions, horizontal_regions, unaligned_regions))
     return data
 
@@ -140,7 +127,8 @@ def summarise_data(data, contig_lengths, output_all):
     return summarised_data
 
 
-def summary_plot(sample_name, summarised_data, contig_lengths):
+def summary_plot(sample_name, summarised_data, contig_lengths, vertical_colour, horizontal_colour,
+                 ambiguous_colour):
     title = f'{sample_name} painting summary'
 
     boundaries = [0]
@@ -178,66 +166,10 @@ def summary_plot(sample_name, summarised_data, contig_lengths):
                        mapping=aes(x='offset_pos', y='count', fill='classification'))
         offset += length
 
-    g += scale_fill_manual({'vertical': VERTICAL_COLOUR, 'horizontal': HORIZONTAL_COLOUR,
-                            'unaligned': UNALIGNED_COLOUR}, guide=False)
+    g += scale_fill_manual({'vertical': vertical_colour, 'horizontal': horizontal_colour,
+                            'unaligned': ambiguous_colour}, guide=False)
 
     for b in boundaries:
         g += geom_vline(xintercept=b, colour='#000000', size=0.5)
 
     return g.draw()
-
-
-def get_compression_type(filename):
-    """
-    Attempts to guess the compression (if any) on a file using the first few bytes.
-    https://stackoverflow.com/questions/13044562
-    """
-    magic_dict = {'gz': (b'\x1f', b'\x8b', b'\x08'),
-                  'bz2': (b'\x42', b'\x5a', b'\x68'),
-                  'zip': (b'\x50', b'\x4b', b'\x03', b'\x04')}
-    max_len = max(len(x) for x in magic_dict)
-    unknown_file = open(str(filename), 'rb')
-    file_start = unknown_file.read(max_len)
-    unknown_file.close()
-    compression_type = 'plain'
-    for file_type, magic_bytes in magic_dict.items():
-        if file_start.startswith(magic_bytes):
-            compression_type = file_type
-    if compression_type == 'bz2':
-        sys.exit('\nError: cannot use bzip2 format - use gzip instead')
-    if compression_type == 'zip':
-        sys.exit('\nError: cannot use zip format - use gzip instead')
-    return compression_type
-
-
-def get_open_func(filename):
-    if get_compression_type(filename) == 'gz':
-        return gzip.open
-    else:  # plain text
-        return open
-
-
-def iterate_fasta(filename):
-    """
-    Takes a FASTA file as input and yields the contents as (name, seq) tuples.
-    """
-    with get_open_func(filename)(filename, 'rt') as fasta_file:
-        name = ''
-        sequence = []
-        for line in fasta_file:
-            line = line.strip()
-            if not line:
-                continue
-            if line[0] == '>':  # Header line = start of new contig
-                if name:
-                    yield name.split()[0], ''.join(sequence)
-                    sequence = []
-                name = line[1:]
-            else:
-                sequence.append(line.upper())
-        if name:
-            yield name.split()[0], ''.join(sequence)
-
-
-if __name__ == '__main__':
-    main()
