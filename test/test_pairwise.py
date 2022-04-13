@@ -62,7 +62,7 @@ def test_parse_part():
     assert 'the numerator of --part must be less than or equal to the denominator' in str(e.value)
 
 
-def test_get_arg_list():
+def test_get_arg_list_1():
     """
     Make sure that we get the same arguments regardless of how we split them into parts.
     """
@@ -70,43 +70,54 @@ def test_get_arg_list():
     assemblies = [('a', 'a.fasta'), ('b', 'b.fasta'), ('c', 'c.fasta'), ('d', 'd.fasta'),
                   ('e', 'e.fasta'), ('f', 'f.fasta'), ('g', 'g.fasta'), ('h', 'h.fasta')]
 
-    arg_list_1 = verticall.pairwise.get_arg_list(Args(part='1/1'), assemblies)
+    arg_list_1 = verticall.pairwise.get_arg_list(Args(part='1/1'), assemblies, None)
     assert len(arg_list_1) == 56
 
-    arg_list_1_2 = verticall.pairwise.get_arg_list(Args(part='1/2'), assemblies)
-    arg_list_2_2 = verticall.pairwise.get_arg_list(Args(part='2/2'), assemblies)
+    arg_list_1_2 = verticall.pairwise.get_arg_list(Args(part='1/2'), assemblies, None)
+    arg_list_2_2 = verticall.pairwise.get_arg_list(Args(part='2/2'), assemblies, None)
     arg_list_2 = arg_list_1_2 + arg_list_2_2
     assert [a[1:] for a in arg_list_1] == [a[1:] for a in arg_list_2]
 
-    arg_list_1_3 = verticall.pairwise.get_arg_list(Args(part='1/3'), assemblies)
-    arg_list_2_3 = verticall.pairwise.get_arg_list(Args(part='2/3'), assemblies)
-    arg_list_3_3 = verticall.pairwise.get_arg_list(Args(part='3/3'), assemblies)
+    arg_list_1_3 = verticall.pairwise.get_arg_list(Args(part='1/3'), assemblies, None)
+    arg_list_2_3 = verticall.pairwise.get_arg_list(Args(part='2/3'), assemblies, None)
+    arg_list_3_3 = verticall.pairwise.get_arg_list(Args(part='3/3'), assemblies, None)
     arg_list_3 = arg_list_1_3 + arg_list_2_3 + arg_list_3_3
     assert [a[1:] for a in arg_list_1] == [a[1:] for a in arg_list_3]
 
-    arg_list_1_4 = verticall.pairwise.get_arg_list(Args(part='1/4'), assemblies)
-    arg_list_2_4 = verticall.pairwise.get_arg_list(Args(part='2/4'), assemblies)
-    arg_list_3_4 = verticall.pairwise.get_arg_list(Args(part='3/4'), assemblies)
-    arg_list_4_4 = verticall.pairwise.get_arg_list(Args(part='4/4'), assemblies)
+    arg_list_1_4 = verticall.pairwise.get_arg_list(Args(part='1/4'), assemblies, None)
+    arg_list_2_4 = verticall.pairwise.get_arg_list(Args(part='2/4'), assemblies, None)
+    arg_list_3_4 = verticall.pairwise.get_arg_list(Args(part='3/4'), assemblies, None)
+    arg_list_4_4 = verticall.pairwise.get_arg_list(Args(part='4/4'), assemblies, None)
     arg_list_4 = arg_list_1_4 + arg_list_2_4 + arg_list_3_4 + arg_list_4_4
     assert [a[1:] for a in arg_list_1] == [a[1:] for a in arg_list_4]
 
-    arg_list_1_5 = verticall.pairwise.get_arg_list(Args(part='1/5'), assemblies)
-    arg_list_2_5 = verticall.pairwise.get_arg_list(Args(part='2/5'), assemblies)
-    arg_list_3_5 = verticall.pairwise.get_arg_list(Args(part='3/5'), assemblies)
-    arg_list_4_5 = verticall.pairwise.get_arg_list(Args(part='4/5'), assemblies)
-    arg_list_5_5 = verticall.pairwise.get_arg_list(Args(part='5/5'), assemblies)
+    arg_list_1_5 = verticall.pairwise.get_arg_list(Args(part='1/5'), assemblies, None)
+    arg_list_2_5 = verticall.pairwise.get_arg_list(Args(part='2/5'), assemblies, None)
+    arg_list_3_5 = verticall.pairwise.get_arg_list(Args(part='3/5'), assemblies, None)
+    arg_list_4_5 = verticall.pairwise.get_arg_list(Args(part='4/5'), assemblies, None)
+    arg_list_5_5 = verticall.pairwise.get_arg_list(Args(part='5/5'), assemblies, None)
     arg_list_5 = arg_list_1_5 + arg_list_2_5 + arg_list_3_5 + arg_list_4_5 + arg_list_5_5
     assert [a[1:] for a in arg_list_1] == [a[1:] for a in arg_list_5]
+
+
+def test_get_arg_list_2():
+    Args = collections.namedtuple('Args', ['part'])
+    assemblies = [('a', 'a.fasta'), ('b', 'b.fasta'), ('c', 'c.fasta'), ('d', 'd.fasta'),
+                  ('e', 'e.fasta'), ('f', 'f.fasta'), ('g', 'g.fasta'), ('h', 'h.fasta')]
+    reference = ('ref', 'ref.fasta')
+
+    arg_list = verticall.pairwise.get_arg_list(Args(part='1/1'), assemblies, reference)
+    assert len(arg_list) == 8
 
 
 def test_find_assemblies_1():
     assembly_dir = pathlib.Path('test/test_pairwise/assemblies')
     assemblies = verticall.pairwise.find_assemblies(assembly_dir)
     assert [a[0] for a in assemblies] == ['a', 'b', 'c', 'd', 'e', 'f']
-    assemblies = verticall.pairwise.find_assemblies(assembly_dir, extensions=['fasta', 'fasta.gz'])
+    assemblies = verticall.pairwise.find_assemblies(assembly_dir,
+                                                    extensions=['.fasta', '.fasta.gz'])
     assert [a[0] for a in assemblies] == ['a', 'b']
-    assemblies = verticall.pairwise.find_assemblies(assembly_dir, extensions=['other'])
+    assemblies = verticall.pairwise.find_assemblies(assembly_dir, extensions=['.other'])
     assert [a[0] for a in assemblies] == ['g']
 
 
@@ -119,15 +130,15 @@ def test_find_assemblies_2():
 
 def test_check_assemblies():
     assemblies = [('a', pathlib.Path('test/test_pairwise/assemblies/a.fasta'))]
-    verticall.pairwise.check_assemblies(assemblies)
+    verticall.pairwise.check_assemblies(assemblies, None)
 
     assemblies = [('b', pathlib.Path('test/test_pairwise/assemblies/b.fasta.gz'))]
     with pytest.raises(SystemExit) as e:
-        verticall.pairwise.check_assemblies(assemblies)
+        verticall.pairwise.check_assemblies(assemblies, None)
     assert 'duplicate contig names' in str(e.value)
 
     assemblies = [('c', pathlib.Path('test/test_pairwise/assemblies/c.fna'))]
     with pytest.raises(SystemExit) as e:
-        verticall.pairwise.check_assemblies(assemblies)
+        verticall.pairwise.check_assemblies(assemblies, None)
     assert 'ambiguous' in str(e.value)
 

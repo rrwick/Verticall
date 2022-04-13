@@ -96,7 +96,9 @@ def pairwise_subparser(subparsers):
     required_args.add_argument('-o', '--out_file', type=pathlib.Path, required=True,
                                help='Filename for tsv output')
 
-    # TODO: add and implement --reference option
+    reference_args = group.add_argument_group('Reference-based analysis')
+    reference_args.add_argument('-r', '--reference', type=pathlib.Path,
+                                help='Reference assembly in FASTA format')
 
     pairwise_and_view_settings(group)
 
@@ -126,7 +128,7 @@ def view_subparser(subparsers):
 
     pairwise_and_view_settings(group)
 
-    view_args = group.add_argument_group('View settings')
+    view_args = group.add_argument_group('Plot settings')
     view_args.add_argument('--sqrt_distance', action='store_true',
                            help='Use a square-root transform on the genomic distance axis '
                                 '(default: no distance axis transform)')
@@ -134,7 +136,7 @@ def view_subparser(subparsers):
                            help='Use a square-root transform on the probability mass axis '
                                 '(default: no mass axis transform)')
     view_args.add_argument('--result', type=int, default=1,
-                           help='Number of result to view (useful for when there are multiple '
+                           help='Number of result to plot (used when there are multiple '
                                 'possible results for the pair, default: DEFAULT)')
     view_args.add_argument('--vertical_colour', type=str, default='#4859a0',
                            help='Hex colour for vertical inheritance')

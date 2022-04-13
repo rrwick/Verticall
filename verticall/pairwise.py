@@ -27,20 +27,25 @@ from .paint import paint_alignments, paint_assemblies
 def pairwise(args):
     welcome_message(args)
     assemblies = find_assemblies(args.in_dir)
-    check_assemblies(assemblies)
+    reference = find_reference(args.reference)
+    check_assemblies(assemblies, reference)
     build_indices(args, assemblies)
     with open(args.out_file, 'wt') as table_file:
         if parse_part(args.part)[0] == 0:  # only include the header in the first part
             table_file.write(get_table_header())
-        process_all_pairs(args, assemblies, table_file)
+        process_all_pairs(args, assemblies, reference, table_file)
     finished_message()
 
 
 def welcome_message(args):
     section_header('Starting Verticall pairwise')
-    explanation_text = 'Vertical pairwise performs a pairwise analysis of all assemblies in the ' \
-                       'given directory, outputting the results to a tab-delimited table.'
-    # TODO: make a different welcome message if --reference was used
+    if args.reference is None:
+        explanation_text = 'Vertical pairwise performs a pairwise analysis of all assemblies in ' \
+                           'the given directory, outputting the results to a tab-delimited table.'
+    else:
+        explanation_text = 'Vertical pairwise performs a pairwise analysis of each assembly in ' \
+                           'the given directory to the specified reference genome, outputting ' \
+                           'the results to a tab-delimited table.'
 
     part_num, part_total = parse_part(args.part)
     if part_total > 1:
@@ -63,16 +68,15 @@ def find_assemblies(in_dir, extensions=None):
     Returns assemblies in a (sample_name, filename) tuple.
     """
     def find_assemblies_with_extension(extension, all_assemblies):
-        extension_len = len(extension) + 1  # plus one for the dot
-        fasta_assemblies = sorted(f for f in in_dir.glob('*.' + extension) if f.is_file())
+        fasta_assemblies = sorted(f for f in in_dir.glob('*' + extension) if f.is_file())
         for a in fasta_assemblies:
-            sample_name = a.name[:-extension_len]
+            sample_name = a.name[:-len(extension)]
             if sample_name in all_assemblies:
-                sys.exit(f'\nError: duplicate sample name {sample_name}')
+                sys.exit(f'Error: duplicate sample name {sample_name}')
             all_assemblies[sample_name] = a
 
     if extensions is None:
-        extensions = ['fasta', 'fasta.gz', 'fna', 'fna.gz', 'fa', 'fa.gz']
+        extensions = get_default_assembly_extensions()
 
     assemblies = {}
     for e in extensions:
@@ -83,10 +87,28 @@ def find_assemblies(in_dir, extensions=None):
     return assemblies
 
 
-def check_assemblies(assemblies):
+def find_reference(reference, extensions=None):
+    if reference is None:
+        return None
+    if extensions is None:
+        extensions = get_default_assembly_extensions()
+    for extension in extensions:
+        if str(reference).endswith(extension):
+            sample_name = reference.name[:-len(extension)]
+            return sample_name, reference
+    sys.exit('Error: reference assembly filename does not end in a FASTA file extension')
+
+
+def get_default_assembly_extensions():
+    return ['.fasta', '.fasta.gz', '.fna', '.fna.gz', '.fa', '.fa.gz']
+
+
+def check_assemblies(assemblies, reference):
     """
     Checks to make sure the assemblies look good: no duplicate contig names, no ambiguous bases.
     """
+    if reference is not None:
+        assemblies = sorted(set(assemblies + [reference]))
     files_with_duplicate_contig_names, files_with_ambiguous_bases = [], []
     log(f'Checking assemblies: 0 / {len(assemblies)}', end='')
     for i, a in enumerate(assemblies):
@@ -128,13 +150,13 @@ def check_one_assembly(filename):
     return duplicate_contig_names, ambiguous_bases
 
 
-def process_all_pairs(args, assemblies, table_file):
+def process_all_pairs(args, assemblies, reference, table_file):
     section_header('Processing pairwise combinations')
     explanation('For each assembly pair, Verticall pairwise aligns the assemblies, counts '
                 'differences in a sliding window, builds a distribution and categorises regions '
                 'of the alignments as either vertical or horizontal. This allows for the '
                 'calculation of a vertical-only genomic distance.')
-    arg_list = get_arg_list(args, assemblies)
+    arg_list = get_arg_list(args, assemblies, reference)
     empty_results, multi_results = False, False
 
     # If only using a single thread, do the alignment in a simple loop (easier for debugging).
@@ -169,17 +191,22 @@ def process_all_pairs(args, assemblies, table_file):
         warning('one or more assembly pairs produced multiple results')
 
 
-def get_arg_list(args, assemblies):
+def get_arg_list(args, assemblies, reference):
     """
     This function produces a list of arguments for the process_one_pair function. If --part 1/1 was
     used (the default), this will include an entry for each pair of assemblies. If another value
     for --part was used, this will include a subset of the pairs.
     """
     arg_list = []
-    for name_a, filename_a in assemblies:
-        for name_b, filename_b in assemblies:
-            if name_a != name_b:
-                arg_list.append((args, name_a, name_b, filename_a, filename_b))
+    if reference is None:
+        for name_a, filename_a in assemblies:
+            for name_b, filename_b in assemblies:
+                if name_a != name_b:
+                    arg_list.append((args, name_a, name_b, filename_a, filename_b))
+    else:
+        ref_name, ref_filename = reference
+        for assembly_name, assembly_filename in assemblies:
+            arg_list.append((args, ref_name, assembly_name, ref_filename, assembly_filename))
 
     part_num, part_total = parse_part(args.part)
     if part_total > 1:
@@ -226,7 +253,10 @@ def process_one_pair(all_args, view=False, view_num=1):
     Since this function can be run in parallel, it doesn't log text directly, but instead collects
     the text to be logged in a list which is returned.
 
-    This function behave
+    This function returns differently if it was called by the pairwise or view subcommands:
+    * pairwise: returns a list of log text and a list of tsv table lines
+    * view: returns the analysis data (alignments, mass distribution, painted assemblies, etc) to
+            be plotted
     """
     args, name_a, name_b, filename_a, filename_b = all_args  # unpack the arguments
     all_log_text = [f'{name_a} vs {name_b}:']  # text logged to console will be stored in this list
