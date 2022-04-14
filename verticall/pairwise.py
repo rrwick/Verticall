@@ -103,7 +103,7 @@ def get_default_assembly_extensions():
     return ['.fasta', '.fasta.gz', '.fna', '.fna.gz', '.fa', '.fa.gz']
 
 
-def check_assemblies(assemblies, reference):
+def check_assemblies(assemblies, reference=None):
     """
     Checks to make sure the assemblies look good: no duplicate contig names, no ambiguous bases.
     """
