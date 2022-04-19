@@ -25,7 +25,8 @@ def get_distribution(args, alignments):
     Uses the alignments to build a distance distribution.
     """
     all_cigars = [a.simplified_cigar for a in alignments]
-    window_size, window_step = choose_window_size_and_step(all_cigars, args.window_count)
+    window_size, window_step = choose_window_size_and_step(all_cigars, args.window_count,
+                                                           args.window_size)
     for a in alignments:
         a.set_up_sliding_windows(window_size, window_step)
 
@@ -76,12 +77,14 @@ def get_vertical_horizontal_distributions(alignments):
     return vertical_masses, horizontal_masses
 
 
-def choose_window_size_and_step(cigars, target_window_count):
+def choose_window_size_and_step(cigars, target_window_count, window_size):
     """
     This function chooses an appropriate window size and step for the given CIGARs. It tries to
     balance larger windows, which give higher-resolution identity samples, especially with
     closely-related assemblies, and smaller windows, which allow for more identity samples.
     """
+    if window_size is not None:
+        return window_size, window_size // 100
     window_step = 1000
     while window_step > 1:
         window_size = window_step * 100

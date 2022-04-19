@@ -157,6 +157,9 @@ def pairwise_and_view_settings(group):
     setting_args.add_argument('--window_count', type=int, default=50000,
                               help='Aim to have at least this many comparison windows between '
                                    'assemblies')
+    setting_args.add_argument('--window_size', type=int, default=None,
+                              help='Use this defined window size for all pairwise comparisons'
+                                   '(default: dynamically choose window size for each pair)')
     setting_args.add_argument('--ignore_indels', action='store_true',
                               help='Only use mismatches to determine distance (default: use '
                                    'both mismatches and gap-compressed indels)')
@@ -298,10 +301,11 @@ def repair_subparser(subparsers):
 
 
 def check_pairwise_args(args):
-    pass
+    check_pairwise_and_view_args(args)
 
 
 def check_view_args(args):
+    check_pairwise_and_view_args(args)
     samples = args.names.split(',')
     if len(samples) != 2:
         sys.exit('Error: two sample names (comma-delimited) must be supplied to --names')
@@ -313,6 +317,17 @@ def check_view_args(args):
         sys.exit('Error: --horizontal_colour must be a valid hex colour code (with leading #)')
     if not check_hex_colour(args.ambiguous_colour):
         sys.exit('Error: --ambiguous_colour must be a valid hex colour code (with leading #)')
+
+
+def check_pairwise_and_view_args(args):
+    """
+    The pairwise and view subcommands share a lot of options, so they are checked in this function.
+    """
+    if args.smoothing_factor <= 0.0 or args.smoothing_factor > 1.0:
+        sys.exit('Error: --smoothing_factor must be between 0.0 and 1.0.')
+    if args.window_size is not None:
+        if args.window_size <= 0 or args.window_size % 100 != 0:
+            sys.exit('Error: --window_size must be a positive multiple of 100')
 
 
 def check_matrix_args(args):
