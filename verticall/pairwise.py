@@ -206,7 +206,8 @@ def get_arg_list(args, assemblies, reference):
     else:
         ref_name, ref_filename = reference
         for assembly_name, assembly_filename in assemblies:
-            arg_list.append((args, ref_name, assembly_name, ref_filename, assembly_filename))
+            if ref_name != assembly_name:
+                arg_list.append((args, ref_name, assembly_name, ref_filename, assembly_filename))
 
     part_num, part_total = parse_part(args.part)
     if part_total > 1:
