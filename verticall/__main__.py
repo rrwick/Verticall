@@ -19,6 +19,7 @@ import sys
 from .help_formatter import MyParser, MyHelpFormatter
 from .misc import check_python_version, get_ascii_art, get_default_thread_count
 from .log import bold
+from .mask import mask
 from .matrix import matrix
 from .pairwise import pairwise
 from .repair import repair
@@ -40,9 +41,9 @@ def main():
     elif args.subparser_name == 'matrix':
         check_matrix_args(args)
         matrix(args)
-    # elif args.subparser_name == 'mask':
-    #     check_mask_args(args)
-    #     filter(args)
+    elif args.subparser_name == 'mask':
+        check_mask_args(args)
+        mask(args)
     elif args.subparser_name == 'summary':
         check_summary_args(args)
         summary(args)
@@ -153,24 +154,24 @@ def pairwise_and_view_settings(group):
     """
     The pairwise and view subcommands share a lot of settings in common, defined in this function.
     """
-    setting_args = group.add_argument_group('Settings')
-    setting_args.add_argument('--window_count', type=int, default=50000,
-                              help='Aim to have at least this many comparison windows between '
-                                   'assemblies')
-    setting_args.add_argument('--window_size', type=int, default=None,
-                              help='Use this defined window size for all pairwise comparisons'
-                                   '(default: dynamically choose window size for each pair)')
-    setting_args.add_argument('--ignore_indels', action='store_true',
-                              help='Only use mismatches to determine distance (default: use '
-                                   'both mismatches and gap-compressed indels)')
-    setting_args.add_argument('--smoothing_factor', type=float, default=0.8,
-                              help='Degree to which the distance distribution is smoothed')
-    setting_args.add_argument('--secondary', type=float, default=0.7,
-                              help='Peaks with a mass of at least this fraction of the most '
-                                   'massive peak will be used to produce secondary distances')
-    setting_args.add_argument('--verbose', action='store_true',
-                              help='Output more detail to stderr for debugging (default: only '
-                                   'output basic information)')
+    settings_args = group.add_argument_group('Settings')
+    settings_args.add_argument('--window_count', type=int, default=50000,
+                               help='Aim to have at least this many comparison windows between '
+                                    'assemblies')
+    settings_args.add_argument('--window_size', type=int, default=None,
+                               help='Use this defined window size for all pairwise comparisons'
+                                    '(default: dynamically choose window size for each pair)')
+    settings_args.add_argument('--ignore_indels', action='store_true',
+                               help='Only use mismatches to determine distance (default: use '
+                                    'both mismatches and gap-compressed indels)')
+    settings_args.add_argument('--smoothing_factor', type=float, default=0.8,
+                               help='Degree to which the distance distribution is smoothed')
+    settings_args.add_argument('--secondary', type=float, default=0.7,
+                               help='Peaks with a mass of at least this fraction of the most '
+                                    'massive peak will be used to produce secondary distances')
+    settings_args.add_argument('--verbose', action='store_true',
+                               help='Output more detail to stderr for debugging (default: only '
+                                    'output basic information)')
 
     alignment_args = group.add_argument_group('Alignment')
     # TODO: explore different indexing options (e.g. -k and -w) to see how they affect the results.
@@ -233,21 +234,34 @@ def matrix_subparser(subparsers):
 
 
 def mask_subparser(subparsers):
-    group = subparsers.add_parser('mask', description='mask horizontal regions from a SNV matrix',
+    group = subparsers.add_parser('mask', description='mask horizontal regions from a '
+                                                      'whole-genome pseudo-alignment',
                                   formatter_class=MyHelpFormatter, add_help=False)
 
     required_args = group.add_argument_group('Required arguments')
-    required_args.add_argument('-i', '--in_file', type=pathlib.Path, required=True,
+    required_args.add_argument('-i', '--in_tsv', type=pathlib.Path, required=True,
                                help='Filename of tsv created by vertical pairwise')
-    required_args.add_argument('-m', '--in_matrix', type=pathlib.Path, required=True,
-                               help='Filename for SNV matrix to be masked')
-    required_args.add_argument('-o', '--out_file', type=pathlib.Path, required=True,
-                               help='Filename for masked SNV matrix output')
+    required_args.add_argument('-a', '--in_alignment', type=pathlib.Path, required=True,
+                               help='Filename for whole-genome pseudo-alignment to be masked')
+    required_args.add_argument('-o', '--out_alignment', type=pathlib.Path, required=True,
+                               help='Filename for masked whole-genome pseudo-alignment')
 
     settings_args = group.add_argument_group('Settings')
+    settings_args.add_argument('--reference', type=str,
+                               help='Sample name for the reference genome (default: determine '
+                                    'automatically if possible from the tsv file)')
     settings_args.add_argument('--multi', type=str, default='first',
                                choices=['first', 'low', 'high'],
                                help='Behaviour when there are multiple results for a sample pair')
+    settings_args.add_argument('--h_char', type=str, default='N',
+                               help='Character used to mask horizontal regions (default: DEFAULT, '
+                                    'use None to leave horizontal regions unmasked)')
+    settings_args.add_argument('--u_char', type=str, default='-',
+                               help='Character used to mask unaligned regions (default: DEFAULT, '
+                                    'use None to leave unaligned regions unmasked)')
+    settings_args.add_argument('--exclude_invariant', action='store_true',
+                               help='Only include variant sites in the output alignment (default: '
+                                    'include both variant and invariant sites in output alignment)')
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
@@ -335,7 +349,14 @@ def check_matrix_args(args):
 
 
 def check_mask_args(args):
-    pass
+    if args.h_char.upper() == 'NONE':
+        args.h_char = None
+    if args.u_char.upper() == 'NONE':
+        args.u_char = None
+    if args.h_char is not None and len(args.h_char) != 1:
+        sys.exit('Error: --h_char must be a single character or "None"')
+    if args.u_char is not None and len(args.u_char) != 1:
+        sys.exit('Error: --u_char must be a single character or "None"')
 
 
 def check_summary_args(args):

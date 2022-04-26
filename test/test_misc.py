@@ -162,3 +162,33 @@ def test_contains_ambiguous_bases():
     assert verticall.misc.contains_ambiguous_bases('ACGACTAGCRACTAGCACT')
     assert verticall.misc.contains_ambiguous_bases('NNNNNNNN')
     assert verticall.misc.contains_ambiguous_bases('DSHIFUSDJFSDOFJ')
+
+
+def test_list_differences():
+    a = [1, 2, 3]
+    b = [1, 2, 3]
+    in_both, in_a_not_b, in_b_not_a = verticall.misc.list_differences(a, b)
+    assert in_both == [1, 2, 3]
+    assert in_a_not_b == []
+    assert in_b_not_a == []
+
+    a = [1, 2, 3, 4, 5]
+    b = [1, 2, 3]
+    in_both, in_a_not_b, in_b_not_a = verticall.misc.list_differences(a, b)
+    assert in_both == [1, 2, 3]
+    assert in_a_not_b == [4, 5]
+    assert in_b_not_a == []
+
+    a = [1, 2, 3]
+    b = [1, 2, 3, 4, 5]
+    in_both, in_a_not_b, in_b_not_a = verticall.misc.list_differences(a, b)
+    assert in_both == [1, 2, 3]
+    assert in_a_not_b == []
+    assert in_b_not_a == [4, 5]
+
+    a = [1, 2, 3]
+    b = [4, 5, 6]
+    in_both, in_a_not_b, in_b_not_a = verticall.misc.list_differences(a, b)
+    assert in_both == []
+    assert in_a_not_b == [1, 2, 3]
+    assert in_b_not_a == [4, 5, 6]

@@ -193,3 +193,16 @@ def split_list(a, n):
 def contains_ambiguous_bases(seq):
     unambiguous_bases = {'A', 'C', 'G', 'T'}
     return not all(base in unambiguous_bases for base in seq.upper())
+
+
+def list_differences(a, b):
+    """
+    Assumes no duplicates in the lists.
+    """
+    a = set(a)
+    b = set(b)
+    in_both = a & b
+    in_a_not_b = a - b
+    in_b_not_a = b - a
+    assert len(a | b) == len(in_both) + len(in_a_not_b) + len(in_b_not_a)
+    return sorted(in_both), sorted(in_a_not_b), sorted(in_b_not_a)
