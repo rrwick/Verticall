@@ -20,7 +20,8 @@ import sys
 
 from .intrange import IntRange
 from .log import log, section_header, explanation
-from .misc import get_fasta_size, get_n50, get_window_count, get_window_coverage
+from .misc import get_fasta_size, get_n50, get_window_count, get_window_coverage, \
+    get_difference_count
 from .paint import Paint
 
 
@@ -76,6 +77,7 @@ def align_sample_pair(args, assembly_filename_a, sample_name_b):
 
     n50_alignment_length = get_n50(len(a.expanded_cigar) for a in alignments)
     aligned_frac = get_query_coverage(alignments, assembly_filename_a)
+    mean_distance = get_mean_distance(alignments)
 
     if not alignments:
         log_text.append('    no alignments found')
@@ -83,7 +85,19 @@ def align_sample_pair(args, assembly_filename_a, sample_name_b):
         log_text.append(f'V  {len(alignments)} alignments:')
         log_text.append(f'V    N50 alignment length: {n50_alignment_length}')
         log_text.append(f'V    aligned fraction: {100.0 * aligned_frac:.2f}%')
-    return alignments, n50_alignment_length, aligned_frac, log_text
+        log_text.append(f'V    mean distance: {mean_distance:.9f}')
+    return alignments, n50_alignment_length, aligned_frac, mean_distance, log_text
+
+
+def get_mean_distance(alignments):
+    """
+    This function uses just the vertically-painted regions to get a mean distance.
+    """
+    if not alignments:
+        return 0.0
+    total_size = sum(len(a.simplified_cigar) for a in alignments)
+    differences = sum(get_difference_count(a.simplified_cigar) for a in alignments)
+    return differences / total_size
 
 
 def cull_redundant_alignments(alignments, allowed_overlap):
@@ -320,13 +334,6 @@ def get_expanded_cigar(cigar):
         letter = p[-1]
         expanded_cigar.append(letter * size)
     return ''.join(expanded_cigar)
-
-
-def get_difference_count(cigar):
-    """
-    Returns the number of mismatches and indels in the CIGAR.
-    """
-    return cigar.count('X') + cigar.count('I') + cigar.count('D')
 
 
 def cigar_to_contig_pos(cigar, start, end):

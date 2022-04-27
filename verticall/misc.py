@@ -206,3 +206,10 @@ def list_differences(a, b):
     in_b_not_a = b - a
     assert len(a | b) == len(in_both) + len(in_a_not_b) + len(in_b_not_a)
     return sorted(in_both), sorted(in_a_not_b), sorted(in_b_not_a)
+
+
+def get_difference_count(cigar):
+    """
+    Returns the number of mismatches and indels in the CIGAR.
+    """
+    return cigar.count('X') + cigar.count('I') + cigar.count('D')

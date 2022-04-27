@@ -18,7 +18,7 @@ import enum
 
 from .distance import get_vertical_horizontal_distributions, get_distance
 from .intrange import IntRange
-from .misc import iterate_fasta
+from .misc import iterate_fasta, get_difference_count
 
 
 class AlignmentRole(enum.Enum):
@@ -51,14 +51,33 @@ def paint_alignments(alignments, thresholds, window_size):
     vertical_masses, horizontal_masses = get_vertical_horizontal_distributions(alignments)
     total_vertical_mass = sum(vertical_masses)
     total_horizontal_mass = sum(horizontal_masses)
-    mean_vert_distance = get_distance(vertical_masses, window_size, 'mean')
-    median_vert_distance = get_distance(vertical_masses, window_size, 'median')
+    mean_vert_window_dist = get_distance(vertical_masses, window_size, 'mean')
+    median_vert_window_dist = get_distance(vertical_masses, window_size, 'median')
+    mean_vert_dist = get_mean_vertical_distance(alignments)
+
     log_text = ['V  painting alignments:',
                 f'    vertical inheritance:   {100.0 * total_vertical_mass:6.2f}%',
                 f'V    horizontal inheritance: {100.0 * total_horizontal_mass:6.2f}%',
-                f'V    mean vertical distance:   {mean_vert_distance:.9f}',
-                f'    median vertical distance: {median_vert_distance:.9f}']
-    return vertical_masses, horizontal_masses, mean_vert_distance, median_vert_distance, log_text
+                f'V    mean vertical window distance:   {mean_vert_window_dist:.9f}',
+                f'V    median vertical window distance: {median_vert_window_dist:.9f}',
+                f'    mean vertical distance:   {mean_vert_dist:.9f}']
+    return vertical_masses, horizontal_masses, mean_vert_window_dist, median_vert_window_dist, \
+        mean_vert_dist, log_text
+
+
+def get_mean_vertical_distance(alignments):
+    """
+    This function uses just the vertically-painted regions to get a mean distance.
+    """
+    total_size, differences = 0, 0
+    for a in alignments:
+        for start, end in a.get_vertical_blocks():
+            total_size += (end - start)
+            differences += get_difference_count(a.simplified_cigar[start:end])
+    if total_size == 0:
+        return 0.0
+    else:
+        return differences / total_size
 
 
 def paint_assemblies(name_a, name_b, filename_a, filename_b, alignments):

@@ -19,7 +19,7 @@ import gzip
 import re
 
 from .log import log
-from .misc import iterate_fasta, contains_ambiguous_bases
+from .misc import iterate_fasta
 
 
 def repair(args):

@@ -263,12 +263,12 @@ def process_one_pair(all_args, view=False, view_num=1):
     all_log_text = [f'{name_a} vs {name_b}:']  # text logged to console will be stored in this list
 
     # Step 1: align the two assemblies to each other.
-    alignments, n50_alignment_length, aligned_frac, log_text = \
+    alignments, n50_alignment_length, aligned_frac, mean_distance, log_text = \
         align_sample_pair(args, filename_a, name_b)
     all_log_text += log_text
 
     # Step 2: produce a distance distribution from sliding windows across the alignments.
-    masses, window_size, window_count, mean_distance, median_distance, log_text = \
+    masses, window_size, window_count, mean_window_distance, median_window_distance, log_text = \
         get_distribution(args, alignments)
     all_log_text += log_text
 
@@ -291,10 +291,11 @@ def process_one_pair(all_args, view=False, view_num=1):
         if view and i+1 != view_num:
             continue
 
-        _, result_level, peak_distance, thresholds = result
+        peak_mass, result_level, peak_distance, thresholds = result
 
-        vertical_masses, horizontal_masses, mean_vert_distance, median_vert_distance, log_text = \
-            paint_alignments(alignments, thresholds, window_size)
+        vertical_masses, horizontal_masses, mean_vert_window_dist, median_vert_window_dist, \
+            mean_vert_dist, log_text = paint_alignments(alignments, thresholds, window_size)
+
         if result_level == 'primary' or args.verbose or view:
             all_log_text += log_text
 
@@ -308,11 +309,12 @@ def process_one_pair(all_args, view=False, view_num=1):
             return alignments, window_size, masses, smoothed_masses, thresholds, vertical_masses, \
                    horizontal_masses, painted_a, all_log_text
 
-        table_lines.append(get_table_line(name_a, name_b, len(alignments), n50_alignment_length,
-                                          aligned_frac, window_size, window_count, mean_distance,
-                                          median_distance, mass_peaks, result_level, peak_distance,
-                                          vertical_masses, horizontal_masses, mean_vert_distance,
-                                          median_vert_distance, painted_a, painted_b))
+        line = get_table_line(name_a, name_b, len(alignments), n50_alignment_length, aligned_frac,
+                              mean_distance, window_size, window_count, mean_window_distance,
+                              median_window_distance, mass_peaks, result_level, peak_distance,
+                              peak_mass, vertical_masses, horizontal_masses, mean_vert_window_dist,
+                              median_vert_window_dist, mean_vert_dist, painted_a, painted_b)
+        table_lines.append(line)
 
     return all_log_text, table_lines
 
@@ -334,17 +336,20 @@ def get_table_header():
             'alignment_count\t'
             'n50_alignment_length\t'
             'aligned_fraction\t'
+            'mean_distance\t'
             'window_size\t'
             'window_count\t'
-            'mean_distance\t'
-            'median_distance\t'
+            'mean_window_distance\t'
+            'median_window_distance\t'
             'mass_peaks\t'
             'result_level\t'
-            'peak_distance\t'
+            'peak_window_distance\t'
+            'peak_mass\t'
             'alignments_vertical_fraction\t'
             'alignments_horizontal_fraction\t'
+            'mean_vertical_window_distance\t'
+            'median_vertical_window_distance\t'
             'mean_vertical_distance\t'
-            'median_vertical_distance\t'
             'assembly_a_vertical_fraction\t'
             'assembly_a_horizontal_fraction\t'
             'assembly_a_unaligned_fraction\t'
@@ -360,9 +365,10 @@ def get_table_header():
 
 
 def get_table_line(name_a, name_b, alignment_count, n50_alignment_length, aligned_frac,
-                   window_size, window_count, mean_distance, median_distance, mass_peaks,
-                   result_level, peak_distance, vertical_masses, horizontal_masses,
-                   mean_vert_distance, median_vert_distance, painted_a, painted_b):
+                   mean_distance, window_size, window_count, mean_window_distance,
+                   median_window_distance, mass_peaks, result_level, peak_distance, peak_mass,
+                   vertical_masses, horizontal_masses, mean_vert_window_distance,
+                   median_vert_window_distance, mean_vert_distance, painted_a, painted_b):
     vertical_frac_a, horizontal_frac_a, unaligned_frac_a = painted_a.get_fractions()
     vertical_frac_b, horizontal_frac_b, unaligned_frac_b = painted_b.get_fractions()
     vertical_regions_a, horizontal_regions_a, unaligned_regions_a = painted_a.get_regions()
@@ -372,17 +378,20 @@ def get_table_line(name_a, name_b, alignment_count, n50_alignment_length, aligne
             f'{alignment_count}\t'
             f'{n50_alignment_length}\t'
             f'{aligned_frac:.9f}\t'
+            f'{mean_distance:.9f}\t'
             f'{window_size}\t'
             f'{window_count}\t'
-            f'{mean_distance:.9f}\t'
-            f'{median_distance:.9f}\t'
+            f'{mean_window_distance:.9f}\t'
+            f'{median_window_distance:.9f}\t'
             f'{mass_peaks}\t'
             f'{result_level}\t'
             f'{peak_distance:.9f}\t'
+            f'{peak_mass:.9f}\t'
             f'{100.0 * sum(vertical_masses):.2f}%\t'
             f'{100.0 * sum(horizontal_masses):.2f}%\t'
+            f'{mean_vert_window_distance:.9f}\t'
+            f'{median_vert_window_distance:.9f}\t'
             f'{mean_vert_distance:.9f}\t'
-            f'{median_vert_distance:.9f}\t'
             f'{100.0 * vertical_frac_a:.2f}%\t'
             f'{100.0 * horizontal_frac_a:.2f}%\t'
             f'{100.0 * unaligned_frac_a:.2f}%\t'

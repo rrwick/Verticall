@@ -47,8 +47,8 @@ def get_distribution(args, alignments):
     log_text = [f'V  distances sampled from sliding windows:',
                 f'V    window size: {window_size} bp',
                 f'V    window count: {len(distances)}',
-                f'V    mean distance:   {mean_distance:.9f}',
-                f'V    median distance: {median_distance:.9f}']
+                f'V    mean window distance:   {mean_distance:.9f}',
+                f'V    median window distance: {median_distance:.9f}']
 
     return masses, window_size, len(distances), mean_distance, median_distance, log_text
 
@@ -144,7 +144,7 @@ def get_interpolated_median(masses):
     """
     Returns the interpolated median of the distance distribution:
     https://en.wikipedia.org/wiki/Median#Interpolated_median
-    https://aec.umich.edu/median.php
+    http://aec.umich.edu/median.php
     """
     median = get_median(masses)
     below, equal, above = 0.0, 0.0, 0.0
