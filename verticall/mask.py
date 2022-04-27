@@ -1,4 +1,6 @@
 """
+This module contains code for the 'verticall mask' subcommand.
+
 Copyright 2022 Ryan Wick (rrwick@gmail.com)
 https://github.com/rrwick/Verticall
 
@@ -14,8 +16,8 @@ If not, see <https://www.gnu.org/licenses/>.
 import sys
 
 from .log import log, section_header, explanation, warning
-from .matrix import get_column_index
 from .misc import iterate_fasta, list_differences
+from .tsv import get_column_index, check_header_for_assembly_a_regions, get_start_end
 
 
 def mask(args):
@@ -82,7 +84,7 @@ def check_tsv_file(filename, ref_name):
         for i, line in enumerate(f):
             parts = line.strip('\n').split('\t')
             if i == 0:  # header line
-                check_header_line(parts, filename)
+                check_header_for_assembly_a_regions(parts, filename)
             else:
                 assembly_a, assembly_b = parts[0], parts[1]
                 a_sample_names.add(assembly_a)
@@ -99,24 +101,6 @@ def check_tsv_file(filename, ref_name):
 
     all_sample_names.discard(ref_name)
     return ref_name, sorted(all_sample_names)
-
-
-def check_header_line(header_parts, filename):
-    if header_parts[0] != 'assembly_a':
-        sys.exit(f'Error: first column in {filename} is not labelled "assembly_a" - is the file '
-                 f'formatted correctly?')
-    if header_parts[1] != 'assembly_b':
-        sys.exit(f'Error: second column in {filename} is not labelled "assembly_b" - is the file '
-                 f'formatted correctly?')
-    if 'assembly_a_vertical_regions' not in header_parts:
-        sys.exit(f'Error: no column named "assembly_a_vertical_regions" found in {filename} - is '
-                 f'the file formatted correctly?')
-    if 'assembly_a_horizontal_regions' not in header_parts:
-        sys.exit(f'Error: no column named "assembly_a_horizontal_regions" found in {filename} - is '
-                 f'the file formatted correctly?')
-    if 'assembly_a_unaligned_regions' not in header_parts:
-        sys.exit(f'Error: no column named "assembly_a_unaligned_regions" found in {filename} - is '
-                 f'the file formatted correctly?')
 
 
 def load_regions_one_assembly(parts, v_col, h_col, u_col):
@@ -147,15 +131,6 @@ def load_regions_one_assembly(parts, v_col, h_col, u_col):
             assert start == prev_end
 
     return vertical_regions, horizontal_regions, unaligned_regions
-
-
-def get_start_end(r):
-    try:
-        contig_name, range_str = r.split(':')
-        start_pos, end_pos = range_str.split('-')
-        return int(start_pos), int(end_pos)
-    except ValueError:
-        sys.exit(f'Error: data is not correctly formatted: {r}')
 
 
 def get_ref_length(data):

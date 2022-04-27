@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-This module contains the code for the 'verticall repair' subcommand.
+This module contains code for the 'verticall pairwise' subcommand.
 
 Copyright 2022 Ryan Wick (rrwick@gmail.com)
 https://github.com/rrwick/Verticall

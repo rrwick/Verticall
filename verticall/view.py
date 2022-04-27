@@ -1,4 +1,6 @@
 """
+This module contains code for the 'verticall view' subcommand.
+
 Copyright 2022 Ryan Wick (rrwick@gmail.com)
 https://github.com/rrwick/Verticall
 

@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 """
-This is a script which takes two arguments:
-* the pairwise.tsv file made by Verticall
-* a sample name
-
-And it outputs (to stdout) a table describing (vertical, horizontal or unaligned) each position
-of the assembly.
+This module contains code for the 'verticall summary' subcommand.
 
 Copyright 2022 Ryan Wick (rrwick@gmail.com)
 https://github.com/rrwick/Verticall
@@ -27,6 +22,7 @@ import sys
 
 from .matrix import get_column_index
 from .misc import iterate_fasta
+from .tsv import split_region_str
 
 
 def summary(args):
@@ -82,12 +78,6 @@ def load_data(filename, sample_name):
                 unaligned_regions = parts[u_column].split(',') if parts[u_column] else []
                 data.append((vertical_regions, horizontal_regions, unaligned_regions))
     return data
-
-
-def split_region_str(region):
-    name, contig_range = region.split(':')
-    start, end = contig_range.split('-')
-    return name, int(start), int(end)
 
 
 def summarise_data(data, contig_lengths, output_all):

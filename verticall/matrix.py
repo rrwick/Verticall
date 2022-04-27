@@ -1,5 +1,5 @@
 """
-This module contains code related to making a distance matrix and applying distance corrections.
+This module contains code for the 'verticall matrix' subcommand.
 
 Copyright 2022 Ryan Wick (rrwick@gmail.com)
 https://github.com/rrwick/Verticall
@@ -19,6 +19,7 @@ import sys
 
 from .log import log, section_header, explanation, warning
 from .misc import check_file_exists
+from .tsv import get_column_index
 
 
 def matrix(args):
@@ -55,8 +56,6 @@ def welcome_message(args):
         log('  when multiple distances exist, the lowest value will be used')
     elif args.multi == 'high':
         log('  when multiple distances exist, the highest value will be used')
-
-
     log()
 
 
@@ -145,19 +144,6 @@ def check_for_missing_distances(distances, sample_names):
                 distances[(sample_a, sample_b)] = None
     if any_missing:
         warning('some pairwise distances were not found - matrix will contain empty cells.')
-
-
-def get_column_index(header_parts, target_header, filename):
-    if header_parts[0] != 'assembly_a':
-        sys.exit(f'Error: first column in {filename} is not labelled "assembly_a" - is the file '
-                 f'formatted correctly?')
-    if header_parts[1] != 'assembly_b':
-        sys.exit(f'Error: second column in {filename} is not labelled "assembly_b" - is the file '
-                 f'formatted correctly?')
-    for i, header in enumerate(header_parts):
-        if target_header == header:
-            return i
-    sys.exit(f'Error: could not find {target_header} column in {filename}')
 
 
 def save_matrix(filename, distances, sample_names):

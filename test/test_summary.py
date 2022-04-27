@@ -19,11 +19,6 @@ import pathlib
 import verticall.summary
 
 
-def test_split_region_str():
-    assert verticall.summary.split_region_str('contig_1:5-10') == ('contig_1', 5, 10)
-    assert verticall.summary.split_region_str('contig_2:123-654') == ('contig_2', 123, 654)
-
-
 def test_get_contig_lengths():
     filename = pathlib.Path('test/test_misc/test.fasta')
     contig_lengths, sample_name = verticall.summary.get_contig_lengths(filename)
