@@ -35,7 +35,7 @@ def get_distribution(args, alignments):
         distances += a.window_differences
 
     if len(distances) == 0:
-        log_text = [f'V  no distances sampled']
+        log_text = [f'  no distances sampled']
         return None, window_size, len(distances), None, None, log_text
 
     distance_counts = collections.Counter(distances)
@@ -44,11 +44,11 @@ def get_distribution(args, alignments):
     mean_distance = get_distance(masses, window_size, 'mean')
     median_distance = get_distance(masses, window_size, 'median')
 
-    log_text = [f'V  distances sampled from sliding windows:',
-                f'V    window size: {window_size} bp',
-                f'V    window count: {len(distances)}',
-                f'V    mean window distance:   {mean_distance:.9f}',
-                f'V    median window distance: {median_distance:.9f}']
+    log_text = [f'  distances sampled from sliding windows:',
+                f'    window size: {window_size} bp',
+                f'    window count: {len(distances)}',
+                f'    mean window distance:   {mean_distance:.9f}',
+                f'    median window distance: {median_distance:.9f}']
 
     return masses, window_size, len(distances), mean_distance, median_distance, log_text
 
@@ -193,7 +193,7 @@ def get_peak_distance(masses, window_size, secondary_ratio):
        * thresholds for alignment painting
     * a list of log text
     """
-    log_text = ['V  mass peaks:']
+    log_text = ['  mass peaks:']
     peaks_with_mass = [(get_peak_total_mass(masses, p), p) for p in find_peaks(masses)]
     largest_mass, most_massive_peak = sorted(peaks_with_mass)[-1]
     secondary_threshold = secondary_ratio * largest_mass
@@ -211,7 +211,7 @@ def get_peak_distance(masses, window_size, secondary_ratio):
         else:
             result_level = ''
         note = '' if not result_level else f' <- {result_level}'
-        log_text.append(f'V    {mass_peak} ({100.0 * mass:.1f}%){note}')
+        log_text.append(f'    {mass_peak} ({100.0 * mass:.1f}%){note}')
     mass_peaks = ','.join(mass_peaks)
 
     results = []
@@ -221,7 +221,7 @@ def get_peak_distance(masses, window_size, secondary_ratio):
         mass_at = masses[peak_count]
         mass_above = masses[peak_count+1] if peak_count < len(masses)-1 else 0.0
         peak_distance = (peak_count + interpolate(mass_below, mass_at, mass_above)) / window_size
-        log_text.append(f'V    interpolated peak distance: {peak_distance:.9f} <- {result_level}')
+        log_text.append(f'    interpolated peak distance: {peak_distance:.9f} <- {result_level}')
         results.append((mass, result_level, peak_distance, thresholds))
 
     results = sorted(results, reverse=True)  # sort results from most to least massive

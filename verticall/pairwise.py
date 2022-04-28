@@ -180,7 +180,7 @@ def process_all_pairs(args, assemblies, reference, table_file):
                     empty_results = True
                 if len(table_lines) > 1:
                     multi_results = True
-                log('\n'.join(prepare_log_text(log_text, args.verbose)), end='\n\n')
+                log('\n'.join(prepare_log_text(log_text, args.verbose)))
                 for table_line in table_lines:
                     table_file.write(table_line)
                 table_file.flush()
@@ -188,7 +188,7 @@ def process_all_pairs(args, assemblies, reference, table_file):
     if empty_results:
         warning('one or more assembly pairs failed to align sufficiently to produce results')
     if multi_results:
-        warning('one or more assembly pairs produced multiple results')
+        warning('one or more assembly pairs produced secondary results')
 
 
 def get_arg_list(args, assemblies, reference):
@@ -236,14 +236,28 @@ def parse_part(part_str):
 
 
 def prepare_log_text(log_text, verbose):
-    prepared = []
-    for line in log_text:
-        if line.startswith('V'):
-            if verbose:
-                prepared.append(line[1:])
-        else:
-            prepared.append(line)
-    return prepared
+    """
+    This function prepares a single assembly pair's logging text. If verbose mode is on, all lines
+    are used plus an additional blank line to space out results. If verbose mode is off, the text
+    is reduced to a single line.
+    """
+    if verbose:
+        return log_text + ['']
+    single_line = log_text[0]
+    no_alignments_lines = [t for t in log_text if 'no alignments found' in t]
+    if no_alignments_lines:
+        single_line += ' no alignments found'
+        return [single_line]
+    vert_inheritance_lines = [t for t in log_text if 'vertical inheritance:' in t]
+    vert_inheritance = vert_inheritance_lines[0].split('vertical inheritance:')[1].strip().rjust(7)
+    mean_vert_dist_lines = [t for t in log_text if 'mean vertical distance:' in t]
+    mean_vert_dist = mean_vert_dist_lines[0].split('mean vertical distance:')[1].strip()
+    single_line += f' {mean_vert_dist}, {vert_inheritance} vertical'
+    if len(mean_vert_dist_lines) == 2:
+        single_line += ' (plus 1 secondary result)'
+    elif len(mean_vert_dist_lines) > 2:
+        single_line += f' (plus {len(mean_vert_dist_lines)-1} secondary results)'
+    return [single_line]
 
 
 def process_one_pair(all_args, view=False, view_num=1):
@@ -295,14 +309,11 @@ def process_one_pair(all_args, view=False, view_num=1):
 
         vertical_masses, horizontal_masses, mean_vert_window_dist, median_vert_window_dist, \
             mean_vert_dist, log_text = paint_alignments(alignments, thresholds, window_size)
-
-        if result_level == 'primary' or args.verbose or view:
-            all_log_text += log_text
+        all_log_text += log_text
 
         painted_a, painted_b, log_text = \
             paint_assemblies(name_a, name_b, filename_a, filename_b, alignments)
-        if result_level == 'primary' or args.verbose or view:
-            all_log_text += log_text
+        all_log_text += log_text
 
         # If called by the view subcommand, we return the results instead of making a table line.
         if view:

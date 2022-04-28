@@ -82,10 +82,10 @@ def align_sample_pair(args, assembly_filename_a, sample_name_b):
     if not alignments:
         log_text.append('    no alignments found')
     else:
-        log_text.append(f'V  {len(alignments)} alignments:')
-        log_text.append(f'V    N50 alignment length: {n50_alignment_length}')
-        log_text.append(f'V    aligned fraction: {100.0 * aligned_frac:.2f}%')
-        log_text.append(f'V    mean distance: {mean_distance:.9f}')
+        log_text.append(f'  {len(alignments)} alignments:')
+        log_text.append(f'    N50 alignment length: {n50_alignment_length}')
+        log_text.append(f'    aligned fraction: {100.0 * aligned_frac:6.2f}%')
+        log_text.append(f'    mean distance:      {mean_distance:.9f}')
     return alignments, n50_alignment_length, aligned_frac, mean_distance, log_text
 
 
