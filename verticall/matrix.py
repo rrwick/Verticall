@@ -23,7 +23,7 @@ from .tsv import get_column_index
 
 
 def matrix(args):
-    welcome_message(args)
+    welcome_message()
     distances, sample_names = load_tsv_file(args.in_file, args.distance_type, args.multi)
     if args.names is not None:
         sample_names = filter_names(sample_names, args.names)
@@ -35,28 +35,11 @@ def matrix(args):
     finished_message()
 
 
-def welcome_message(args):
+def welcome_message():
     section_header('Starting Verticall matrix')
     explanation('Verticall matrix extracts distances from the tab-delimited file made by Verticall '
                 'pairwise, producing a PHYLIP distance matrix suitable for use in distance-based '
                 'phylogeny algorithms (e.g. BioNJ or FastME).')
-    log('Settings:')
-    log(f'  distance type: {args.distance_type}')
-    if args.asymmetrical:
-        log('  matrix will be asymmetrical (a,b ≠ b,a)')
-    else:
-        log('  matrix will be symmetrical (a,b = b,a)')
-    if args.no_jukes_cantor:
-        log('  Jukes-Cantor correction will not be applied')
-    else:
-        log('  Jukes-Cantor correction will be applied')
-    if args.multi == 'first':
-        log('  when multiple distances exist, the first value will be used')
-    elif args.multi == 'low':
-        log('  when multiple distances exist, the lowest value will be used')
-    elif args.multi == 'high':
-        log('  when multiple distances exist, the highest value will be used')
-    log()
 
 
 def finished_message():
@@ -67,7 +50,6 @@ def finished_message():
 
 def load_tsv_file(filename, distance_type, multi):
     check_file_exists(filename)
-    section_header('Loading distances')
     distances, sample_names = {}, set()
     column_index = None
     with open(filename, 'rt') as f:

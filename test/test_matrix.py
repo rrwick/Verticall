@@ -14,35 +14,15 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 
-import collections
 import pytest
 
 import verticall.matrix
 
 
 def test_welcome_message(capsys):
-    Args = collections.namedtuple('Args', ['distance_type', 'asymmetrical', 'no_jukes_cantor',
-                                           'multi'])
-
-    verticall.matrix.welcome_message(Args(distance_type=None, asymmetrical=False,
-                                          no_jukes_cantor=False, multi='first'))
+    verticall.matrix.welcome_message()
     _, err = capsys.readouterr()
     assert 'Verticall matrix' in err
-    assert 'will be symmetrical' in err
-    assert 'will be applied' in err
-    assert 'first value' in err
-
-    verticall.matrix.welcome_message(Args(distance_type=None, asymmetrical=True,
-                                          no_jukes_cantor=True, multi='low'))
-    _, err = capsys.readouterr()
-    assert 'will be asymmetrical' in err
-    assert 'will not be applied' in err
-    assert 'lowest value' in err
-
-    verticall.matrix.welcome_message(Args(distance_type=None, asymmetrical=True,
-                                          no_jukes_cantor=True, multi='high'))
-    _, err = capsys.readouterr()
-    assert 'highest value' in err
 
 
 def test_finished_message(capsys):
