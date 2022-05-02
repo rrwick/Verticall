@@ -40,10 +40,10 @@ def pairwise(args):
 def welcome_message(args):
     section_header('Starting Verticall pairwise')
     if args.reference is None:
-        explanation_text = 'Vertical pairwise performs a pairwise analysis of all assemblies in ' \
+        explanation_text = 'Verticall pairwise performs a pairwise analysis of all assemblies in ' \
                            'the given directory, outputting the results to a tab-delimited table.'
     else:
-        explanation_text = 'Vertical pairwise performs a pairwise analysis of each assembly in ' \
+        explanation_text = 'Verticall pairwise performs a pairwise analysis of each assembly in ' \
                            'the given directory to the specified reference genome, outputting ' \
                            'the results to a tab-delimited table.'
 
@@ -58,9 +58,9 @@ def welcome_message(args):
 def finished_message():
     section_header('Finished!')
     explanation('You can now use the resulting tab-delimited file to produce a distance matrix '
-                '(using Vertical matrix), summarise an assembly\'s vertical-vs-horizontal regions '
-                '(using Vertical summary) or mask horizontal regions from a SNV matrix (using '
-                'Vertical mask).')
+                '(using Verticall matrix), summarise an assembly\'s vertical-vs-horizontal regions '
+                '(using Verticall summary) or mask horizontal regions from a SNV matrix (using '
+                'Verticall mask).')
 
 
 def find_assemblies(in_dir, extensions=None):
@@ -189,6 +189,7 @@ def process_all_pairs(args, assemblies, reference, table_file):
         warning('one or more assembly pairs failed to align sufficiently to produce results')
     if multi_results:
         warning('one or more assembly pairs produced secondary results')
+    log()
 
 
 def get_arg_list(args, assemblies, reference):
@@ -249,7 +250,7 @@ def prepare_log_text(log_text, verbose):
         single_line += ' no alignments found'
         return [single_line]
     vert_inheritance_lines = [t for t in log_text if 'vertical inheritance:' in t]
-    vert_inheritance = vert_inheritance_lines[0].split('vertical inheritance:')[1].strip().rjust(7)
+    vert_inheritance = vert_inheritance_lines[0].split('vertical inheritance:')[1].strip()
     mean_vert_dist_lines = [t for t in log_text if 'mean vertical distance:' in t]
     mean_vert_dist = mean_vert_dist_lines[0].split('mean vertical distance:')[1].strip()
     single_line += f' {mean_vert_dist}, {vert_inheritance} vertical'

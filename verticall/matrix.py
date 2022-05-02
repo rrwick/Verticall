@@ -37,10 +37,10 @@ def matrix(args):
 
 def welcome_message(args):
     section_header('Starting Verticall matrix')
-    explanation('Verticall matrix extracts distances from the tab-delimited file made by Vertical '
+    explanation('Verticall matrix extracts distances from the tab-delimited file made by Verticall '
                 'pairwise, producing a PHYLIP distance matrix suitable for use in distance-based '
                 'phylogeny algorithms (e.g. BioNJ or FastME).')
-    log('Options:')
+    log('Settings:')
     log(f'  distance type: {args.distance_type}')
     if args.asymmetrical:
         log('  matrix will be asymmetrical (a,b ≠ b,a)')
@@ -61,7 +61,7 @@ def welcome_message(args):
 
 def finished_message():
     section_header('Finished!')
-    explanation('You can now use a distance-based algorithm (e.g. BioNJ or FastME) to produce a '
+    explanation('You can now use a distance-based algorithm (e.g. BIONJ or FastME) to produce a '
                 'phylogeny from the distance matrix.')
 
 

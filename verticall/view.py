@@ -52,7 +52,7 @@ def view(args):
 
 def welcome_message():
     section_header('Starting Verticall view')
-    explanation('Verticall view performs the same analysis as Vertical pairwise, but only for a '
+    explanation('Verticall view performs the same analysis as Verticall pairwise, but only for a '
                 'single assembly pair. The results of the analysis are then visualised in '
                 'interactive plots.')
 
@@ -68,11 +68,11 @@ def get_sample_names_and_filenames(args, assemblies):
     try:
         filename_a = [filename for name, filename in assemblies if name == name_a][0]
     except IndexError:
-        sys.exit(f'Error: could not find {name_a} in assemblies')
+        sys.exit(f'Error: could not find assembly named {name_a}')
     try:
         filename_b = [filename for name, filename in assemblies if name == name_b][0]
     except IndexError:
-        sys.exit(f'Error: could not find {name_b} in assemblies')
+        sys.exit(f'Error: could not find assembly named {name_b}')
     return name_a, name_b, filename_a, filename_b
 
 
