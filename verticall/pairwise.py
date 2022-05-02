@@ -309,7 +309,8 @@ def process_one_pair(all_args, view=False, view_num=1):
         peak_mass, result_level, peak_distance, thresholds = result
 
         vertical_masses, horizontal_masses, mean_vert_window_dist, median_vert_window_dist, \
-            mean_vert_dist, log_text = paint_alignments(alignments, thresholds, window_size)
+            mean_vert_dist, r_over_m, log_text = paint_alignments(alignments, thresholds,
+                                                                  window_size)
         all_log_text += log_text
 
         painted_a, painted_b, log_text = \
@@ -325,7 +326,8 @@ def process_one_pair(all_args, view=False, view_num=1):
                               mean_distance, window_size, window_count, mean_window_distance,
                               median_window_distance, mass_peaks, result_level, peak_distance,
                               peak_mass, vertical_masses, horizontal_masses, mean_vert_window_dist,
-                              median_vert_window_dist, mean_vert_dist, painted_a, painted_b)
+                              median_vert_window_dist, mean_vert_dist, r_over_m, painted_a,
+                              painted_b)
         table_lines.append(line)
 
     return all_log_text, table_lines
@@ -362,6 +364,7 @@ def get_table_header():
             'mean_vertical_window_distance\t'
             'median_vertical_window_distance\t'
             'mean_vertical_distance\t'
+            'r/m\t'
             'assembly_a_vertical_fraction\t'
             'assembly_a_horizontal_fraction\t'
             'assembly_a_unaligned_fraction\t'
@@ -380,7 +383,7 @@ def get_table_line(name_a, name_b, alignment_count, n50_alignment_length, aligne
                    mean_distance, window_size, window_count, mean_window_distance,
                    median_window_distance, mass_peaks, result_level, peak_distance, peak_mass,
                    vertical_masses, horizontal_masses, mean_vert_window_distance,
-                   median_vert_window_distance, mean_vert_distance, painted_a, painted_b):
+                   median_vert_window_distance, mean_vert_distance, r_over_m, painted_a, painted_b):
     vertical_frac_a, horizontal_frac_a, unaligned_frac_a = painted_a.get_fractions()
     vertical_frac_b, horizontal_frac_b, unaligned_frac_b = painted_b.get_fractions()
     vertical_regions_a, horizontal_regions_a, unaligned_regions_a = painted_a.get_regions()
@@ -404,6 +407,7 @@ def get_table_line(name_a, name_b, alignment_count, n50_alignment_length, aligne
             f'{mean_vert_window_distance:.9f}\t'
             f'{median_vert_window_distance:.9f}\t'
             f'{mean_vert_distance:.9f}\t'
+            f'{r_over_m:.9f}\t'
             f'{100.0 * vertical_frac_a:.2f}%\t'
             f'{100.0 * horizontal_frac_a:.2f}%\t'
             f'{100.0 * unaligned_frac_a:.2f}%\t'

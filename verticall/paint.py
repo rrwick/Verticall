@@ -54,6 +54,7 @@ def paint_alignments(alignments, thresholds, window_size):
     mean_vert_window_dist = get_distance(vertical_masses, window_size, 'mean')
     median_vert_window_dist = get_distance(vertical_masses, window_size, 'median')
     mean_vert_dist = get_mean_vertical_distance(alignments)
+    r_over_m = get_r_over_m(alignments)
 
     log_text = ['  painting alignments:',
                 f'    vertical inheritance:          {100.0 * total_vertical_mass:6.2f}%',
@@ -62,7 +63,7 @@ def paint_alignments(alignments, thresholds, window_size):
                 f'    median vertical window distance: {median_vert_window_dist:.9f}',
                 f'    mean vertical distance:          {mean_vert_dist:.9f}']
     return vertical_masses, horizontal_masses, mean_vert_window_dist, median_vert_window_dist, \
-        mean_vert_dist, log_text
+        mean_vert_dist, r_over_m, log_text
 
 
 def get_mean_vertical_distance(alignments):
@@ -78,6 +79,19 @@ def get_mean_vertical_distance(alignments):
         return 0.0
     else:
         return differences / total_size
+
+
+def get_r_over_m(alignments):
+    v_differences, h_differences = 0, 0
+    for a in alignments:
+        for start, end in a.get_vertical_blocks():
+            v_differences += get_difference_count(a.simplified_cigar[start:end])
+        for start, end in a.get_horizontal_blocks():
+            h_differences += get_difference_count(a.simplified_cigar[start:end])
+    if v_differences == 0:
+        return 0.0
+    else:
+        return h_differences / v_differences
 
 
 def paint_assemblies(name_a, name_b, filename_a, filename_b, alignments):
