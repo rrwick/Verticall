@@ -20,7 +20,7 @@ import sys
 from .alignment import build_indices, align_sample_pair
 from .distance import get_distribution, smooth_distribution, get_peak_distance
 from .log import log, section_header, explanation, warning
-from .misc import split_list, iterate_fasta, contains_ambiguous_bases
+from .misc import split_list, iterate_fasta, contains_ambiguous_bases, check_file_exists
 from .paint import paint_alignments, paint_assemblies
 
 
@@ -90,6 +90,7 @@ def find_assemblies(in_dir, extensions=None):
 def find_reference(reference, extensions=None):
     if reference is None:
         return None
+    check_file_exists(reference)
     if extensions is None:
         extensions = get_default_assembly_extensions()
     for extension in extensions:
