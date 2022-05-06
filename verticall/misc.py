@@ -86,7 +86,7 @@ def get_sequence_file_type(filename):
         return 'unknown'
 
 
-def iterate_fasta(filename, include_info=False):
+def iterate_fasta(filename, include_info=False, preserve_case=False):
     """
     Takes a FASTA file as input and yields the contents as (name, seq) tuples. If include_info is
     set, it will yield (name, info, seq) tuples, where info is whatever follows the name.
@@ -110,7 +110,10 @@ def iterate_fasta(filename, include_info=False):
                     sequence = []
                 name = line[1:]
             else:
-                sequence.append(line.upper())
+                if preserve_case:
+                    sequence.append(line)
+                else:
+                    sequence.append(line.upper())
         if name:
             if include_info:
                 name_parts = name.split(maxsplit=1)

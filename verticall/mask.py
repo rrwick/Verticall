@@ -149,7 +149,7 @@ def load_pseudo_alignment(filename, ref_name, tsv_sample_names):
     alignment = {}
     log(f'{filename}:')
     sequence_names, sequence_lengths = set(), set()
-    for name, seq in iterate_fasta(filename):
+    for name, seq in iterate_fasta(filename, preserve_case=True):
         sequence_names.add(name)
         sequence_lengths.add(len(seq))
         alignment[name] = seq
@@ -271,11 +271,10 @@ def drop_empty_positions(sequences):
     alignment_length = get_alignment_length(sequences)
     positions_to_remove = set()
     for i in range(alignment_length):
-        bases_at_pos = {seq[i] for seq in sequences.values()}
+        bases_at_pos = {seq[i].upper() for seq in sequences.values()}
         if 'A' not in bases_at_pos and 'C' not in bases_at_pos and 'G' not in bases_at_pos \
                 and 'T' not in bases_at_pos:
             positions_to_remove.add(i)
-
     log(f'{len(positions_to_remove):,} empty positions '
         f'({100.0 * len(positions_to_remove)/alignment_length:.3}%) removed from pseudo-alignment')
     return drop_positions(sequences, positions_to_remove)
@@ -288,10 +287,9 @@ def drop_invariant_positions(sequences):
     alignment_length = get_alignment_length(sequences)
     positions_to_remove = set()
     for i in range(alignment_length):
-        bases_at_pos = {seq[i] for seq in sequences.values()}
+        bases_at_pos = {seq[i].upper() for seq in sequences.values()}
         if count_real_bases(bases_at_pos) < 2:
             positions_to_remove.add(i)
-
     log(f'{len(positions_to_remove):,} invariant positions '
         f'({100.0 * len(positions_to_remove)/alignment_length:.3}%) removed from pseudo-alignment')
     return drop_positions(sequences, positions_to_remove)
