@@ -15,6 +15,7 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 import collections
+import pathlib
 import pytest
 
 import verticall.mask
@@ -65,17 +66,17 @@ def test_get_alignment_positions():
 
 
 def test_drop_empty_positions():
-    sequences = {'A': 'AGCTACGACCTA',
-                 'B': 'AGCTACG-CCTA',
-                 'C': 'AGCNNNGACCTA'}
-    assert verticall.mask.drop_empty_positions(sequences) == {'A': 'AGCTACGACCTA',
-                                                              'B': 'AGCTACG-CCTA',
-                                                              'C': 'AGCNNNGACCTA'}
-    sequences = {'A': 'AGCTACG-CCTA',
-                 'B': 'AGCTACG-CCTA',
+    sequences = {'A': 'agcTACGACCTA',
+                 'B': 'agcTACG-CcTA',
+                 'C': 'agcNNNGACcTA'}
+    assert verticall.mask.drop_empty_positions(sequences) == {'A': 'agcTACGACCTA',
+                                                              'B': 'agcTACG-CcTA',
+                                                              'C': 'agcNNNGACcTA'}
+    sequences = {'A': 'AGCtACG-CCTA',
+                 'B': 'AGCtACg-CCTA',
                  'C': 'AGCNNNG-CCTA'}
-    assert verticall.mask.drop_empty_positions(sequences) == {'A': 'AGCTACGCCTA',
-                                                              'B': 'AGCTACGCCTA',
+    assert verticall.mask.drop_empty_positions(sequences) == {'A': 'AGCtACGCCTA',
+                                                              'B': 'AGCtACgCCTA',
                                                               'C': 'AGCNNNGCCTA'}
     sequences = {'A': 'AGNT-CNACN-A',
                  'B': 'AGNT-C--C--A',
@@ -86,11 +87,11 @@ def test_drop_empty_positions():
 
 
 def test_drop_invariant_positions():
-    sequences = {'A': 'AGCTACGACCTA',
-                 'B': 'AGCAACGACGTA',
-                 'C': 'AGCTACGCCCTA'}
-    assert verticall.mask.drop_invariant_positions(sequences) == {'A': 'TAC',
-                                                                  'B': 'AAG',
+    sequences = {'A': 'AGCTACGAcctA',
+                 'B': 'aGCaACGACGtA',
+                 'C': 'AGCTACGCcCtA'}
+    assert verticall.mask.drop_invariant_positions(sequences) == {'A': 'TAc',
+                                                                  'B': 'aAG',
                                                                   'C': 'TCC'}
     sequences = {'A': 'AGCTACGACCTA',
                  'B': 'TCGACTGACGAC',
@@ -98,9 +99,9 @@ def test_drop_invariant_positions():
     assert verticall.mask.drop_invariant_positions(sequences) == {'A': 'AGCTACGACCTA',
                                                                   'B': 'TCGACTGACGAC',
                                                                   'C': 'ACGACTACGACG'}
-    sequences = {'A': 'AGCTACGACCTA',
-                 'B': 'AGCTACGACCTA',
-                 'C': 'AGCTACGACCTA'}
+    sequences = {'A': 'agCTACGACcta',
+                 'B': 'agCTacgACCTA',
+                 'C': 'agCTACGACCTA'}
     assert verticall.mask.drop_invariant_positions(sequences) == {'A': '',
                                                                   'B': '',
                                                                   'C': ''}
@@ -113,3 +114,39 @@ def test_count_real_bases():
     assert verticall.mask.count_real_bases({'A', 'N'}) == 1
     assert verticall.mask.count_real_bases({'-', 'N'}) == 0
     assert verticall.mask.count_real_bases({'A', 'N', 'C', '-', 'G', 'X', 'T'}) == 4
+
+
+def test_load_regions():
+    in_tsv = pathlib.Path('test/test_mask/pairwise.tsv')
+
+    data, ref_name, ref_length, sample_names = verticall.mask.load_regions(in_tsv, 'ref', 'exclude')
+    assert ref_name == 'ref'
+    assert ref_length == 3000
+    assert sample_names == ['1', '2', '3']
+    assert data['1'] == ([(0, 1000), (2000, 3000)], [(1000, 2000)], [])
+    assert data['2'] == ([(0, 1100), (2100, 3000)], [(1100, 2000)], [(2000, 2100)])
+    assert data['3'] == ([(0, 1200), (2200, 3000)], [(1200, 2000)], [(2000, 2200)])
+
+    data, ref_name, ref_length, sample_names = verticall.mask.load_regions(in_tsv, 'ref', 'first')
+    assert sample_names == ['1', '2', '3', '4']
+    assert data['4'] == ([(0, 1000)], [(1000, 3000)], [])
+
+    data, ref_name, ref_length, sample_names = verticall.mask.load_regions(in_tsv, 'ref', 'low')
+    assert data['4'] == ([(1000, 2000)], [(0, 1000), (2000, 3000)], [])
+
+    data, ref_name, ref_length, sample_names = verticall.mask.load_regions(in_tsv, 'ref', 'high')
+    assert data['4'] == ([(2000, 3000)], [(0, 2000)], [])
+
+
+def test_get_ref_length():
+    data = {'1': ([(0, 1000), (2000, 5000)], [(1000, 2000)], []),
+            '2': ([(0, 5000)], [], []),
+            '3': ([], [], [(0, 5000)])}
+    assert verticall.mask.get_ref_length(data) == 5000
+
+    data = {'1': ([(0, 1000), (2000, 5000)], [(1000, 2000)], []),
+            '2': ([(0, 6000)], [], []),
+            '3': ([], [], [(0, 5000)])}
+    with pytest.raises(SystemExit) as e:
+        verticall.mask.get_ref_length(data)
+    assert 'inconsistent' in str(e.value)

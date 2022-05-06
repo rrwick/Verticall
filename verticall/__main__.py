@@ -253,8 +253,8 @@ def mask_subparser(subparsers):
     settings_args.add_argument('--reference', type=str,
                                help='Sample name for the reference genome (default: determine '
                                     'automatically if possible from the tsv file)')
-    settings_args.add_argument('--multi', type=str, default='first',
-                               choices=['first', 'low', 'high'],
+    settings_args.add_argument('--multi', type=str, default='exclude',
+                               choices=['exclude', 'first', 'low', 'high'],
                                help='Behaviour when there are multiple results for a sample pair')
     settings_args.add_argument('--h_char', type=str, default='N',
                                help='Character used to mask horizontal regions (default: DEFAULT, '

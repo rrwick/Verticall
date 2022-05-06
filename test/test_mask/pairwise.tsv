@@ -1,0 +1,8 @@
+assembly_a	assembly_b	result_level	mean_vertical_distance	assembly_a_vertical_regions	assembly_a_horizontal_regions	assembly_a_unaligned_regions
+ref	1	primary	0.01	1:0-1000,1:2000-3000	1:1000-2000	
+ref	2	primary	0.02	1:0-1100,1:2100-3000	1:1100-2000	1:2000-2100
+ref	3	primary	0.03	1:0-1200,1:2200-3000	1:1200-2000	1:2000-2200
+ref	4	primary	0.04	1:0-1000	1:1000-3000	
+ref	4	secondary	0.00	1:1000-2000	1:0-1000,1:2000-3000	
+ref	4	secondary	0.06	1:2000-3000	1:0-2000	
+not_ref	5	primary	0.05	1:0-1000,1:2000-3000	1:1000-2000	

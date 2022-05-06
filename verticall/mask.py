@@ -22,7 +22,7 @@ from .tsv import get_column_index, check_header_for_assembly_a_regions, get_star
 
 def mask(args):
     welcome_message(args)
-    data, ref_name, ref_length, sample_names = load_regions(args.in_tsv, args.reference)
+    data, ref_name, ref_length, sample_names = load_regions(args.in_tsv, args.reference, args.multi)
     sequences, sample_names = load_pseudo_alignment(args.in_alignment, ref_name, sample_names)
     masked_sequences = mask_sequences(data, sequences, ref_name, ref_length, sample_names,
                                       args.h_char, args.u_char)
@@ -47,13 +47,14 @@ def finished_message():
                 'such as RAxML.')
 
 
-def load_regions(filename, ref_name):
+def load_regions(filename, ref_name, multi):
     section_header('Loading input data')
     log(f'{filename}:')
-    ref_name, sample_names = check_tsv_file(filename, ref_name)
-    data = {}
+    ref_name = check_tsv_file(filename, ref_name)
+    data, distances, sample_names = {}, {}, set()
     v_col, h_col, u_col = None, None, None
-    loaded_count, skipped_count = 0, 0
+    loaded_count = 0
+    excluded_samples = get_multi_result_samples(filename, ref_name) if multi == 'exclude' else set()
     with open(filename, 'rt') as pairwise_file:
         for i, line in enumerate(pairwise_file):
             parts = line.strip('\n').split('\t')
@@ -61,36 +62,72 @@ def load_regions(filename, ref_name):
                 v_col = get_column_index(parts, 'assembly_a_vertical_regions', filename)
                 h_col = get_column_index(parts, 'assembly_a_horizontal_regions', filename)
                 u_col = get_column_index(parts, 'assembly_a_unaligned_regions', filename)
-            elif parts[0] == ref_name:
-                if parts[0] == ref_name:
-                    assembly_name = parts[1]
-                    data[assembly_name] = load_regions_one_assembly(parts, v_col, h_col, u_col)
-                    loaded_count += 1
+                d_col = get_column_index(parts, 'mean_vertical_distance', filename)
+                continue
+            if parts[0] != ref_name:
+                continue
+            assembly_name = parts[1]
+            if assembly_name in excluded_samples:
+                continue
+            distance = float(parts[d_col])
+            regions = load_regions_one_assembly(parts, v_col, h_col, u_col)
+            if assembly_name not in data:  # first time we've seen this assembly
+                distances[assembly_name] = distance
+                data[assembly_name] = regions
+                loaded_count += 1
+                sample_names.add(assembly_name)
+            else:  # seen this assembly already
+                if multi == 'first':
+                    pass
+                elif multi == 'low':
+                    if distance < distances[assembly_name]:
+                        distances[assembly_name] = distance
+                        data[assembly_name] = regions
+                elif multi == 'high':
+                    if distance > distances[assembly_name]:
+                        distances[assembly_name] = distance
+                        data[assembly_name] = regions
                 else:
-                    skipped_count += 1
+                    assert False
     if len(data) == 0:
         sys.exit(f'Error: no reference-to-assembly pairwise comparisons found in {filename} - is '
                  f'the provided reference name correct?')
     log(f'  {loaded_count} reference-to-assembly pairwise comparisons')
     ref_length = get_ref_length(data)
     log()
-    return data, ref_name, ref_length, sample_names
+    return data, ref_name, ref_length, sorted(sample_names)
+
+
+def get_multi_result_samples(filename, ref_name):
+    samples, multi_result_samples = set(), set()
+    with open(filename, 'rt') as f:
+        for i, line in enumerate(f):
+            if i == 0:  # header line
+                continue
+            parts = line.strip('\n').split('\t')
+            assembly_a, assembly_b = parts[0], parts[1]
+            if assembly_a != ref_name:
+                continue
+            if assembly_b in samples:
+                multi_result_samples.add(assembly_b)
+            else:
+                samples.add(assembly_b)
+    if multi_result_samples:
+        multi_result_samples_str = ', '.join(sorted(multi_result_samples))
+        warning(f'The following samples will be excluded due to secondary results: '
+                f'{multi_result_samples_str}')
+    return multi_result_samples
 
 
 def check_tsv_file(filename, ref_name):
-    a_sample_names, all_sample_names = set(), set()
-
+    a_sample_names = set()
     with open(filename, 'rt') as f:
         for i, line in enumerate(f):
             parts = line.strip('\n').split('\t')
             if i == 0:  # header line
                 check_header_for_assembly_a_regions(parts, filename)
             else:
-                assembly_a, assembly_b = parts[0], parts[1]
-                a_sample_names.add(assembly_a)
-                all_sample_names.add(assembly_a)
-                all_sample_names.add(assembly_b)
-
+                a_sample_names.add(parts[0])
     if ref_name is None:  # user didn't specify a reference name
         if len(a_sample_names) == 1:
             ref_name = list(a_sample_names)[0]
@@ -98,9 +135,7 @@ def check_tsv_file(filename, ref_name):
         else:
             sys.exit('Error: could not automatically determine the reference name, please '
                      'specify one using the --reference option.')
-
-    all_sample_names.discard(ref_name)
-    return ref_name, sorted(all_sample_names)
+    return ref_name
 
 
 def load_regions_one_assembly(parts, v_col, h_col, u_col):
