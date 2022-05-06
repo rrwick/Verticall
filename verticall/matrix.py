@@ -52,6 +52,7 @@ def load_tsv_file(filename, distance_type, multi):
     check_file_exists(filename)
     distances, sample_names = {}, set()
     column_index = None
+    excluded_samples = get_multi_result_samples(filename) if multi == 'exclude' else set()
     with open(filename, 'rt') as f:
         for i, line in enumerate(f):
             parts = line.strip('\n').split('\t')
@@ -59,6 +60,8 @@ def load_tsv_file(filename, distance_type, multi):
                 column_index = get_column_index(parts, distance_type + '_distance', filename)
             else:
                 assembly_a, assembly_b = parts[0], parts[1]
+                if assembly_a in excluded_samples or assembly_b in excluded_samples:
+                    continue
                 distance = get_distance_from_line_parts(parts, column_index)
                 sample_names.add(assembly_a)
                 sample_names.add(assembly_b)
@@ -74,6 +77,27 @@ def load_tsv_file(filename, distance_type, multi):
     check_for_missing_distances(distances, sample_names)
     log()
     return distances, sorted(sample_names)
+
+
+def get_multi_result_samples(filename):
+    pairs, multi_result_samples = set(), set()
+    with open(filename, 'rt') as f:
+        for i, line in enumerate(f):
+            if i == 0:  # header line
+                continue
+            parts = line.strip('\n').split('\t')
+            assembly_a, assembly_b = parts[0], parts[1]
+            pair = (assembly_a, assembly_b)
+            if pair in pairs:
+                multi_result_samples.add(assembly_a)
+                multi_result_samples.add(assembly_b)
+            else:
+                pairs.add(pair)
+    if multi_result_samples:
+        multi_result_samples_str = ', '.join(sorted(multi_result_samples))
+        warning(f'The following samples will be excluded due to secondary results: '
+                f'{multi_result_samples_str}')
+    return multi_result_samples
 
 
 def get_distance_from_line_parts(parts, column_index):

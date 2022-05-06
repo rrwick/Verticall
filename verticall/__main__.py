@@ -96,7 +96,7 @@ def pairwise_subparser(subparsers):
     required_args.add_argument('-i', '--in_dir', type=pathlib.Path, required=True,
                                help='Directory containing assemblies in FASTA format')
     required_args.add_argument('-o', '--out_file', type=pathlib.Path, required=True,
-                               help='Filename for tsv output')
+                               help='Filename of tsv output')
 
     reference_args = group.add_argument_group('Reference-based analysis')
     reference_args.add_argument('-r', '--reference', type=pathlib.Path,
@@ -166,7 +166,7 @@ def pairwise_and_view_settings(group):
                                     'both mismatches and gap-compressed indels)')
     settings_args.add_argument('--smoothing_factor', type=float, default=0.8,
                                help='Degree to which the distance distribution is smoothed')
-    settings_args.add_argument('--secondary', type=float, default=0.7,
+    settings_args.add_argument('--secondary', type=float, default=0.8,
                                help='Peaks with a mass of at least this fraction of the most '
                                     'massive peak will be used to produce secondary distances')
     settings_args.add_argument('--verbose', action='store_true',
@@ -205,7 +205,7 @@ def matrix_subparser(subparsers):
     required_args.add_argument('-i', '--in_file', type=pathlib.Path, required=True,
                                help='Filename of tsv created by vertical pairwise')
     required_args.add_argument('-o', '--out_file', type=pathlib.Path, required=True,
-                               help='Filename for PHYLIP matrix output')
+                               help='Filename of PHYLIP matrix output')
 
     settings_args = group.add_argument_group('Settings')
     settings_args.add_argument('--distance_type', type=str, default='mean_vertical',
@@ -222,8 +222,8 @@ def matrix_subparser(subparsers):
     settings_args.add_argument('--no_jukes_cantor', action='store_true',
                                help='Do not apply Jukes-Cantor correction (default: apply '
                                     'Jukes-Cantor correction)')
-    settings_args.add_argument('--multi', type=str, default='first',
-                               choices=['first', 'low', 'high'],
+    settings_args.add_argument('--multi', type=str, default='exclude',
+                               choices=['exclude', 'first', 'low', 'high'],
                                help='Behaviour when there are multiple results for a sample pair')
     settings_args.add_argument('--names', type=str,
                                help='Samples names to include in matrix (comma-delimited, '
@@ -245,9 +245,9 @@ def mask_subparser(subparsers):
     required_args.add_argument('-i', '--in_tsv', type=pathlib.Path, required=True,
                                help='Filename of tsv created by vertical pairwise')
     required_args.add_argument('-a', '--in_alignment', type=pathlib.Path, required=True,
-                               help='Filename for whole-genome pseudo-alignment to be masked')
+                               help='Filename of whole-genome pseudo-alignment to be masked')
     required_args.add_argument('-o', '--out_alignment', type=pathlib.Path, required=True,
-                               help='Filename for masked whole-genome pseudo-alignment')
+                               help='Filename of masked whole-genome pseudo-alignment')
 
     settings_args = group.add_argument_group('Settings')
     settings_args.add_argument('--reference', type=str,
@@ -281,7 +281,7 @@ def summary_subparser(subparsers):
     required_args.add_argument('-i', '--in_file', type=pathlib.Path, required=True,
                                help='Filename of tsv created by vertical pairwise')
     required_args.add_argument('-a', '--assembly', type=pathlib.Path, required=True,
-                               help='Filename for assembly to be summarised')
+                               help='Filename of assembly to be summarised')
 
     settings_args = group.add_argument_group('Settings')
     settings_args.add_argument('--all', action='store_true',
@@ -307,7 +307,7 @@ def repair_subparser(subparsers):
     required_args.add_argument('-i', '--in_file', type=pathlib.Path, required=True,
                                help='Filename of assembly in need of repair')
     required_args.add_argument('-o', '--out_file', type=pathlib.Path, required=True,
-                               help='Filename for repaired assembly output (if the same as -i, '
+                               help='Filename of repaired assembly output (if the same as -i, '
                                     'the input file will be overwritten)')
 
     other_args = group.add_argument_group('Other')
