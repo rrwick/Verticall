@@ -24,8 +24,8 @@ import sys
 def main():
     sample_names = set()
     distances = {}
-    for fastani_file in sys.argv[1:]
-        with fastani_file as f:
+    for fastani_file in sys.argv[1:]:
+        with open(fastani_file, 'rt') as f:
             for line in f:
                 parts = line.strip().split('\t')
                 a_1 = pathlib.Path(parts[0]).name.split('.fasta')[0]
