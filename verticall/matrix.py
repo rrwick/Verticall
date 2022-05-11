@@ -13,6 +13,7 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 
+import collections
 import itertools
 import math
 import sys
@@ -24,7 +25,8 @@ from .tsv import get_column_index
 
 def matrix(args):
     welcome_message()
-    distances, sample_names = load_tsv_file(args.in_file, args.distance_type, args.multi)
+    distances, sample_names = load_tsv_file(args.in_file, args.distance_type)
+    distances, sample_names = resolve_multi_distances(distances, sample_names, args.multi)
     if args.names is not None:
         sample_names = filter_names(sample_names, args.names)
     if not args.no_jukes_cantor:
@@ -48,11 +50,11 @@ def finished_message():
                 'phylogeny from the distance matrix.')
 
 
-def load_tsv_file(filename, distance_type, multi):
+def load_tsv_file(filename, distance_type):
     check_file_exists(filename)
-    distances, sample_names = {}, set()
+    distances, sample_names = collections.defaultdict(list), set()
     column_index = None
-    excluded_samples = get_multi_result_samples(filename) if multi == 'exclude' else set()
+    # excluded_samples = get_multi_result_samples(filename) if multi == 'exclude' else set()
     with open(filename, 'rt') as f:
         for i, line in enumerate(f):
             parts = line.strip('\n').split('\t')
@@ -60,44 +62,120 @@ def load_tsv_file(filename, distance_type, multi):
                 column_index = get_column_index(parts, distance_type + '_distance', filename)
             else:
                 assembly_a, assembly_b = parts[0], parts[1]
-                if assembly_a in excluded_samples or assembly_b in excluded_samples:
-                    continue
+                # if assembly_a in excluded_samples or assembly_b in excluded_samples:
+                #     continue
                 distance = get_distance_from_line_parts(parts, column_index)
                 sample_names.add(assembly_a)
                 sample_names.add(assembly_b)
-                if (assembly_a, assembly_b) in distances:
-                    existing = distances[(assembly_a, assembly_b)]
-                    distances[(assembly_a, assembly_b)] = multi_distance(existing, distance, multi)
-                else:
-                    distances[(assembly_a, assembly_b)] = distance
+                distances[(assembly_a, assembly_b)].append(distance)
     sample_names = sorted(sample_names)
     log(f'{len(distances)} distances loaded for {len(sample_names)} assemblies')
     for sample_name in sample_names:
-        distances[(sample_name, sample_name)] = 0.0
-    check_for_missing_distances(distances, sample_names)
+        distances[(sample_name, sample_name)].append(0.0)
     log()
     return distances, sorted(sample_names)
 
 
-def get_multi_result_samples(filename):
-    pairs, multi_result_samples = set(), set()
-    with open(filename, 'rt') as f:
-        for i, line in enumerate(f):
-            if i == 0:  # header line
-                continue
-            parts = line.strip('\n').split('\t')
-            assembly_a, assembly_b = parts[0], parts[1]
-            pair = (assembly_a, assembly_b)
-            if pair in pairs:
-                multi_result_samples.add(assembly_a)
-                multi_result_samples.add(assembly_b)
-            else:
-                pairs.add(pair)
-    if multi_result_samples:
-        multi_result_samples_str = ', '.join(sorted(multi_result_samples))
-        warning(f'The following samples will be excluded due to secondary results: '
-                f'{multi_result_samples_str}')
-    return multi_result_samples
+def resolve_multi_distances(distances, sample_names, multi):
+    section_header('Resolving multi-distance pairs')
+    explanation('Some pairs may have more than one result in the TSV file, so this step reduces '
+                'each pair to a single distance using the logic chosen by the --multi option.')
+
+    multi_distance_pairs = set(p for p, d in distances.items() if len(d) > 1)
+    log(f'Multi-distance pairs: {len(multi_distance_pairs)} / {len(distances)}')
+    log()
+    if len(multi_distance_pairs) == 0:
+        log('No resolution required')
+        return {p: d[0] for p, d in distances.items()}, sample_names
+    elif multi == 'concordant':
+        log('Resolving by greedily choosing the most tree-concordant distances')
+        distances = choose_concordant_distances(distances, sample_names, multi_distance_pairs)
+    elif multi == 'exclude':
+        log('Resolving by excluding any samples in a multi-distance pair')
+        distances, sample_names = exclude_multi_distances(distances, multi_distance_pairs)
+    elif multi == 'first':
+        log('Resolving using TSV file order (keeping the first distance for each pair)')
+        distances = {p: d[0] for p, d in distances.items()}
+    elif multi == 'low':
+        log('Resolving to minimum (keeping the lowest distance for each pair)')
+        distances =  {p: min(d) for p, d in distances.items()}
+    elif multi == 'high':
+        log('Resolving to maximum (keeping the highest distance for each pair)')
+        distances = {p: max(d) for p, d in distances.items()}
+    else:
+        assert False
+    log()
+    return distances, sample_names
+
+
+def choose_concordant_distances(distances, sample_names, multi_distance_pairs):
+    round_num = 1
+    while True:
+        # Start with the first distance in each pair (like with --multi first) - this is the
+        # baseline we will try to improve upon.
+        first_distances = {p: d[0] for p, d in distances.items()}
+        make_symmetrical(first_distances, sample_names)
+        first_concordance = get_tree_concordance(first_distances)
+        log(f'\nRound {round_num} starting concordance: {first_concordance}')
+
+        # Now we go through each multi-distance pair and check the concordance using each possible
+        # alternative distance, remembering the best result.
+        best_concordance, best_pair_and_distance = None, None
+        for pair in sorted(multi_distance_pairs):
+            assert len(distances[pair]) > 1
+            log(f'  {pair[0]} vs {pair[1]}:')
+            for alt_distance in distances[pair][1:]:
+                trial_distances = {p: d[0] for p, d in distances.items()}
+                trial_distances[pair] = alt_distance
+                concordance = get_tree_concordance(trial_distances)
+                log(f'    {distances[pair][0]} -> {alt_distance}, concordance: {concordance}')
+                if best_concordance is None or concordance < best_concordance:
+                    best_concordance = concordance
+                    best_pair_and_distance = (pair, alt_distance)
+        log(f'  Round {round_num} best concordance:     {best_concordance}')
+
+        # If our best result improves concordance, we cement that distance (remove alternatives).
+        if best_concordance < first_concordance:
+            best_pair, best_distance = best_pair_and_distance
+            distances[best_pair] = [best_distance]
+            multi_distance_pairs.remove(best_pair)
+        else:
+            log(f'\nNo improvement - multi-distance resolution finished')
+            break
+        if len(multi_distance_pairs) == 0:
+            log(f'\nNo more multi-distance pairs remain')
+            break
+
+    return {p: d[0] for p, d in distances.items()}
+
+
+def get_tree_concordance(distances):
+    """
+    This function takes in a distance matrix and returns a value which indicates how well the
+    distances fit into a tree.
+    """
+    return 0.0  # TEMP
+
+
+def exclude_multi_distances(distances, multi_distance_pairs):
+    excluded_samples = set()
+    for assembly_a, assembly_b in multi_distance_pairs:
+        excluded_samples.add(assembly_a)
+        excluded_samples.add(assembly_b)
+    excluded_str = ', '.join(sorted(excluded_samples))
+    log()
+    log(f'The following samples will be excluded due to multiple results: {excluded_str}')
+    new_distances, new_sample_names = {}, set()
+    for pair, distance_list in distances.items():
+        assembly_a, assembly_b = pair
+        if assembly_a not in excluded_samples and assembly_b not in excluded_samples:
+            assert len(distance_list) == 1
+            new_distances[(assembly_a, assembly_b)] = distance_list[0]
+            new_sample_names.add(assembly_a)
+            new_sample_names.add(assembly_b)
+    log()
+    log(f'{len(new_sample_names)} samples ({len(new_distances)} distances) remain')
+    return new_distances, sorted(new_sample_names)
 
 
 def get_distance_from_line_parts(parts, column_index):
@@ -155,7 +233,6 @@ def check_for_missing_distances(distances, sample_names):
 def save_matrix(filename, distances, sample_names):
     section_header('Saving matrix to file')
     log(f'{filename.resolve()}')
-
     distance_count, missing_distances = 0, False
     with open(filename, 'wt') as f:
         f.write(str(len(sample_names)))
@@ -172,8 +249,6 @@ def save_matrix(filename, distances, sample_names):
                     distance_count += 1
                 f.write(f'\t{distance}')
             f.write('\n')
-
-    log(f'{len(sample_names)} samples, {distance_count} distances')
     log()
     if missing_distances:
         warning('one or more distances are missing resulting in an incomplete matrix')
