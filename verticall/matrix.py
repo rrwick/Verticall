@@ -16,7 +16,12 @@ If not, see <https://www.gnu.org/licenses/>.
 import collections
 import itertools
 import math
+import os
+import pathlib
+import subprocess
 import sys
+import tempfile
+import time  # TEMP
 
 from .log import log, section_header, explanation, warning
 from .misc import check_file_exists
@@ -98,7 +103,7 @@ def resolve_multi_distances(distances, sample_names, multi):
         distances = {p: d[0] for p, d in distances.items()}
     elif multi == 'low':
         log('Resolving to minimum (keeping the lowest distance for each pair)')
-        distances =  {p: min(d) for p, d in distances.items()}
+        distances = {p: min(d) for p, d in distances.items()}
     elif multi == 'high':
         log('Resolving to maximum (keeping the highest distance for each pair)')
         distances = {p: max(d) for p, d in distances.items()}
@@ -114,47 +119,64 @@ def choose_concordant_distances(distances, sample_names, multi_distance_pairs):
         # Start with the first distance in each pair (like with --multi first) - this is the
         # baseline we will try to improve upon.
         first_distances = {p: d[0] for p, d in distances.items()}
-        make_symmetrical(first_distances, sample_names)
-        first_concordance = get_tree_concordance(first_distances)
-        log(f'\nRound {round_num} starting concordance: {first_concordance}')
+        first_concordance = get_tree_concordance(first_distances, sample_names)
+        log(f'\nRound {round_num}:')
+        log(f'    multi-distance pairs: {len(multi_distance_pairs)}')
+        log(f'    starting concordance: {first_concordance}')
 
         # Now we go through each multi-distance pair and check the concordance using each possible
         # alternative distance, remembering the best result.
         best_concordance, best_pair_and_distance = None, None
         for pair in sorted(multi_distance_pairs):
             assert len(distances[pair]) > 1
-            log(f'  {pair[0]} vs {pair[1]}:')
             for alt_distance in distances[pair][1:]:
                 trial_distances = {p: d[0] for p, d in distances.items()}
                 trial_distances[pair] = alt_distance
-                concordance = get_tree_concordance(trial_distances)
-                log(f'    {distances[pair][0]} -> {alt_distance}, concordance: {concordance}')
+                concordance = get_tree_concordance(trial_distances, sample_names)
+                log(f'    {pair[0]} vs {pair[1]}: {distances[pair][0]:.9f} → {alt_distance:.9f}, '
+                    f'concordance: {concordance}')
                 if best_concordance is None or concordance < best_concordance:
                     best_concordance = concordance
                     best_pair_and_distance = (pair, alt_distance)
-        log(f'  Round {round_num} best concordance:     {best_concordance}')
-
-        # If our best result improves concordance, we cement that distance (remove alternatives).
+        log(f'    best concordance: {best_concordance}')
         if best_concordance < first_concordance:
-            best_pair, best_distance = best_pair_and_distance
-            distances[best_pair] = [best_distance]
+            # If our best result improves concordance, cement that distance (remove alternatives).
+            best_pair, new_distance = best_pair_and_distance
+            prev_distance = distances[best_pair][0]
+            distances[best_pair] = [new_distance]
             multi_distance_pairs.remove(best_pair)
+            log(f'    {best_pair[0]} vs {best_pair[1]}: {prev_distance:.9f} → {new_distance:.9f}')
         else:
             log(f'\nNo improvement - multi-distance resolution finished')
             break
         if len(multi_distance_pairs) == 0:
             log(f'\nNo more multi-distance pairs remain')
             break
+        round_num += 1
 
     return {p: d[0] for p, d in distances.items()}
 
 
-def get_tree_concordance(distances):
+def get_tree_concordance(distances, sample_names):
     """
     This function takes in a distance matrix and returns a value which indicates how well the
     distances fit into a tree.
     """
-    return 0.0  # TEMP
+    make_symmetrical(distances, sample_names)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_dir = pathlib.Path(temp_dir)
+        temp_phylip = temp_dir / 'temp.phylip'
+        save_matrix(temp_phylip, distances, sample_names, silent=True)
+        r_script = pathlib.Path(os.path.dirname(os.path.realpath(__file__))) / 'concordance.R'
+        command = ['Rscript', str(r_script), str(temp_phylip)]
+        p = subprocess.run(command, capture_output=True, text=True)
+        if p.returncode != 0:
+            sys.exit(f'Error: concordance.R failed to run - do you have R and ape installed?')
+        try:
+            concordance = float(p.stdout.strip())
+        except ValueError:
+            sys.exit(f'Error: invalid output of concordance.R')
+    return concordance
 
 
 def exclude_multi_distances(distances, multi_distance_pairs):
@@ -230,9 +252,10 @@ def check_for_missing_distances(distances, sample_names):
         warning('some pairwise distances were not found - matrix will contain empty cells.')
 
 
-def save_matrix(filename, distances, sample_names):
-    section_header('Saving matrix to file')
-    log(f'{filename.resolve()}')
+def save_matrix(filename, distances, sample_names, silent=False):
+    if not silent:
+        section_header('Saving matrix to file')
+        log(f'{filename.resolve()}')
     distance_count, missing_distances = 0, False
     with open(filename, 'wt') as f:
         f.write(str(len(sample_names)))
@@ -249,9 +272,10 @@ def save_matrix(filename, distances, sample_names):
                     distance_count += 1
                 f.write(f'\t{distance}')
             f.write('\n')
-    log()
-    if missing_distances:
-        warning('one or more distances are missing resulting in an incomplete matrix')
+    if not silent:
+        log()
+        if missing_distances:
+            warning('one or more distances are missing resulting in an incomplete matrix')
 
 
 def jukes_cantor_correction(distances, sample_names):
