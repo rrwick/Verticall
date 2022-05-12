@@ -16,12 +16,12 @@ If not, see <https://www.gnu.org/licenses/>.
 import collections
 import itertools
 import math
+from multiprocessing import Pool
 import os
 import pathlib
 import subprocess
 import sys
 import tempfile
-import time  # TEMP
 
 from .log import log, section_header, explanation, warning
 from .misc import check_file_exists
@@ -31,7 +31,8 @@ from .tsv import get_column_index
 def matrix(args):
     welcome_message()
     distances, sample_names = load_tsv_file(args.in_file, args.distance_type)
-    distances, sample_names = resolve_multi_distances(distances, sample_names, args.multi)
+    distances, sample_names = resolve_multi_distances(distances, sample_names, args.multi,
+                                                      args.threads)
     if args.names is not None:
         sample_names = filter_names(sample_names, args.names)
     if not args.no_jukes_cantor:
@@ -81,7 +82,7 @@ def load_tsv_file(filename, distance_type):
     return distances, sorted(sample_names)
 
 
-def resolve_multi_distances(distances, sample_names, multi):
+def resolve_multi_distances(distances, sample_names, multi, threads):
     section_header('Resolving multi-distance pairs')
     explanation('Some pairs may have more than one result in the TSV file, so this step reduces '
                 'each pair to a single distance using the logic chosen by the --multi option.')
@@ -94,7 +95,8 @@ def resolve_multi_distances(distances, sample_names, multi):
         return {p: d[0] for p, d in distances.items()}, sample_names
     elif multi == 'concordant':
         log('Resolving by greedily choosing the most tree-concordant distances')
-        distances = choose_concordant_distances(distances, sample_names, multi_distance_pairs)
+        distances = choose_concordant_distances(distances, sample_names, multi_distance_pairs,
+                                                threads)
     elif multi == 'exclude':
         log('Resolving by excluding any samples in a multi-distance pair')
         distances, sample_names = exclude_multi_distances(distances, multi_distance_pairs)
@@ -113,7 +115,8 @@ def resolve_multi_distances(distances, sample_names, multi):
     return distances, sample_names
 
 
-def choose_concordant_distances(distances, sample_names, multi_distance_pairs):
+def choose_concordant_distances(distances, sample_names, multi_distance_pairs, threads,
+                                verbose=False):
     round_num = 1
     while True:
         # Start with the first distance in each pair (like with --multi first) - this is the
@@ -121,31 +124,47 @@ def choose_concordant_distances(distances, sample_names, multi_distance_pairs):
         first_distances = {p: d[0] for p, d in distances.items()}
         first_concordance = get_tree_concordance(first_distances, sample_names)
         log(f'\nRound {round_num}:')
-        log(f'    multi-distance pairs: {len(multi_distance_pairs)}')
-        log(f'    starting concordance: {first_concordance}')
+        log(f'  multi-distance pairs: {len(multi_distance_pairs)}')
+        log(f'  starting concordance: {first_concordance}')
 
         # Now we go through each multi-distance pair and check the concordance using each possible
         # alternative distance, remembering the best result.
         best_concordance, best_pair_and_distance = None, None
+
+        arg_list = []
         for pair in sorted(multi_distance_pairs):
             assert len(distances[pair]) > 1
             for alt_distance in distances[pair][1:]:
-                trial_distances = {p: d[0] for p, d in distances.items()}
-                trial_distances[pair] = alt_distance
-                concordance = get_tree_concordance(trial_distances, sample_names)
-                log(f'    {pair[0]} vs {pair[1]}: {distances[pair][0]:.9f} → {alt_distance:.9f}, '
-                    f'concordance: {concordance}')
+                arg_list.append((distances, sample_names, pair, alt_distance))
+
+        if threads == 1:
+            for a in arg_list:
+                pair, alt_distance, concordance = assess_one_alt_distance(a)
+                if verbose:
+                    log(f'  {pair[0]} vs {pair[1]}: {distances[pair][0]:.9f} → '
+                        f'{alt_distance:.9f}, concordance: {concordance}')
                 if best_concordance is None or concordance < best_concordance:
                     best_concordance = concordance
                     best_pair_and_distance = (pair, alt_distance)
-        log(f'    best concordance: {best_concordance}')
+
+        else:  # multiple threads
+            with Pool(processes=threads) as pool:
+                for pair, alt_distance, concordance in pool.imap(assess_one_alt_distance, arg_list):
+                    if verbose:
+                        log(f'  {pair[0]} vs {pair[1]}: {distances[pair][0]:.9f} → '
+                            f'{alt_distance:.9f}, concordance: {concordance}')
+                    if best_concordance is None or concordance < best_concordance:
+                        best_concordance = concordance
+                        best_pair_and_distance = (pair, alt_distance)
+
+        log(f'  best concordance:     {best_concordance}')
         if best_concordance < first_concordance:
             # If our best result improves concordance, cement that distance (remove alternatives).
             best_pair, new_distance = best_pair_and_distance
             prev_distance = distances[best_pair][0]
             distances[best_pair] = [new_distance]
             multi_distance_pairs.remove(best_pair)
-            log(f'    {best_pair[0]} vs {best_pair[1]}: {prev_distance:.9f} → {new_distance:.9f}')
+            log(f'  {best_pair[0]} vs {best_pair[1]}: {prev_distance:.9f} → {new_distance:.9f}')
         else:
             log(f'\nNo improvement - multi-distance resolution finished')
             break
@@ -155,6 +174,14 @@ def choose_concordant_distances(distances, sample_names, multi_distance_pairs):
         round_num += 1
 
     return {p: d[0] for p, d in distances.items()}
+
+
+def assess_one_alt_distance(args):
+    distances, sample_names, pair, alt_distance = args
+    trial_distances = {p: d[0] for p, d in distances.items()}
+    trial_distances[pair] = alt_distance
+    concordance = get_tree_concordance(trial_distances, sample_names)
+    return pair, alt_distance, concordance
 
 
 def get_tree_concordance(distances, sample_names):

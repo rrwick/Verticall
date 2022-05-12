@@ -166,7 +166,7 @@ def pairwise_and_view_settings(group):
                                     'both mismatches and gap-compressed indels)')
     settings_args.add_argument('--smoothing_factor', type=float, default=0.8,
                                help='Degree to which the distance distribution is smoothed')
-    settings_args.add_argument('--secondary', type=float, default=0.8,
+    settings_args.add_argument('--secondary', type=float, default=0.7,
                                help='Peaks with a mass of at least this fraction of the most '
                                     'massive peak will be used to produce secondary distances')
     settings_args.add_argument('--verbose', action='store_true',
@@ -228,6 +228,10 @@ def matrix_subparser(subparsers):
     settings_args.add_argument('--names', type=str,
                                help='Samples names to include in matrix (comma-delimited, '
                                     'default: include all samples)')
+
+    performance_args = group.add_argument_group('Performance')
+    performance_args.add_argument('-t', '--threads', type=int, default=get_default_thread_count(),
+                                  help='CPU threads for parallel processing')
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
