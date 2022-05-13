@@ -16,12 +16,7 @@ If not, see <https://www.gnu.org/licenses/>.
 import collections
 import itertools
 import math
-from multiprocessing import Pool
-import os
-import pathlib
-import subprocess
 import sys
-import tempfile
 
 from .log import log, section_header, explanation, warning
 from .misc import check_file_exists
@@ -31,8 +26,7 @@ from .tsv import get_column_index
 def matrix(args):
     welcome_message()
     distances, sample_names = load_tsv_file(args.in_file, args.distance_type)
-    distances, sample_names = resolve_multi_distances(distances, sample_names, args.multi,
-                                                      args.threads)
+    distances, sample_names = resolve_multi_distances(distances, sample_names, args.multi)
     if args.names is not None:
         sample_names = filter_names(sample_names, args.names)
     if not args.no_jukes_cantor:
@@ -82,7 +76,7 @@ def load_tsv_file(filename, distance_type):
     return distances, sorted(sample_names)
 
 
-def resolve_multi_distances(distances, sample_names, multi, threads):
+def resolve_multi_distances(distances, sample_names, multi):
     section_header('Resolving multi-distance pairs')
     explanation('Some pairs may have more than one result in the TSV file, so this step reduces '
                 'each pair to a single distance using the logic chosen by the --multi option.')
@@ -93,16 +87,12 @@ def resolve_multi_distances(distances, sample_names, multi, threads):
     if len(multi_distance_pairs) == 0:
         log('No resolution required')
         return {p: d[0] for p, d in distances.items()}, sample_names
-    elif multi == 'concordant':
-        log('Resolving by greedily choosing the most tree-concordant distances')
-        distances = choose_concordant_distances(distances, sample_names, multi_distance_pairs,
-                                                threads)
-    elif multi == 'exclude':
-        log('Resolving by excluding any samples in a multi-distance pair')
-        distances, sample_names = exclude_multi_distances(distances, multi_distance_pairs)
     elif multi == 'first':
         log('Resolving using TSV file order (keeping the first distance for each pair)')
         distances = {p: d[0] for p, d in distances.items()}
+    elif multi == 'exclude':
+        log('Resolving by excluding any samples in a multi-distance pair')
+        distances, sample_names = exclude_multi_distances(distances, multi_distance_pairs)
     elif multi == 'low':
         log('Resolving to minimum (keeping the lowest distance for each pair)')
         distances = {p: min(d) for p, d in distances.items()}
@@ -113,97 +103,6 @@ def resolve_multi_distances(distances, sample_names, multi, threads):
         assert False
     log()
     return distances, sample_names
-
-
-def choose_concordant_distances(distances, sample_names, multi_distance_pairs, threads,
-                                verbose=False):
-    round_num = 1
-    while True:
-        # Start with the first distance in each pair (like with --multi first) - this is the
-        # baseline we will try to improve upon.
-        first_distances = {p: d[0] for p, d in distances.items()}
-        first_concordance = get_tree_concordance(first_distances, sample_names)
-        log(f'\nRound {round_num}:')
-        log(f'  multi-distance pairs: {len(multi_distance_pairs)}')
-        log(f'  starting concordance: {first_concordance}')
-
-        # Now we go through each multi-distance pair and check the concordance using each possible
-        # alternative distance, remembering the best result.
-        best_concordance, best_pair_and_distance = None, None
-
-        arg_list = []
-        for pair in sorted(multi_distance_pairs):
-            assert len(distances[pair]) > 1
-            for alt_distance in distances[pair][1:]:
-                arg_list.append((distances, sample_names, pair, alt_distance))
-
-        if threads == 1:
-            for a in arg_list:
-                pair, alt_distance, concordance = assess_one_alt_distance(a)
-                if verbose:
-                    log(f'  {pair[0]} vs {pair[1]}: {distances[pair][0]:.9f} → '
-                        f'{alt_distance:.9f}, concordance: {concordance}')
-                if best_concordance is None or concordance < best_concordance:
-                    best_concordance = concordance
-                    best_pair_and_distance = (pair, alt_distance)
-
-        else:  # multiple threads
-            with Pool(processes=threads) as pool:
-                for pair, alt_distance, concordance in pool.imap(assess_one_alt_distance, arg_list):
-                    if verbose:
-                        log(f'  {pair[0]} vs {pair[1]}: {distances[pair][0]:.9f} → '
-                            f'{alt_distance:.9f}, concordance: {concordance}')
-                    if best_concordance is None or concordance < best_concordance:
-                        best_concordance = concordance
-                        best_pair_and_distance = (pair, alt_distance)
-
-        log(f'  best concordance:     {best_concordance}')
-        if best_concordance < first_concordance:
-            # If our best result improves concordance, cement that distance (remove alternatives).
-            best_pair, new_distance = best_pair_and_distance
-            prev_distance = distances[best_pair][0]
-            distances[best_pair] = [new_distance]
-            multi_distance_pairs.remove(best_pair)
-            log(f'  {best_pair[0]} vs {best_pair[1]}: {prev_distance:.9f} → {new_distance:.9f}')
-        else:
-            log(f'\nNo improvement - multi-distance resolution finished')
-            break
-        if len(multi_distance_pairs) == 0:
-            log(f'\nNo more multi-distance pairs remain')
-            break
-        round_num += 1
-
-    return {p: d[0] for p, d in distances.items()}
-
-
-def assess_one_alt_distance(args):
-    distances, sample_names, pair, alt_distance = args
-    trial_distances = {p: d[0] for p, d in distances.items()}
-    trial_distances[pair] = alt_distance
-    concordance = get_tree_concordance(trial_distances, sample_names)
-    return pair, alt_distance, concordance
-
-
-def get_tree_concordance(distances, sample_names):
-    """
-    This function takes in a distance matrix and returns a value which indicates how well the
-    distances fit into a tree.
-    """
-    make_symmetrical(distances, sample_names)
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_dir = pathlib.Path(temp_dir)
-        temp_phylip = temp_dir / 'temp.phylip'
-        save_matrix(temp_phylip, distances, sample_names, silent=True)
-        r_script = pathlib.Path(os.path.dirname(os.path.realpath(__file__))) / 'concordance.R'
-        command = ['Rscript', str(r_script), str(temp_phylip)]
-        p = subprocess.run(command, capture_output=True, text=True)
-        if p.returncode != 0:
-            sys.exit(f'Error: concordance.R failed to run - do you have R and ape installed?')
-        try:
-            concordance = float(p.stdout.strip())
-        except ValueError:
-            sys.exit(f'Error: invalid output of concordance.R')
-    return concordance
 
 
 def exclude_multi_distances(distances, multi_distance_pairs):
@@ -241,22 +140,6 @@ def get_distance_from_line_parts(parts, column_index):
         sys.exit(f'Error: could not convert {distance} to a number')
 
 
-def multi_distance(existing_distance, new_distance, multi):
-    """
-    This code handles the case when a distance is seen a subsequent time for a single assembly pair.
-    Given the existing distance (earlier in the tsv), a new distance (later in the tsv) and multi
-    logic, it returns the distance that should be used in the matrix.
-    """
-    if multi == 'first':
-        return existing_distance
-    elif multi == 'low':
-        return min(existing_distance, new_distance)
-    elif multi == 'high':
-        return max(existing_distance, new_distance)
-    else:
-        assert False
-
-
 def filter_names(all_names, specified_names):
     all_names = set(all_names)
     filtered_names = set()
@@ -269,21 +152,20 @@ def filter_names(all_names, specified_names):
 
 
 def check_for_missing_distances(distances, sample_names):
-    any_missing = False
+    """
+    Fills in any missing distances in the matrix with None.
+    """
     for sample_a in sample_names:
         for sample_b in sample_names:
             if (sample_a, sample_b) not in distances:
-                any_missing = True
                 distances[(sample_a, sample_b)] = None
-    if any_missing:
-        warning('some pairwise distances were not found - matrix will contain empty cells.')
 
 
 def save_matrix(filename, distances, sample_names, silent=False):
     if not silent:
         section_header('Saving matrix to file')
         log(f'{filename.resolve()}')
-    distance_count, missing_distances = 0, False
+    missing_distances = False
     with open(filename, 'wt') as f:
         f.write(str(len(sample_names)))
         f.write('\n')
@@ -296,7 +178,6 @@ def save_matrix(filename, distances, sample_names, silent=False):
                     missing_distances = True
                 else:
                     distance = f'{distance:.9f}'
-                    distance_count += 1
                 f.write(f'\t{distance}')
             f.write('\n')
     if not silent:

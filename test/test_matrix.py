@@ -120,17 +120,6 @@ def test_filter_names():
     assert 'could not find sample' in str(e.value)
 
 
-def test_multi_distance():
-    assert verticall.matrix.multi_distance(0.4, 0.3, 'first') == 0.4
-    assert verticall.matrix.multi_distance(0.4, 0.5, 'first') == 0.4
-    assert verticall.matrix.multi_distance(0.4, 0.3, 'low') == 0.3
-    assert verticall.matrix.multi_distance(0.4, 0.5, 'low') == 0.4
-    assert verticall.matrix.multi_distance(0.4, 0.3, 'high') == 0.4
-    assert verticall.matrix.multi_distance(0.4, 0.5, 'high') == 0.5
-    with pytest.raises(AssertionError):
-        verticall.matrix.multi_distance(0.4, 0.5, 'bad')
-
-
 def test_get_distance_from_line_parts():
     parts = ['a', 'b', '0.0002', '', '0.0001', 'not_a_num']
     assert verticall.matrix.get_distance_from_line_parts(parts, 2) == pytest.approx(0.0002)
