@@ -40,7 +40,6 @@ setup(name='Verticall',
       packages=['verticall'],
       install_requires=['numpy', 'pandas', 'matplotlib', 'plotnine', 'pytest'],
       entry_points={"console_scripts": ['verticall = verticall.__main__:main']},
-      package_data={'verticall': ['*.R']},
       include_package_data=True,
       zip_safe=False,
       python_requires='>=3.7')

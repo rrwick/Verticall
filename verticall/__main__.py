@@ -166,7 +166,7 @@ def pairwise_and_view_settings(group):
                                     'both mismatches and gap-compressed indels)')
     settings_args.add_argument('--smoothing_factor', type=float, default=0.8,
                                help='Degree to which the distance distribution is smoothed')
-    settings_args.add_argument('--secondary', type=float, default=0.8,
+    settings_args.add_argument('--secondary', type=float, default=0.7,
                                help='Peaks with a mass of at least this fraction of the most '
                                     'massive peak will be used to produce secondary distances')
     settings_args.add_argument('--verbose', action='store_true',
