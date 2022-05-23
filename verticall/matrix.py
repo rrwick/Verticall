@@ -86,7 +86,7 @@ def resolve_multi_distances(distances, sample_names, multi):
     log()
     if len(multi_distance_pairs) == 0:
         log('No resolution required')
-        return {p: d[0] for p, d in distances.items()}, sample_names
+        distances = {p: d[0] for p, d in distances.items()}
     elif multi == 'first':
         log('Resolving using TSV file order (keeping the first distance for each pair)')
         distances = {p: d[0] for p, d in distances.items()}
