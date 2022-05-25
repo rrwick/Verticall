@@ -13,6 +13,7 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 
+import svgwrite
 import sys
 
 from .log import log, section_header, explanation, warning
@@ -25,7 +26,8 @@ def mask(args):
     data, ref_name, ref_length, sample_names = load_regions(args.in_tsv, args.reference, args.multi)
     sequences, sample_names = load_pseudo_alignment(args.in_alignment, ref_name, sample_names)
     masked_sequences = mask_sequences(data, sequences, ref_name, ref_length, sample_names,
-                                      args.h_char, args.u_char)
+                                      args.h_char, args.u_char, args.image, args.vertical_colour,
+                                      args.horizontal_colour, args.unaligned_colour)
     masked_sequences = finalise(masked_sequences, args.exclude_invariant)
     save_to_file(masked_sequences, args.out_alignment)
     finished_message()
@@ -79,6 +81,7 @@ def load_regions(filename, ref_name, multi):
             else:  # seen this assembly already
                 if multi == 'first':
                     pass
+                # TODO: add --multi exclude logic
                 elif multi == 'low':
                     if distance < distances[assembly_name]:
                         distances[assembly_name] = distance
@@ -217,25 +220,42 @@ def load_pseudo_alignment(filename, ref_name, tsv_sample_names):
     return alignment, in_both
 
 
-def mask_sequences(data, sequences, ref_name, ref_length, sample_names, h_char, u_char):
+def mask_sequences(data, sequences, ref_name, ref_length, sample_names, h_char, u_char,
+                   image_filename, v_colour, h_colour, u_colour):
     section_header('Masking sequences')
     ref_seq = sequences[ref_name]
     ref_pos_to_align_pos = get_alignment_positions(ref_seq, ref_length)
     longest_sample_name_len = max(len(s) for s in sample_names)
     masked_sequences = {ref_name: ref_seq}
+
+    if image_filename is not None:
+        image = svgwrite.Drawing(image_filename, profile='full')
+    else:
+        image = None
+
+    y_pos = 12
     for sample_name in sample_names:
         log(f'{sample_name.rjust(longest_sample_name_len)}:', end=' ')
-        masked_sequences[sample_name] = mask_one_sequence(data, sequences, sample_name, h_char,
-                                                          u_char, ref_pos_to_align_pos, ref_length)
+        masked_sequences[sample_name] = \
+            mask_one_sequence(data, sequences, sample_name, h_char, u_char, ref_pos_to_align_pos,
+                              ref_length, image, v_colour, h_colour, u_colour, y_pos)
+        y_pos += 12
+
+    if image_filename is not None:
+        image.save()
     log()
     return masked_sequences
 
 
 def mask_one_sequence(data, sequences, sample_name, h_char, u_char, ref_pos_to_align_pos,
-                      ref_length):
+                      ref_length, image, v_colour, h_colour, u_colour, y_pos):
     _, horizontal_regions, unaligned_regions = data[sample_name]
     sample_seq = [b for b in sequences[sample_name]]
     unmasked, h_masked, u_masked = ref_length, 0, 0
+    if image is not None:
+        image.add(image.text(sample_name, insert=(97, y_pos+4), style='text-anchor:end',
+                             font_size='12px'))
+        image.add(image.line((100, y_pos), (500, y_pos), stroke=v_colour, stroke_width=9))
     if h_char is not None:
         for start, end in horizontal_regions:
             unmasked -= (end - start)
@@ -243,6 +263,10 @@ def mask_one_sequence(data, sequences, sample_name, h_char, u_char, ref_pos_to_a
             start, end = ref_pos_to_align_pos[start], ref_pos_to_align_pos[end]
             for i in range(start, end):
                 sample_seq[i] = h_char
+            if image is not None:
+                image.add(image.line((100 + 400 * start / ref_length, y_pos),
+                                     (100 + 400 * end / ref_length, y_pos),
+                                     stroke=h_colour, stroke_width=9))
     if u_char is not None:
         for start, end in unaligned_regions:
             unmasked -= (end - start)
@@ -250,6 +274,10 @@ def mask_one_sequence(data, sequences, sample_name, h_char, u_char, ref_pos_to_a
             start, end = ref_pos_to_align_pos[start], ref_pos_to_align_pos[end]
             for i in range(start, end):
                 sample_seq[i] = u_char
+            if image is not None:
+                image.add(image.line((100 + 400 * start / ref_length, y_pos),
+                                     (100 + 400 * end / ref_length, y_pos),
+                                     stroke=u_colour, stroke_width=9))
     log_message = f'{100.0 * unmasked/ref_length:6.2f}% unmasked'
     if h_char is not None:
         log_message += f', {100.0 * h_masked/ref_length:5.2f}% "{h_char}"'

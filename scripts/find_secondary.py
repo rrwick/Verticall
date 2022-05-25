@@ -33,7 +33,7 @@ def get_arguments():
     parser = argparse.ArgumentParser(description='Subset a PHYLIP matrix')
 
     parser.add_argument('tsv', type=str,
-                        help='Filename of Verticall tsv file')
+                        help='Filename of Verticall TSV file')
     parser.add_argument('samples', type=str, nargs='+',
                         help='Comma-delimited list of sample names')
     args = parser.parse_args()

@@ -96,7 +96,7 @@ def pairwise_subparser(subparsers):
     required_args.add_argument('-i', '--in_dir', type=pathlib.Path, required=True,
                                help='Directory containing assemblies in FASTA format')
     required_args.add_argument('-o', '--out_file', type=pathlib.Path, required=True,
-                               help='Filename of tsv output')
+                               help='Filename of TSV output')
 
     reference_args = group.add_argument_group('Reference-based analysis')
     reference_args.add_argument('-r', '--reference', type=pathlib.Path,
@@ -141,7 +141,8 @@ def view_subparser(subparsers):
                            help='Number of result to plot (used when there are multiple '
                                 'possible results for the pair, default: DEFAULT)')
 
-    colour_settings(group)
+    colour_args = group.add_argument_group('Colours')
+    colour_settings(colour_args, 'ambiguous')
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
@@ -184,17 +185,23 @@ def pairwise_and_view_settings(group):
                                 help='Allow this much overlap between alignments')
 
 
-def colour_settings(group):
+def colour_settings(colour_args, third_colour_name):
     """
-    The view and summary subcommands share colour settings in common, defined in this function.
+    A few subcommands share colour settings in common, defined in this function.
     """
-    colour_args = group.add_argument_group('Colours')
     colour_args.add_argument('--vertical_colour', type=str, default='#4859a0',
                              help='Hex colour for vertical inheritance')
     colour_args.add_argument('--horizontal_colour', type=str, default='#c47e7e',
                              help='Hex colour for horizontal inheritance')
-    colour_args.add_argument('--ambiguous_colour', type=str, default='#c9c9c9',
-                             help='Hex colour for ambiguous inheritance')
+    third_colour = '#c9c9c9'
+    if third_colour_name == 'unaligned':
+        colour_args.add_argument('--unaligned_colour', type=str, default=third_colour,
+                                 help='Hex colour for unaligned inheritance')
+    elif third_colour_name == 'ambiguous':
+        colour_args.add_argument('--ambiguous_colour', type=str, default=third_colour,
+                                 help='Hex colour for ambiguous inheritance')
+    else:
+        assert False
 
 
 def matrix_subparser(subparsers):
@@ -203,7 +210,7 @@ def matrix_subparser(subparsers):
 
     required_args = group.add_argument_group('Required arguments')
     required_args.add_argument('-i', '--in_file', type=pathlib.Path, required=True,
-                               help='Filename of tsv created by vertical pairwise')
+                               help='Filename of TSV created by vertical pairwise')
     required_args.add_argument('-o', '--out_file', type=pathlib.Path, required=True,
                                help='Filename of PHYLIP matrix output')
 
@@ -243,16 +250,21 @@ def mask_subparser(subparsers):
 
     required_args = group.add_argument_group('Required arguments')
     required_args.add_argument('-i', '--in_tsv', type=pathlib.Path, required=True,
-                               help='Filename of tsv created by vertical pairwise')
+                               help='Filename of TSV created by vertical pairwise')
     required_args.add_argument('-a', '--in_alignment', type=pathlib.Path, required=True,
                                help='Filename of whole-genome pseudo-alignment to be masked')
     required_args.add_argument('-o', '--out_alignment', type=pathlib.Path, required=True,
                                help='Filename of masked whole-genome pseudo-alignment')
 
+    draw_args = group.add_argument_group('Illustration')
+    draw_args.add_argument('--image', type=pathlib.Path,
+                           help='Filename of SVG illustration of masked regions (optional)')
+    colour_settings(draw_args, 'unaligned')
+
     settings_args = group.add_argument_group('Settings')
     settings_args.add_argument('--reference', type=str,
                                help='Sample name for the reference genome (default: determine '
-                                    'automatically if possible from the tsv file)')
+                                    'automatically if possible from the TSV file)')
     settings_args.add_argument('--multi', type=str, default='first',
                                choices=['first', 'exclude', 'low', 'high'],
                                help='Behaviour when there are multiple results for a sample pair')
@@ -290,7 +302,8 @@ def summary_subparser(subparsers):
     settings_args.add_argument('--plot', action='store_true',
                                help='Instead of outputting a table, display an interactive plot')
 
-    colour_settings(group)
+    colour_args = group.add_argument_group('Colours')
+    colour_settings(colour_args, 'ambiguous')
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
