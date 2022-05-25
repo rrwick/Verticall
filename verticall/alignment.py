@@ -176,7 +176,8 @@ class Alignment(object):
         Starting with the CIGAR from the PAF file, this method defines other CIGAR-related stuff.
         """
         self.expanded_cigar = get_expanded_cigar(self.cigar)
-        cigar_to_query = cigar_to_contig_pos(self.expanded_cigar, self.query_start, self.query_end)
+        cigar_to_query = cigar_to_contig_pos(self.expanded_cigar, self.query_start, self.query_end,
+                                             self.strand)
         flipped_cigar = swap_insertions_and_deletions(self.expanded_cigar)
         cigar_to_target = cigar_to_contig_pos(flipped_cigar, self.target_start, self.target_end)
 
@@ -336,7 +337,7 @@ def get_expanded_cigar(cigar):
     return ''.join(expanded_cigar)
 
 
-def cigar_to_contig_pos(cigar, start, end):
+def cigar_to_contig_pos(cigar, start, end, strand='+'):
     """
     Takes an expanded CIGAR and returns a list of the same length, where the list contains
     contig positions corresponding to each CIGAR position.
@@ -346,12 +347,15 @@ def cigar_to_contig_pos(cigar, start, end):
     sequence positions while deletions do not.
     """
     cigar_to_contig = []
+    assert start <= end
     i = start
     for c in cigar:
         cigar_to_contig.append(i)
         if c == '=' or c == 'X' or c == 'I':
             i += 1
     assert i == end
+    if strand == '-':
+        cigar_to_contig = cigar_to_contig[::-1]
     return cigar_to_contig
 
 

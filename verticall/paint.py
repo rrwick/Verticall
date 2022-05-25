@@ -184,7 +184,12 @@ class PaintedContig(object):
             differences = a.window_differences[i]
             classification = a.window_classifications[i]
             a_start, a_end = window
-            seq_start, seq_end = cigar_to_seq[a_start], cigar_to_seq[a_end-1]+1
+
+            seq_start, seq_end = cigar_to_seq[a_start], cigar_to_seq[a_end-1]
+            if seq_end < seq_start:
+                seq_start, seq_end = seq_end, seq_start
+            seq_end += 1
+
             seq_centre = (seq_start + seq_end) / 2
             points.append((seq_centre, differences))
 

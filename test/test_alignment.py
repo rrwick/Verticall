@@ -120,6 +120,12 @@ def test_cigar_to_contig_pos():
     assert verticall.alignment.cigar_to_contig_pos('==D==', 3, 7) == [3, 4, 5, 5, 6]
     assert verticall.alignment.cigar_to_contig_pos('=D===', 3, 7) == [3, 4, 4, 5, 6]
 
+    assert verticall.alignment.cigar_to_contig_pos('=====', 0, 5, '-') == [4, 3, 2, 1, 0]
+    assert verticall.alignment.cigar_to_contig_pos('=X=X=', 5, 10, '-') == [9, 8, 7, 6, 5]
+    assert verticall.alignment.cigar_to_contig_pos('==I==', 2, 7, '-') == [6, 5, 4, 3, 2]
+    assert verticall.alignment.cigar_to_contig_pos('==D==', 3, 7, '-') == [6, 5, 5, 4, 3]
+    assert verticall.alignment.cigar_to_contig_pos('=D===', 3, 7, '-') == [6, 5, 4, 4, 3]
+
 
 def test_get_difference_count_1():
     assert verticall.alignment.get_difference_count('==================================') == 0
