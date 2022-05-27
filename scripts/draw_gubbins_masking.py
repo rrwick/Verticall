@@ -51,12 +51,15 @@ def main():
     image = svgwrite.Drawing(args.image, profile='full')
     y_pos = 12
     for sample_name in names:
+        print(f'{sample_name}:')
         image.add(image.text(sample_name, insert=(97, y_pos+4), style='text-anchor:end',
                              font_size='12px'))
         image.add(image.line((100, y_pos), (500, y_pos), stroke=args.vertical_colour,
                              stroke_width=9))
+        sample_name = sample_name.replace('#', '_')
         if sample_name in masked_regions:
             for start, end in masked_regions[sample_name]:
+                print(f'  {start}-{end}')
                 image.add(image.line((100 + 400 * start / alignment_length, y_pos),
                                      (100 + 400 * end / alignment_length, y_pos),
                                      stroke=args.horizontal_colour, stroke_width=9))
