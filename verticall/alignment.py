@@ -22,7 +22,6 @@ from .intrange import IntRange
 from .log import log, section_header, explanation
 from .misc import get_fasta_size, get_n50, get_window_count, get_window_coverage, \
     get_difference_count
-from .paint import Paint
 
 
 def build_indices(args, assemblies):
@@ -247,26 +246,26 @@ class Alignment(object):
 
         for d in self.window_differences:
             if d < very_low:
-                self.window_classifications.append(Paint.HORIZONTAL)
+                self.window_classifications.append(2)  # 2 means horizontal
             elif d < low:
-                self.window_classifications.append(Paint.AMBIGUOUS)
+                self.window_classifications.append(3)  # 3 means ambiguous
             elif d > very_high:
-                self.window_classifications.append(Paint.HORIZONTAL)
+                self.window_classifications.append(2)  # 2 means horizontal
             elif d > high:
-                self.window_classifications.append(Paint.AMBIGUOUS)
+                self.window_classifications.append(3)  # 3 means ambiguous
             else:
-                self.window_classifications.append(Paint.VERTICAL)
+                self.window_classifications.append(1)  # 1 means vertical
 
         self.window_class_with_amb = self.window_classifications.copy()
         self.window_classifications = remove_ambiguous(self.window_classifications)
 
     def get_all_vertical_distances(self):
         return [d for i, d in enumerate(self.window_differences)
-                if self.window_classifications[i] == Paint.VERTICAL]
+                if self.window_classifications[i] == 1]  # 1 means vertical
 
     def get_all_horizontal_distances(self):
         return [d for i, d in enumerate(self.window_differences)
-                if self.window_classifications[i] == Paint.HORIZONTAL]
+                if self.window_classifications[i] == 2]  # 2 means horizontal
 
     def query_covered_bases(self):
         return self.query_end - self.query_start
@@ -300,19 +299,19 @@ class Alignment(object):
         """
         Returns a list of all ranges of the alignment which have been painted as vertical.
         """
-        return self.get_blocks(Paint.VERTICAL, include_ambiguous)
+        return self.get_blocks(1, include_ambiguous)  # 1 means vertical
 
     def get_horizontal_blocks(self, include_ambiguous=False):
         """
         Returns a list of all ranges of the alignment which have been painted as horizontal.
         """
-        return self.get_blocks(Paint.HORIZONTAL, include_ambiguous)
+        return self.get_blocks(2, include_ambiguous)  # 2 means horizontal
 
     def get_ambiguous_blocks(self, include_ambiguous=False):
         """
         Returns a list of all ranges of the alignment which have been painted as ambiguous.
         """
-        return self.get_blocks(Paint.AMBIGUOUS, include_ambiguous)
+        return self.get_blocks(3, include_ambiguous)  # 3 means ambiguous
 
     def get_blocks(self, classification, include_ambiguous=False):
         blocks = IntRange()
@@ -394,7 +393,10 @@ def compress_indels(cigar, cigar_to_contig=None):
     new_cigar, new_cigar_to_contig = [], []
     prev_c = None
     for c, i in zip(cigar, cigar_to_contig):
-        if (c == 'D' and prev_c == 'D') or (c == 'I' and prev_c == 'I'):
+        if c == '=':  # most common case, so first for performance
+            new_cigar.append(c)
+            new_cigar_to_contig.append(i)
+        elif (c == 'D' and prev_c == 'D') or (c == 'I' and prev_c == 'I'):
             new_cigar_to_contig[-1] = i
         else:
             new_cigar.append(c)
@@ -421,7 +423,7 @@ def remove_ambiguous(classifications):
 
         # Runs that span all windows are conservatively considered horizontal.
         if start == 0 and end == len(classifications):
-            new_classification = Paint.HORIZONTAL
+            new_classification = 2   # 2 means horizontal
 
         # Runs that begin at the start of the windows are defined by whatever follows them.
         elif start == 0:
@@ -439,7 +441,7 @@ def remove_ambiguous(classifications):
             if preceding == following:
                 new_classification = preceding
             else:
-                new_classification = Paint.HORIZONTAL
+                new_classification = 2   # 2 means horizontal
 
         for i in range(start, end):
             simplified_classifications[i] = new_classification
@@ -455,7 +457,7 @@ def find_ambiguous_runs(classifications):
     ambiguous_runs = []
     start, end = None, None
     for i, c in enumerate(classifications):
-        if c == Paint.AMBIGUOUS:
+        if c == 3:  # 3 means ambiguous
             if start is None:
                 start = i
             end = i+1

@@ -25,25 +25,6 @@ class AlignmentRole(enum.Enum):
     TARGET = 1
 
 
-class Paint(enum.Enum):
-    UNALIGNED = 0
-    VERTICAL = 1
-    HORIZONTAL = 2
-    AMBIGUOUS = 3
-
-    def __repr__(self):
-        if self == Paint.UNALIGNED:
-            return 'U'
-        elif self == Paint.VERTICAL:
-            return 'V'
-        elif self == Paint.HORIZONTAL:
-            return 'H'
-        elif self == Paint.AMBIGUOUS:
-            return '?'
-        else:
-            assert False
-
-
 def paint_alignments(alignments, thresholds, window_size):
     for a in alignments:
         a.paint_sliding_windows(thresholds)
@@ -171,7 +152,7 @@ class PaintedContig(object):
 
     def __init__(self, seq):
         self.length = len(seq)
-        self.paint = [Paint.UNALIGNED] * self.length
+        self.paint = [0] * self.length  # 0 means unaligned
         self.alignment_points = []
         self.vertical_blocks = None
         self.horizontal_blocks = None
@@ -194,19 +175,22 @@ class PaintedContig(object):
             seq_centre = (seq_start + seq_end) / 2
             points.append((seq_centre, differences))
 
-            if classification == Paint.VERTICAL:
+            if classification == 1:  # 1 means vertical
                 vertical_ranges.append((seq_start, seq_end))
-            elif classification == Paint.HORIZONTAL:
+            elif classification == 2:  # 2 means vertical
                 horizontal_ranges.append((seq_start, seq_end))
             else:
                 assert False
 
+        # Both vertical (1) and horizontal (2) paint over unaligned (3), and vertical paints over
+        # horizontal. I.e. vertical takes precedence, then horizontal, then unaligned.
         for start, end in horizontal_ranges:
             for i in range(start, end):
-                self.paint_position(i, Paint.HORIZONTAL)
+                if self.paint[i] != 1:  # 1 means vertical
+                    self.paint[i] = 2  # 2 means horizontal
         for start, end in vertical_ranges:
             for i in range(start, end):
-                self.paint_position(i, Paint.VERTICAL)
+                self.paint[i] = 1  # 1 means vertical
 
         self.alignment_points.append(points)
 
@@ -218,21 +202,12 @@ class PaintedContig(object):
                 max_differences = max(max_differences, max(differences))
         return max_differences
 
-    def paint_position(self, i, classification):
-        """
-        Paints a single position of the contig. Both VERTICAL and HORIZONTAL paint over UNALIGNED,
-        and VERTICAL paints over HORIZONTAL. I.e. VERTICAL takes precedence, then HORIZONTAL, then
-        UNALIGNED.
-        """
-        if self.paint[i] != Paint.VERTICAL:
-            self.paint[i] = classification
-
     def get_vertical_blocks(self):
         """
         Returns a list of all ranges of the contig which have been painted as vertical.
         """
         if self.vertical_blocks is None:
-            self.vertical_blocks = get_blocks(self.paint, Paint.VERTICAL)
+            self.vertical_blocks = get_blocks(self.paint, 1)  # 1 means vertical
         return self.vertical_blocks
 
     def get_horizontal_blocks(self):
@@ -240,7 +215,7 @@ class PaintedContig(object):
         Returns a list of all ranges of the contig which have been painted as horizontal.
         """
         if self.horizontal_blocks is None:
-            self.horizontal_blocks = get_blocks(self.paint, Paint.HORIZONTAL)
+            self.horizontal_blocks = get_blocks(self.paint, 2)  # 2 means horizontal
         return self.horizontal_blocks
 
     def get_unaligned_blocks(self):
@@ -248,7 +223,7 @@ class PaintedContig(object):
         Returns a list of all ranges of the contig which have been painted as unaligned.
         """
         if self.unaligned_blocks is None:
-            self.unaligned_blocks = get_blocks(self.paint, Paint.UNALIGNED)
+            self.unaligned_blocks = get_blocks(self.paint, 0)  # 0 means unaligned
         return self.unaligned_blocks
 
 

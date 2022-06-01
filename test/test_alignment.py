@@ -15,7 +15,6 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 import verticall.alignment
-import verticall.paint
 
 
 def test_get_expanded_cigar():
@@ -141,9 +140,9 @@ def test_get_difference_count_2():
 
 
 def test_find_ambiguous_runs():
-    h = verticall.paint.Paint.HORIZONTAL
-    v = verticall.paint.Paint.VERTICAL
-    a = verticall.paint.Paint.AMBIGUOUS
+    v = 1
+    h = 2
+    a = 3
     assert verticall.alignment.find_ambiguous_runs([h, h, h, h, h, h]) == []
     assert verticall.alignment.find_ambiguous_runs([v, v, v, v, v, v]) == []
     assert verticall.alignment.find_ambiguous_runs([h, h, a, h, h, h]) == [(2, 3)]
@@ -154,9 +153,9 @@ def test_find_ambiguous_runs():
 
 
 def test_remove_ambiguous():
-    h = verticall.paint.Paint.HORIZONTAL
-    v = verticall.paint.Paint.VERTICAL
-    a = verticall.paint.Paint.AMBIGUOUS
+    v = 1
+    h = 2
+    a = 3
     assert verticall.alignment.remove_ambiguous([h, h, h, h, h, h]) == [h, h, h, h, h, h]
     assert verticall.alignment.remove_ambiguous([h, h, a, a, a, h]) == [h, h, h, h, h, h]
     assert verticall.alignment.remove_ambiguous([h, h, a, h, a, h]) == [h, h, h, h, h, h]
