@@ -33,7 +33,7 @@ def build_indices(args, assemblies):
         log(f'0 / {len(assemblies)}', end='')
     for i, a in enumerate(assemblies):
         sample_name, assembly_filename = a
-        if not index_exists(args, sample_name):
+        if not index_exists(args.in_dir, sample_name, args.verbose):
             index_file = (args.in_dir / (sample_name + '.mmi')).resolve()
             command = ['minimap2']
             command += index_options
@@ -50,11 +50,10 @@ def build_indices(args, assemblies):
     log()
 
 
-def index_exists(args, sample_name):
-    index = args.in_dir / (sample_name + '.mmi')
-    # TODO: is there a way to check for malformed indices?
+def index_exists(directory, sample_name, verbose):
+    index = directory / (sample_name + '.mmi')
     exists = (index.is_file() and index.stat().st_size > 0)
-    if exists and args.verbose:
+    if exists and verbose:
         log(f'{index} already exists')
     return exists
 

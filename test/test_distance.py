@@ -15,7 +15,6 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 import pytest
-import statistics
 
 import verticall.distance
 

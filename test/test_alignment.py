@@ -14,7 +14,26 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 
+import pathlib
+import tempfile
+
 import verticall.alignment
+
+
+def test_index_exists():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_dir = pathlib.Path(temp_dir)
+
+        assert not verticall.alignment.index_exists(temp_dir, 'absent', True)
+
+        empty_index = temp_dir / 'empty.mmi'
+        open(empty_index, 'a').close()
+        assert not verticall.alignment.index_exists(temp_dir, 'empty', True)
+
+        good_index = temp_dir / 'good.mmi'
+        with open(good_index, 'wt') as f:
+            f.write('stuff')
+        assert verticall.alignment.index_exists(temp_dir, 'good', True)
 
 
 def test_get_expanded_cigar():
@@ -170,3 +189,28 @@ def test_remove_ambiguous():
     assert verticall.alignment.remove_ambiguous([h, h, a, a, v, v]) == [h, h, h, h, v, v]
     assert verticall.alignment.remove_ambiguous([h, a, a, a, a, v]) == [h, h, h, h, h, v]
     assert verticall.alignment.remove_ambiguous([a, a, a, a, a, a]) == [h, h, h, h, h, h]
+
+
+def test_set_up_sliding_windows():
+    """
+    CIGAR:            11=1X10=1X12=1X1=1X12=
+    simplified CIGAR: ===========X==========X============X=X============
+    windows:          ----------          ----------          ----------
+                           ----------          ----------
+                                ----------          ----------
+                                     ----------          ----------
+    """
+    a = verticall.alignment.Alignment('A\t1000\t50\t100\t+\t'
+                                      'C\t1000\t50\t100\t50\t50\tAS:i:50\t'
+                                      'cg:Z:11=1X10=1X12=1X1=1X12=')
+    assert a.expanded_cigar == '===========X==========X============X=X============'
+    assert a.simplified_cigar == '===========X==========X============X=X============'
+
+    a.set_up_sliding_windows(10, 5)
+    assert len(a.windows) == len(a.windows_no_overlap) == len(a.window_differences) == 9
+    assert a.windows == [(0, 10), (5, 15), (10, 20), (15, 25), (20, 30),
+                         (25, 35), (30, 40), (35, 45), (40, 50)]
+    assert a.windows_no_overlap == [(0, 7), (7, 12), (12, 17), (17, 22), (22, 27),
+                                    (27, 32), (32, 37), (37, 42), (42, 50)]
+    assert a.window_differences == [0, 1, 1, 1, 1, 0, 2, 2, 0]
+    assert a.get_max_differences() == 2
