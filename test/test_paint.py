@@ -21,3 +21,21 @@ def test_get_blocks():
     paint = [0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 0]
     assert verticall.paint.get_blocks(paint, 0) == [(0, 1), (4, 7), (8, 9), (11, 12)]
     assert verticall.paint.get_blocks(paint, 1) == [(1, 4), (7, 8), (9, 11)]
+    assert verticall.paint.get_blocks(paint, 2) == []
+
+    paint = [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+    assert verticall.paint.get_blocks(paint, 0) == [(0, 6)]
+    assert verticall.paint.get_blocks(paint, 1) == [(6, 12)]
+
+    paint = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    assert verticall.paint.get_blocks(paint, 0) == [(0, 12)]
+    assert verticall.paint.get_blocks(paint, 1) == []
+
+    paint = []
+    assert verticall.paint.get_blocks(paint, 0) == []
+    assert verticall.paint.get_blocks(paint, 1) == []
+
+    paint = ['A', 'A', 'B', 'C', 'C', 'A']
+    assert verticall.paint.get_blocks(paint, 'A') == [(0, 2), (5, 6)]
+    assert verticall.paint.get_blocks(paint, 'B') == [(2, 3)]
+    assert verticall.paint.get_blocks(paint, 'C') == [(3, 5)]

@@ -351,7 +351,7 @@ def cigar_to_contig_pos(cigar, start, end, strand='+'):
     i = start
     for c in cigar:
         cigar_to_contig.append(i)
-        if c == '=' or c == 'X' or c == 'I':
+        if c != 'D':  # c == '=' or c == 'X' or c == 'I'
             i += 1
     assert i == end
     if strand == '-':
@@ -392,15 +392,15 @@ def compress_indels(cigar, cigar_to_contig=None):
         return re.sub(r'I+', 'I', re.sub(r'D+', 'D', cigar))
     assert len(cigar) == len(cigar_to_contig)
     new_cigar, new_cigar_to_contig = [], []
+    prev_c = None
     for c, i in zip(cigar, cigar_to_contig):
-        if c == 'D' and len(new_cigar) > 0 and new_cigar[-1] == 'D':
-            new_cigar.pop()
-            new_cigar_to_contig.pop()
-        if c == 'I' and len(new_cigar) > 0 and new_cigar[-1] == 'I':
-            new_cigar.pop()
-            new_cigar_to_contig.pop()
-        new_cigar.append(c)
-        new_cigar_to_contig.append(i)
+        if (c == 'D' and prev_c == 'D') or (c == 'I' and prev_c == 'I'):
+            new_cigar_to_contig[-1] = i
+        else:
+            new_cigar.append(c)
+            new_cigar_to_contig.append(i)
+        prev_c = c
+    assert len(new_cigar) == len(new_cigar_to_contig)
     return ''.join(new_cigar), new_cigar_to_contig
 
 

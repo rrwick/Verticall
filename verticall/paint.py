@@ -17,7 +17,6 @@ If not, see <https://www.gnu.org/licenses/>.
 import enum
 
 from .distance import get_vertical_horizontal_distributions, get_distance
-from .intrange import IntRange
 from .misc import iterate_fasta, get_difference_count
 
 
@@ -174,12 +173,14 @@ class PaintedContig(object):
         self.length = len(seq)
         self.paint = [Paint.UNALIGNED] * self.length
         self.alignment_points = []
+        self.vertical_blocks = None
+        self.horizontal_blocks = None
+        self.unaligned_blocks = None
 
     def add_alignment(self, a, role):
         cigar_to_seq = a.cigar_to_query if role == AlignmentRole.QUERY else a.cigar_to_target
         points = []
-        vertical_ranges = IntRange()
-        horizontal_ranges = IntRange()
+        vertical_ranges, horizontal_ranges = [], []
         for i, window in enumerate(a.windows_no_overlap):
             differences = a.window_differences[i]
             classification = a.window_classifications[i]
@@ -194,16 +195,16 @@ class PaintedContig(object):
             points.append((seq_centre, differences))
 
             if classification == Paint.VERTICAL:
-                vertical_ranges.add_range(seq_start, seq_end)
+                vertical_ranges.append((seq_start, seq_end))
             elif classification == Paint.HORIZONTAL:
-                horizontal_ranges.add_range(seq_start, seq_end)
+                horizontal_ranges.append((seq_start, seq_end))
             else:
                 assert False
 
-        for start, end in horizontal_ranges.ranges:
+        for start, end in horizontal_ranges:
             for i in range(start, end):
                 self.paint_position(i, Paint.HORIZONTAL)
-        for start, end in vertical_ranges.ranges:
+        for start, end in vertical_ranges:
             for i in range(start, end):
                 self.paint_position(i, Paint.VERTICAL)
 
@@ -223,7 +224,6 @@ class PaintedContig(object):
         and VERTICAL paints over HORIZONTAL. I.e. VERTICAL takes precedence, then HORIZONTAL, then
         UNALIGNED.
         """
-        assert classification == Paint.VERTICAL or classification == Paint.HORIZONTAL
         if self.paint[i] != Paint.VERTICAL:
             self.paint[i] = classification
 
@@ -231,19 +231,25 @@ class PaintedContig(object):
         """
         Returns a list of all ranges of the contig which have been painted as vertical.
         """
-        return get_blocks(self.paint, Paint.VERTICAL)
+        if self.vertical_blocks is None:
+            self.vertical_blocks = get_blocks(self.paint, Paint.VERTICAL)
+        return self.vertical_blocks
 
     def get_horizontal_blocks(self):
         """
         Returns a list of all ranges of the contig which have been painted as horizontal.
         """
-        return get_blocks(self.paint, Paint.HORIZONTAL)
+        if self.horizontal_blocks is None:
+            self.horizontal_blocks = get_blocks(self.paint, Paint.HORIZONTAL)
+        return self.horizontal_blocks
 
     def get_unaligned_blocks(self):
         """
         Returns a list of all ranges of the contig which have been painted as unaligned.
         """
-        return get_blocks(self.paint, Paint.UNALIGNED)
+        if self.unaligned_blocks is None:
+            self.unaligned_blocks = get_blocks(self.paint, Paint.UNALIGNED)
+        return self.unaligned_blocks
 
 
 def get_blocks(paint, classification):

@@ -168,7 +168,7 @@ def process_all_pairs(args, assemblies, reference, table_file):
                 empty_results = True
             if len(table_lines) > 1:
                 multi_results = True
-            log('\n'.join(prepare_log_text(log_text, args.verbose)), end='\n\n')
+            log('\n'.join(prepare_log_text(log_text, args.verbose)))
             for table_line in table_lines:
                 table_file.write(table_line)
             table_file.flush()
