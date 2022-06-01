@@ -141,4 +141,3 @@ def test_check_assemblies():
     with pytest.raises(SystemExit) as e:
         verticall.pairwise.check_assemblies(assemblies, None)
     assert 'ambiguous' in str(e.value)
-
