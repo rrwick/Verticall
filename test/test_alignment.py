@@ -15,6 +15,7 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 import pathlib
+import pytest
 import tempfile
 
 import verticall.alignment
@@ -40,6 +41,24 @@ def test_get_expanded_cigar():
     assert verticall.alignment.get_expanded_cigar('5=') == '====='
     assert verticall.alignment.get_expanded_cigar('3=1I4=2D2=1X4=') == '===I====DD==X===='
     assert verticall.alignment.get_expanded_cigar('') == ''
+
+
+def test_bad_paf():
+    with pytest.raises(SystemExit) as e:
+        verticall.alignment.Alignment('not_a_paf_line')
+    assert 'PAF format' in str(e.value)
+
+
+def test_repr():
+    a = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'C\t1000\t60\t160\t100\t100\tAS:i:100\tcg:Z:100=')
+    assert str(a) == 'A:50-150(+), C:60-160 (100.000%)'
+
+
+def test_query_covered_bases():
+    a = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    assert a.query_covered_bases() == 100
 
 
 def test_overlaps_1():
@@ -88,6 +107,17 @@ def test_overlaps_4():
         assert a.overlaps(b, allowed_overlap)
         assert b.overlaps(a, allowed_overlap)
     for allowed_overlap in [5, 10, 100]:
+        assert not a.overlaps(b, allowed_overlap)
+        assert not b.overlaps(a, allowed_overlap)
+
+
+def test_overlaps_5():
+    # Different query sequence, so no overlap.
+    a = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    b = verticall.alignment.Alignment('B\t1000\t50\t150\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    for allowed_overlap in [0, 10, 20]:
         assert not a.overlaps(b, allowed_overlap)
         assert not b.overlaps(a, allowed_overlap)
 
@@ -191,15 +221,13 @@ def test_remove_ambiguous():
     assert verticall.alignment.remove_ambiguous([a, a, a, a, a, a]) == [h, h, h, h, h, h]
 
 
-def test_set_up_sliding_windows():
-    """
-    CIGAR:            11=1X10=1X12=1X1=1X12=
-    simplified CIGAR: ===========X==========X============X=X============
-    windows:          ----------          ----------          ----------
-                           ----------          ----------
-                                ----------          ----------
-                                     ----------          ----------
-    """
+def test_set_up_sliding_windows_1():
+    # CIGAR:            11=1X10=1X12=1X1=1X12=
+    # simplified CIGAR: ===========X==========X============X=X============
+    # windows:          ----------          ----------          ----------
+    #                        ----------          ----------
+    #                             ----------          ----------
+    #                                  ----------          ----------
     a = verticall.alignment.Alignment('A\t1000\t50\t100\t+\t'
                                       'C\t1000\t50\t100\t50\t50\tAS:i:50\t'
                                       'cg:Z:11=1X10=1X12=1X1=1X12=')
@@ -214,3 +242,95 @@ def test_set_up_sliding_windows():
                                     (27, 32), (32, 37), (37, 42), (42, 50)]
     assert a.window_differences == [0, 1, 1, 1, 1, 0, 2, 2, 0]
     assert a.get_max_differences() == 2
+
+
+def test_set_up_sliding_windows_2():
+    # Tests a sliding window too big for this alignment.
+    a = verticall.alignment.Alignment('A\t1000\t50\t100\t+\t'
+                                      'C\t1000\t50\t100\t50\t50\tAS:i:50\t'
+                                      'cg:Z:11=1X10=1X12=1X1=1X12=')
+    assert a.expanded_cigar == '===========X==========X============X=X============'
+    assert a.simplified_cigar == '===========X==========X============X=X============'
+
+    a.set_up_sliding_windows(100, 10)
+    assert len(a.windows) == len(a.windows_no_overlap) == len(a.window_differences) == 0
+    assert a.get_max_differences() == 0
+
+
+def test_paint_sliding_windows_1():
+    # CIGAR:            11=1X10=1X12=1X1=1X12=
+    # simplified CIGAR: ===========X==========X============X=X============
+    # windows:          ----------          ----------          ----------
+    #                        ----------          ----------
+    #                             ----------          ----------
+    #                                  ----------          ----------
+    a = verticall.alignment.Alignment('A\t1000\t50\t100\t+\t'
+                                      'C\t1000\t50\t100\t50\t50\tAS:i:50\t'
+                                      'cg:Z:11=1X10=1X12=1X1=1X12=')
+    a.set_up_sliding_windows(10, 5)
+    assert a.window_differences == [0, 1, 1, 1, 1, 0, 2, 2, 0]
+    thresholds = {'very_low': None, 'low': None, 'high': 1, 'very_high': 2}
+    a.paint_sliding_windows(thresholds)
+    assert a.window_class_with_amb == [1, 1, 1, 1, 1, 1, 3, 3, 1]
+    assert a.window_classifications == [1, 1, 1, 1, 1, 1, 1, 1, 1]
+    assert a.get_vertical_blocks(include_ambiguous=False) == [(0, 50)]
+    assert a.get_vertical_blocks(include_ambiguous=True) == [(0, 32), (42, 50)]
+    assert a.get_horizontal_blocks(include_ambiguous=False) == []
+    assert a.get_horizontal_blocks(include_ambiguous=True) == []
+    assert a.get_ambiguous_blocks(include_ambiguous=False) == []
+    assert a.get_ambiguous_blocks(include_ambiguous=True) == [(32, 42)]
+    assert a.get_all_vertical_distances() == [0, 1, 1, 1, 1, 0, 2, 2, 0]
+    assert a.get_all_horizontal_distances() == []
+
+
+def test_paint_sliding_windows_2():
+    # CIGAR:            11=1X10=1X12=3X12=
+    # simplified CIGAR: ===========X==========X============XXX============
+    # windows:          ----------          ----------          ----------
+    #                        ----------          ----------
+    #                             ----------          ----------
+    #                                  ----------          ----------
+    a = verticall.alignment.Alignment('A\t1000\t50\t100\t+\t'
+                                      'C\t1000\t50\t100\t50\t50\tAS:i:50\t'
+                                      'cg:Z:11=1X10=1X12=3X12=')
+    a.set_up_sliding_windows(10, 5)
+    assert a.window_differences == [0, 1, 1, 1, 1, 0, 3, 3, 0]
+    thresholds = {'very_low': None, 'low': None, 'high': 1, 'very_high': 2}
+    a.paint_sliding_windows(thresholds)
+    assert a.window_class_with_amb == [1, 1, 1, 1, 1, 1, 2, 2, 1]
+    assert a.window_classifications == [1, 1, 1, 1, 1, 1, 2, 2, 1]
+    assert a.get_vertical_blocks(include_ambiguous=False) == [(0, 32), (42, 50)]
+    assert a.get_vertical_blocks(include_ambiguous=True) == [(0, 32), (42, 50)]
+    assert a.get_horizontal_blocks(include_ambiguous=False) == [(32, 42)]
+    assert a.get_horizontal_blocks(include_ambiguous=True) == [(32, 42)]
+    assert a.get_ambiguous_blocks(include_ambiguous=False) == []
+    assert a.get_ambiguous_blocks(include_ambiguous=True) == []
+    assert a.get_all_vertical_distances() == [0, 1, 1, 1, 1, 0, 0]
+    assert a.get_all_horizontal_distances() == [3, 3]
+
+
+def test_paint_sliding_windows_3():
+    # CIGAR:            2=1X2=1X2=1X2=1X2=1X2=1X2=1X2=1X2=1X2=1X11=1X2=1X2=1X2=
+    # simplified CIGAR: ==X==X==X==X==X==X==X==X==X==X===========X==X==X==
+    # windows:          ----------          ----------          ----------
+    #                        ----------          ----------
+    #                             ----------          ----------
+    #                                  ----------          ----------
+    a = verticall.alignment.Alignment('A\t1000\t50\t100\t+\t'
+                                      'C\t1000\t50\t100\t50\t50\tAS:i:50\t'
+                                      'cg:Z:'
+                                      '2=1X2=1X2=1X2=1X2=1X2=1X2=1X2=1X2=1X2=1X11=1X2=1X2=1X2=')
+    a.set_up_sliding_windows(10, 5)
+    assert a.window_differences == [3, 4, 3, 3, 4, 2, 0, 2, 3]
+    thresholds = {'very_low': 1, 'low': 3, 'high': None, 'very_high': None}
+    a.paint_sliding_windows(thresholds)
+    assert a.window_class_with_amb == [1, 1, 1, 1, 1, 3, 2, 3, 1]
+    assert a.window_classifications == [1, 1, 1, 1, 1, 2, 2, 2, 1]
+    assert a.get_vertical_blocks(include_ambiguous=False) == [(0, 27), (42, 50)]
+    assert a.get_vertical_blocks(include_ambiguous=True) == [(0, 27), (42, 50)]
+    assert a.get_horizontal_blocks(include_ambiguous=False) == [(27, 42)]
+    assert a.get_horizontal_blocks(include_ambiguous=True) == [(32, 37)]
+    assert a.get_ambiguous_blocks(include_ambiguous=False) == []
+    assert a.get_ambiguous_blocks(include_ambiguous=True) == [(27, 32), (37, 42)]
+    assert a.get_all_vertical_distances() == [3, 4, 3, 3, 4, 3]
+    assert a.get_all_horizontal_distances() == [2, 0, 2]

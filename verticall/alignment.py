@@ -142,6 +142,12 @@ class Alignment(object):
         self.window_classifications = []  # Vertical/horizontal call for each window
         self.window_class_with_amb = []   # Vertical/horizontal/ambiguous call for each window
 
+    def __repr__(self):
+        return self.query_name + ':' + str(self.query_start) + '-' + str(self.query_end) + \
+               '(' + self.strand + '), ' + \
+               self.target_name + ':' + str(self.target_start) + '-' + str(self.target_end) + \
+               ' (' + ('%.3f' % self.percent_identity) + '%)'
+
     @staticmethod
     def read_paf_columns(paf_line):
         parts = paf_line.strip().split('\t')
@@ -268,12 +274,6 @@ class Alignment(object):
 
     def query_covered_bases(self):
         return self.query_end - self.query_start
-
-    def __repr__(self):
-        return self.query_name + ':' + str(self.query_start) + '-' + str(self.query_end) + \
-               '(' + self.strand + '), ' + \
-               self.target_name + ':' + str(self.target_start) + '-' + str(self.target_end) + \
-               ' (' + ('%.3f' % self.percent_identity) + '%)'
 
     def overlaps(self, other, allowed_overlap):
         """
