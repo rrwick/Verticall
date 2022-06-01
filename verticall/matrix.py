@@ -130,7 +130,7 @@ def get_distance_from_line_parts(parts, column_index):
     try:
         distance = parts[column_index]
     except IndexError:
-        sys.exit(f'Error: column {column_index+1} missing from tsv file')
+        sys.exit(f'Error: column {column_index+1} missing from TSV file')
     try:
         if distance == '':
             return None

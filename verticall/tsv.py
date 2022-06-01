@@ -1,5 +1,5 @@
 """
-This module contains some miscellaneous functions related to reading and parsing the tsv file made
+This module contains some miscellaneous functions related to reading and parsing the TSV file made
 by Verticall pairwise.
 
 Copyright 2022 Ryan Wick (rrwick@gmail.com)

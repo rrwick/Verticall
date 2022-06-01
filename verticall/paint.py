@@ -68,8 +68,10 @@ def get_r_over_m(alignments):
             v_differences += get_difference_count(a.simplified_cigar[start:end])
         for start, end in a.get_horizontal_blocks():
             h_differences += get_difference_count(a.simplified_cigar[start:end])
-    if v_differences == 0:
-        return 0.0
+    if h_differences == 0 and v_differences == 0:
+        return 'undef'
+    elif h_differences > 0 and v_differences == 0:
+        return 'inf'
     else:
         return h_differences / v_differences
 

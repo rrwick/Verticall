@@ -303,7 +303,7 @@ def get_alignment_positions(aligned_ref_seq, ref_length):
     positions[ref_pos] = len(aligned_ref_seq)
     if ref_pos != ref_length:
         sys.exit('Error: length of reference sequence in alignment does not match length of '
-                 'reference sequence in tsv file - have regions been masked with dashes?')
+                 'reference sequence in TSV file - have regions been masked with dashes?')
     return positions
 
 

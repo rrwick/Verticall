@@ -389,6 +389,8 @@ def get_table_line(name_a, name_b, alignment_count, n50_alignment_length, aligne
     vertical_frac_b, horizontal_frac_b, unaligned_frac_b = painted_b.get_fractions()
     vertical_regions_a, horizontal_regions_a, unaligned_regions_a = painted_a.get_regions()
     vertical_regions_b, horizontal_regions_b, unaligned_regions_b = painted_b.get_regions()
+    if isinstance(r_over_m, float):
+        r_over_m = f'{r_over_m:.9f}'
     return (f'{name_a}\t'
             f'{name_b}\t'
             f'{alignment_count}\t'
@@ -408,7 +410,7 @@ def get_table_line(name_a, name_b, alignment_count, n50_alignment_length, aligne
             f'{mean_vert_window_distance:.9f}\t'
             f'{median_vert_window_distance:.9f}\t'
             f'{mean_vert_distance:.9f}\t'
-            f'{r_over_m:.9f}\t'
+            f'{r_over_m}\t'
             f'{100.0 * vertical_frac_a:.2f}%\t'
             f'{100.0 * horizontal_frac_a:.2f}%\t'
             f'{100.0 * unaligned_frac_a:.2f}%\t'
