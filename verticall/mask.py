@@ -81,7 +81,6 @@ def load_regions(filename, ref_name, multi):
             else:  # seen this assembly already
                 if multi == 'first':
                     pass
-                # TODO: add --multi exclude logic
                 elif multi == 'low':
                     if distance < distances[assembly_name]:
                         distances[assembly_name] = distance

@@ -17,6 +17,7 @@ If not, see <https://www.gnu.org/licenses/>.
 import collections
 import pathlib
 import pytest
+import tempfile
 
 import verticall.mask
 
@@ -107,6 +108,18 @@ def test_drop_invariant_positions():
                                                                   'C': ''}
 
 
+def test_finalise():
+    sequences = {'A': 'AACtACG-CCTA',
+                 'B': 'AGCtACg-CCGA',
+                 'C': 'AGCNNNG-CCTA'}
+    assert verticall.mask.finalise(sequences, False) == {'A': 'AACtACGCCTA',
+                                                         'B': 'AGCtACgCCGA',
+                                                         'C': 'AGCNNNGCCTA'}
+    assert verticall.mask.finalise(sequences, True) == {'A': 'AT',
+                                                        'B': 'GG',
+                                                        'C': 'GT'}
+
+
 def test_count_real_bases():
     assert verticall.mask.count_real_bases({'N'}) == 0
     assert verticall.mask.count_real_bases({'A'}) == 1
@@ -116,26 +129,192 @@ def test_count_real_bases():
     assert verticall.mask.count_real_bases({'A', 'N', 'C', '-', 'G', 'X', 'T'}) == 4
 
 
-def test_load_regions():
+def test_check_tsv_file_1():
     in_tsv = pathlib.Path('test/test_mask/pairwise.tsv')
+    ref_name = verticall.mask.check_tsv_file(in_tsv, 'ref')
+    assert ref_name == 'ref'
 
+
+def test_check_tsv_file_2():
+    # Fails to auto-determine reference name because there are two names in column 1.
+    in_tsv = pathlib.Path('test/test_mask/pairwise.tsv')
+    with pytest.raises(SystemExit) as e:
+        verticall.mask.check_tsv_file(in_tsv, None)
+    assert 'could not automatically determine the reference name' in str(e.value)
+
+
+def test_check_tsv_file_3():
+    # Succeeds in auto-determining reference name because there is only one name in column 1.
+    in_tsv = pathlib.Path('test/test_mask/unambiguous_ref.tsv')
+    ref_name = verticall.mask.check_tsv_file(in_tsv, None)
+    assert ref_name == 'ref'
+
+
+def test_load_regions_1():
+    in_tsv = pathlib.Path('test/test_mask/pairwise.tsv')
+    data, ref_name, ref_length, sample_names = verticall.mask.load_regions(in_tsv, 'ref', 'first')
+    assert ref_name == 'ref'
+    assert ref_length == 30
+    assert sample_names == ['1', '2', '3', '4']
+    assert data['1'] == ([(0, 10), (20, 30)], [(10, 20)], [])
+    assert data['2'] == ([(0, 11), (21, 30)], [(11, 20)], [(20, 21)])
+    assert data['3'] == ([(0, 12), (22, 30)], [(12, 20)], [(20, 22)])
+    assert data['4'] == ([(0, 10)], [(10, 30)], [])
+
+
+def test_load_regions_2():
+    in_tsv = pathlib.Path('test/test_mask/pairwise.tsv')
     data, ref_name, ref_length, sample_names = verticall.mask.load_regions(in_tsv, 'ref', 'exclude')
     assert ref_name == 'ref'
-    assert ref_length == 3000
+    assert ref_length == 30
     assert sample_names == ['1', '2', '3']
-    assert data['1'] == ([(0, 1000), (2000, 3000)], [(1000, 2000)], [])
-    assert data['2'] == ([(0, 1100), (2100, 3000)], [(1100, 2000)], [(2000, 2100)])
-    assert data['3'] == ([(0, 1200), (2200, 3000)], [(1200, 2000)], [(2000, 2200)])
+    assert data['1'] == ([(0, 10), (20, 30)], [(10, 20)], [])
+    assert data['2'] == ([(0, 11), (21, 30)], [(11, 20)], [(20, 21)])
+    assert data['3'] == ([(0, 12), (22, 30)], [(12, 20)], [(20, 22)])
+    assert '4' not in data
 
-    data, ref_name, ref_length, sample_names = verticall.mask.load_regions(in_tsv, 'ref', 'first')
-    assert sample_names == ['1', '2', '3', '4']
-    assert data['4'] == ([(0, 1000)], [(1000, 3000)], [])
 
+def test_load_regions_3():
+    in_tsv = pathlib.Path('test/test_mask/pairwise.tsv')
     data, ref_name, ref_length, sample_names = verticall.mask.load_regions(in_tsv, 'ref', 'low')
-    assert data['4'] == ([(1000, 2000)], [(0, 1000), (2000, 3000)], [])
+    assert ref_name == 'ref'
+    assert ref_length == 30
+    assert data['1'] == ([(0, 10), (20, 30)], [(10, 20)], [])
+    assert data['2'] == ([(0, 11), (21, 30)], [(11, 20)], [(20, 21)])
+    assert data['3'] == ([(0, 12), (22, 30)], [(12, 20)], [(20, 22)])
+    assert data['4'] == ([(10, 20)], [(0, 10), (20, 30)], [])
 
+
+def test_load_regions_4():
+    in_tsv = pathlib.Path('test/test_mask/pairwise.tsv')
     data, ref_name, ref_length, sample_names = verticall.mask.load_regions(in_tsv, 'ref', 'high')
-    assert data['4'] == ([(2000, 3000)], [(0, 2000)], [])
+    assert ref_name == 'ref'
+    assert ref_length == 30
+    assert data['1'] == ([(0, 10), (20, 30)], [(10, 20)], [])
+    assert data['2'] == ([(0, 11), (21, 30)], [(11, 20)], [(20, 21)])
+    assert data['3'] == ([(0, 12), (22, 30)], [(12, 20)], [(20, 22)])
+    assert data['4'] == ([(20, 30)], [(0, 20)], [])
+
+
+def test_load_regions_5():
+    in_tsv = pathlib.Path('test/test_mask/pairwise.tsv')
+    with pytest.raises(SystemExit) as e:
+        verticall.mask.load_regions(in_tsv, 'bad_ref_name', 'first')
+    assert 'reference-to-assembly pairwise comparisons found' in str(e.value)
+
+
+def test_load_regions_6():
+    in_tsv = pathlib.Path('test/test_mask/multicontig_ref.tsv')
+    with pytest.raises(SystemExit) as e:
+        verticall.mask.load_regions(in_tsv, 'ref', 'first')
+    assert 'reference genome has more than one contig name' in str(e.value)
+
+
+def test_load_pseudo_alignment_1():
+    in_align = pathlib.Path('test/test_mask/alignment.fasta')
+    sample_names = ['1', '2', '3', '4']
+    sequences, sample_names = verticall.mask.load_pseudo_alignment(in_align, 'ref', sample_names)
+    assert sample_names == ['1', '2', '3', '4']
+    assert sequences['ref'] == 'GTACGCATCTCTTC--TCTGTAGCAATGAGAT'
+    assert sequences['1'] ==   'GTAcnnatCTCTTCAATCTGTAGCAATGAGAT'
+    assert sequences['2'] ==   'GTACGCATCTCTTC--TCtgtagcaATNNNAT'
+    assert sequences['3'] ==   'GTACGCATctcttc--tcTGTAGCAATGA---'
+    assert sequences['4'] ==   'GTA-----CTCTTC--TCTGTAgcaatgagAT'
+
+
+def test_load_pseudo_alignment_2():
+    in_align = pathlib.Path('test/test_mask/alignment.fasta')
+    sample_names = ['A', 'B', 'C', 'D']
+    with pytest.raises(SystemExit) as e:
+        verticall.mask.load_pseudo_alignment(in_align, 'bad_ref_name', sample_names)
+    assert 'could not find reference sequence' in str(e.value)
+
+
+def test_load_pseudo_alignment_3():
+    in_align = pathlib.Path('test/test_mask/empty.fasta')
+    sample_names = ['A', 'B', 'C', 'D']
+    with pytest.raises(SystemExit) as e:
+        verticall.mask.load_pseudo_alignment(in_align, 'ref', sample_names)
+    assert 'no sequences could be loaded' in str(e.value)
+
+
+def test_load_pseudo_alignment_4():
+    in_align = pathlib.Path('test/test_mask/alignment.fasta')
+    sample_names = ['A', 'B', 'C', 'D']
+    with pytest.raises(SystemExit) as e:
+        verticall.mask.load_pseudo_alignment(in_align, 'ref', sample_names)
+    assert 'no sample names in common' in str(e.value)
+
+
+def test_load_pseudo_alignment_5():
+    in_align = pathlib.Path('test/test_mask/different_lengths.fasta')
+    sample_names = ['A', 'B', 'C', 'D']
+    with pytest.raises(SystemExit) as e:
+        verticall.mask.load_pseudo_alignment(in_align, 'ref', sample_names)
+    assert 'must be the same length' in str(e.value)
+
+
+def test_mask_sequences_1():
+    in_tsv = pathlib.Path('test/test_mask/pairwise.tsv')
+    in_align = pathlib.Path('test/test_mask/alignment.fasta')
+    data, ref_name, ref_length, sample_names = verticall.mask.load_regions(in_tsv, 'ref', 'first')
+    sequences, sample_names = verticall.mask.load_pseudo_alignment(in_align, ref_name, sample_names)
+    masked_sequences = \
+        verticall.mask.mask_sequences(data, sequences, ref_name, ref_length, sample_names,
+                                      'N', '-', None, '#4859a0', '#c47e7e', '#c9c9c9')
+    assert list(masked_sequences.keys()) == ['ref', '1', '2', '3', '4']
+    assert masked_sequences['ref'] == 'GTACGCATCTCTTC--TCTGTAGCAATGAGAT'
+    assert masked_sequences['1'] ==   'GTAcnnatCTNNNNNNNNNNNNGCAATGAGAT'
+    assert masked_sequences['2'] ==   'GTACGCATCTCNNNNNNNNNNN-caATNNNAT'
+    assert masked_sequences['3'] ==   'GTACGCATctctNNNNNNNNNN--AATGA---'
+    assert masked_sequences['4'] ==   'GTA-----CTNNNNNNNNNNNNNNNNNNNNNN'
+
+
+def test_mask_sequences_2():
+    in_tsv = pathlib.Path('test/test_mask/pairwise.tsv')
+    in_align = pathlib.Path('test/test_mask/alignment.fasta')
+    data, ref_name, ref_length, sample_names = verticall.mask.load_regions(in_tsv, 'ref', 'exclude')
+    sequences, sample_names = verticall.mask.load_pseudo_alignment(in_align, ref_name, sample_names)
+    masked_sequences = \
+        verticall.mask.mask_sequences(data, sequences, ref_name, ref_length, sample_names,
+                                      'N', '-', None, '#4859a0', '#c47e7e', '#c9c9c9')
+    assert list(masked_sequences.keys()) == ['ref', '1', '2', '3']
+    assert masked_sequences['ref'] == 'GTACGCATCTCTTC--TCTGTAGCAATGAGAT'
+    assert masked_sequences['1'] ==   'GTAcnnatCTNNNNNNNNNNNNGCAATGAGAT'
+    assert masked_sequences['2'] ==   'GTACGCATCTCNNNNNNNNNNN-caATNNNAT'
+    assert masked_sequences['3'] ==   'GTACGCATctctNNNNNNNNNN--AATGA---'
+
+
+def test_mask_sequences_3():
+    in_tsv = pathlib.Path('test/test_mask/pairwise.tsv')
+    in_align = pathlib.Path('test/test_mask/alignment.fasta')
+    data, ref_name, ref_length, sample_names = verticall.mask.load_regions(in_tsv, 'ref', 'low')
+    sequences, sample_names = verticall.mask.load_pseudo_alignment(in_align, ref_name, sample_names)
+    masked_sequences = \
+        verticall.mask.mask_sequences(data, sequences, ref_name, ref_length, sample_names,
+                                      'N', '-', None, '#4859a0', '#c47e7e', '#c9c9c9')
+    assert list(masked_sequences.keys()) == ['ref', '1', '2', '3', '4']
+    assert masked_sequences['ref'] == 'GTACGCATCTCTTC--TCTGTAGCAATGAGAT'
+    assert masked_sequences['1'] ==   'GTAcnnatCTNNNNNNNNNNNNGCAATGAGAT'
+    assert masked_sequences['2'] ==   'GTACGCATCTCNNNNNNNNNNN-caATNNNAT'
+    assert masked_sequences['3'] ==   'GTACGCATctctNNNNNNNNNN--AATGA---'
+    assert masked_sequences['4'] ==   'NNNNNNNNNNCTTC--TCTGTANNNNNNNNNN'
+
+
+def test_mask_sequences_4():
+    in_tsv = pathlib.Path('test/test_mask/pairwise.tsv')
+    in_align = pathlib.Path('test/test_mask/alignment.fasta')
+    data, ref_name, ref_length, sample_names = verticall.mask.load_regions(in_tsv, 'ref', 'high')
+    sequences, sample_names = verticall.mask.load_pseudo_alignment(in_align, ref_name, sample_names)
+    masked_sequences = \
+        verticall.mask.mask_sequences(data, sequences, ref_name, ref_length, sample_names,
+                                      'N', '-', None, '#4859a0', '#c47e7e', '#c9c9c9')
+    assert list(masked_sequences.keys()) == ['ref', '1', '2', '3', '4']
+    assert masked_sequences['ref'] == 'GTACGCATCTCTTC--TCTGTAGCAATGAGAT'
+    assert masked_sequences['1'] ==   'GTAcnnatCTNNNNNNNNNNNNGCAATGAGAT'
+    assert masked_sequences['2'] ==   'GTACGCATCTCNNNNNNNNNNN-caATNNNAT'
+    assert masked_sequences['3'] ==   'GTACGCATctctNNNNNNNNNN--AATGA---'
+    assert masked_sequences['4'] ==   'NNNNNNNNNNNNNNNNNNNNNNgcaatgagAT'
 
 
 def test_get_ref_length():
