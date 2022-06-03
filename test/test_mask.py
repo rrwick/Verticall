@@ -70,21 +70,21 @@ def test_drop_empty_positions():
     sequences = {'A': 'agcTACGACCTA',
                  'B': 'agcTACG-CcTA',
                  'C': 'agcNNNGACcTA'}
-    assert verticall.mask.drop_empty_positions(sequences) == {'A': 'agcTACGACCTA',
-                                                              'B': 'agcTACG-CcTA',
-                                                              'C': 'agcNNNGACcTA'}
+    assert verticall.mask.drop_gap_positions(sequences) == {'A': 'agcTACGACCTA',
+                                                            'B': 'agcTACG-CcTA',
+                                                            'C': 'agcNNNGACcTA'}
     sequences = {'A': 'AGCtACG-CCTA',
                  'B': 'AGCtACg-CCTA',
                  'C': 'AGCNNNG-CCTA'}
-    assert verticall.mask.drop_empty_positions(sequences) == {'A': 'AGCtACGCCTA',
-                                                              'B': 'AGCtACgCCTA',
-                                                              'C': 'AGCNNNGCCTA'}
+    assert verticall.mask.drop_gap_positions(sequences) == {'A': 'AGCtACGCCTA',
+                                                            'B': 'AGCtACgCCTA',
+                                                            'C': 'AGCNNNGCCTA'}
     sequences = {'A': 'AGNT-CNACN-A',
                  'B': 'AGNT-C--C--A',
                  'C': 'AGNNNNG-C--A'}
-    assert verticall.mask.drop_empty_positions(sequences) == {'A': 'AGTCNACA',
-                                                              'B': 'AGTC--CA',
-                                                              'C': 'AGNNG-CA'}
+    assert verticall.mask.drop_gap_positions(sequences) == {'A': 'AGNT-CNACNA',
+                                                            'B': 'AGNT-C--C-A',
+                                                            'C': 'AGNNNNG-C-A'}
 
 
 def test_drop_invariant_positions():

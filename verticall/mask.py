@@ -308,7 +308,7 @@ def get_alignment_positions(aligned_ref_seq, ref_length):
 
 def finalise(masked_sequences, exclude_invariant):
     section_header('Finalising sequences')
-    masked_sequences = drop_empty_positions(masked_sequences)
+    masked_sequences = drop_gap_positions(masked_sequences)
     if exclude_invariant:
         masked_sequences = drop_invariant_positions(masked_sequences)
     log()
@@ -326,18 +326,20 @@ def save_to_file(masked_sequences, filename):
     log()
 
 
-def drop_empty_positions(sequences):
+def drop_gap_positions(sequences):
     """
-    Returns an alignment where any columns that consist entirely of non-base characters are removed.
+    Returns an alignment where any columns that consist entirely of gaps are removed
     """
     alignment_length = get_alignment_length(sequences)
     positions_to_remove = set()
     for i in range(alignment_length):
-        bases_at_pos = {seq[i].upper() for seq in sequences.values()}
-        if 'A' not in bases_at_pos and 'C' not in bases_at_pos and 'G' not in bases_at_pos \
-                and 'T' not in bases_at_pos:
+        for seq in sequences.values():
+            base = seq[i].upper()
+            if base != '-':
+                break
+        else:  # no break
             positions_to_remove.add(i)
-    log(f'{len(positions_to_remove):,} empty positions '
+    log(f'{len(positions_to_remove):,} all-gap positions '
         f'({100.0 * len(positions_to_remove)/alignment_length:.3}%) removed from pseudo-alignment')
     return drop_positions(sequences, positions_to_remove)
 
@@ -349,11 +351,12 @@ def drop_invariant_positions(sequences):
     alignment_length = get_alignment_length(sequences)
     positions_to_remove = set()
     for i in range(alignment_length):
-        bases_at_pos = {seq[i].upper() for seq in sequences.values()}
+        bases_at_pos = {seq[i] for seq in sequences.values()}
         if count_real_bases(bases_at_pos) < 2:
             positions_to_remove.add(i)
     log(f'{len(positions_to_remove):,} invariant positions '
         f'({100.0 * len(positions_to_remove)/alignment_length:.3}%) removed from pseudo-alignment')
+    # TODO: display what the invariant positions were (counts for A, C, G, T and ambiguous)
     return drop_positions(sequences, positions_to_remove)
 
 
@@ -375,12 +378,12 @@ def drop_positions(sequences, positions_to_remove):
 
 def count_real_bases(base_set):
     count = 0
-    if 'A' in base_set:
+    if 'A' in base_set or 'a' in base_set:
         count += 1
-    if 'C' in base_set:
+    if 'C' in base_set or 'c' in base_set:
         count += 1
-    if 'G' in base_set:
+    if 'G' in base_set or 'g' in base_set:
         count += 1
-    if 'T' in base_set:
+    if 'T' in base_set or 't' in base_set:
         count += 1
     return count
