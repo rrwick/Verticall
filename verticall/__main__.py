@@ -276,8 +276,12 @@ def mask_subparser(subparsers):
                                     'use None to leave unaligned regions unmasked)')
     settings_args.add_argument('--exclude_invariant', action='store_true',
                                help='Only include variant sites in the output alignment (default: '
-                                    'include both variant and invariant sites in output alignment)')
-    # TODO: add --exclude_reference
+                                    'include both variant and invariant sites in the output '
+                                    'alignment)')
+    settings_args.add_argument('--exclude_reference', action='store_true',
+                               help='Do not include the reference sequence in the output '
+                                    'alignment (default: include the reference sequence in the '
+                                    'output alignment)')
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,

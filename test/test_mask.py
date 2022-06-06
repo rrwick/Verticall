@@ -118,12 +118,25 @@ def test_finalise():
     sequences = {'A': 'AACtACG-CCTA',
                  'B': 'AGCtACg-CCGA',
                  'C': 'AGCNNNG-CCTA'}
-    assert verticall.mask.finalise(sequences, False) == {'A': 'AACtACGCCTA',
-                                                         'B': 'AGCtACgCCGA',
-                                                         'C': 'AGCNNNGCCTA'}
-    assert verticall.mask.finalise(sequences, True) == {'A': 'AT',
-                                                        'B': 'GG',
-                                                        'C': 'GT'}
+    assert verticall.mask.finalise(sequences, 'A', False, False) == {'A': 'AACtACGCCTA',
+                                                                     'B': 'AGCtACgCCGA',
+                                                                     'C': 'AGCNNNGCCTA'}
+    sequences = {'A': 'AACtACG-CCTA',
+                 'B': 'AGCtACg-CCGA',
+                 'C': 'AGCNNNG-CCTA'}
+    assert verticall.mask.finalise(sequences, 'A', False, True) == {'A': 'AT',
+                                                                    'B': 'GG',
+                                                                    'C': 'GT'}
+    sequences = {'A': 'AACtACG-CCTA',
+                 'B': 'AGCtACg-CCGA',
+                 'C': 'AGCNNNG-CCTA'}
+    assert verticall.mask.finalise(sequences, 'A', True, False) == {'B': 'AGCtACgCCGA',
+                                                                    'C': 'AGCNNNGCCTA'}
+    sequences = {'A': 'AACtACG-CCTA',
+                 'B': 'AGCtACg-CCGA',
+                 'C': 'AGCNNNG-CCTA'}
+    assert verticall.mask.finalise(sequences, 'A', True, True) == {'B': 'G',
+                                                                   'C': 'T'}
 
 
 def test_count_real_bases():

@@ -28,7 +28,8 @@ def mask(args):
     masked_sequences = mask_sequences(data, sequences, ref_name, ref_length, sample_names,
                                       args.h_char, args.u_char, args.image, args.vertical_colour,
                                       args.horizontal_colour, args.unaligned_colour)
-    masked_sequences = finalise(masked_sequences, args.exclude_invariant)
+    masked_sequences = finalise(masked_sequences, ref_name, args.exclude_reference,
+                                args.exclude_invariant)
     save_to_file(masked_sequences, args.out_alignment)
     finished_message()
 
@@ -306,11 +307,16 @@ def get_alignment_positions(aligned_ref_seq, ref_length):
     return positions
 
 
-def finalise(masked_sequences, exclude_invariant):
+def finalise(masked_sequences, ref_name, exclude_reference, exclude_invariant):
     section_header('Finalising sequences')
+    assert ref_name in masked_sequences
+    if exclude_reference:
+        del masked_sequences[ref_name]
     masked_sequences = drop_gap_positions(masked_sequences)
     if exclude_invariant:
         masked_sequences = drop_invariant_positions(masked_sequences)
+    log(f'Final pseudo-alignment length: {get_alignment_length(masked_sequences)}')
+    log()
     return masked_sequences
 
 
