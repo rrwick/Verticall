@@ -311,7 +311,6 @@ def finalise(masked_sequences, exclude_invariant):
     masked_sequences = drop_gap_positions(masked_sequences)
     if exclude_invariant:
         masked_sequences = drop_invariant_positions(masked_sequences)
-    log()
     return masked_sequences
 
 
@@ -341,6 +340,7 @@ def drop_gap_positions(sequences):
             positions_to_remove.add(i)
     log(f'{len(positions_to_remove):,} all-gap positions '
         f'({100.0 * len(positions_to_remove)/alignment_length:.3}%) removed from pseudo-alignment')
+    log()
     return drop_positions(sequences, positions_to_remove)
 
 
@@ -350,13 +350,38 @@ def drop_invariant_positions(sequences):
     """
     alignment_length = get_alignment_length(sequences)
     positions_to_remove = set()
+    a, c, g, t, n = 0, 0, 0, 0, 0
     for i in range(alignment_length):
         bases_at_pos = {seq[i] for seq in sequences.values()}
-        if count_real_bases(bases_at_pos) < 2:
+        real_base_count = count_real_bases(bases_at_pos)
+        if real_base_count == 1:
             positions_to_remove.add(i)
-    log(f'{len(positions_to_remove):,} invariant positions '
-        f'({100.0 * len(positions_to_remove)/alignment_length:.3}%) removed from pseudo-alignment')
-    # TODO: display what the invariant positions were (counts for A, C, G, T and ambiguous)
+            if 'A' in bases_at_pos or 'a' in bases_at_pos:
+                a += 1
+            elif 'C' in bases_at_pos or 'c' in bases_at_pos:
+                c += 1
+            elif 'G' in bases_at_pos or 'g' in bases_at_pos:
+                g += 1
+            elif 'T' in bases_at_pos or 't' in bases_at_pos:
+                t += 1
+            else:
+                assert False
+        elif real_base_count == 0:
+            positions_to_remove.add(i)
+            n += 1
+    assert a + c + g + t + n == len(positions_to_remove)
+    if not positions_to_remove:
+        log(f'no invariant positions removed from pseudo-alignment')
+    else:
+        percentage = 100.0 * len(positions_to_remove)/alignment_length
+        log(f'{len(positions_to_remove):,} invariant positions ({percentage:.3}%) removed from '
+            f'pseudo-alignment:')
+        log(f'  A: {a:,}')
+        log(f'  C: {c:,}')
+        log(f'  G: {g:,}')
+        log(f'  T: {t:,}')
+        log(f'  N: {n:,}')
+    log()
     return drop_positions(sequences, positions_to_remove)
 
 

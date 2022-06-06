@@ -277,6 +277,7 @@ def mask_subparser(subparsers):
     settings_args.add_argument('--exclude_invariant', action='store_true',
                                help='Only include variant sites in the output alignment (default: '
                                     'include both variant and invariant sites in output alignment)')
+    # TODO: add --exclude_reference
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,

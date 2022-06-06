@@ -106,6 +106,12 @@ def test_drop_invariant_positions():
     assert verticall.mask.drop_invariant_positions(sequences) == {'A': '',
                                                                   'B': '',
                                                                   'C': ''}
+    sequences = {'A': 'NNNnnCGAcctA',
+                 'B': 'nnNNNCGACGtA',
+                 'C': 'nNnNnCGCcCtA'}
+    assert verticall.mask.drop_invariant_positions(sequences) == {'A': 'Ac',
+                                                                  'B': 'AG',
+                                                                  'C': 'CC'}
 
 
 def test_finalise():
