@@ -44,10 +44,40 @@ def drop_invariant_positions(sequences):
     """
     alignment_length = get_alignment_length(sequences)
     positions_to_remove = set()
+    a, c, g, t, n = 0, 0, 0, 0, 0
+    print(f'0 / {alignment_length:,}', file=sys.stderr, end='')
     for i in range(alignment_length):
-        bases_at_pos = {seq[i].upper() for seq in sequences.values()}
-        if count_real_bases(bases_at_pos) < 2:
+        print(f'\r{i+1:,} / {alignment_length:,}', file=sys.stderr, end='')
+        bases_at_pos = {seq[i] for seq in sequences.values()}
+        real_base_count = count_real_bases(bases_at_pos)
+        if real_base_count == 1:
             positions_to_remove.add(i)
+            if 'A' in bases_at_pos or 'a' in bases_at_pos:
+                a += 1
+            elif 'C' in bases_at_pos or 'c' in bases_at_pos:
+                c += 1
+            elif 'G' in bases_at_pos or 'g' in bases_at_pos:
+                g += 1
+            elif 'T' in bases_at_pos or 't' in bases_at_pos:
+                t += 1
+            else:
+                assert False
+        elif real_base_count == 0:
+            positions_to_remove.add(i)
+            n += 1
+    print('\n', file=sys.stderr)
+    assert a + c + g + t + n == len(positions_to_remove)
+    if not positions_to_remove:
+        print(f'no invariant positions removed from pseudo-alignment', file=sys.stderr)
+    else:
+        percentage = 100.0 * len(positions_to_remove)/alignment_length
+        print(f'{len(positions_to_remove):,} invariant positions ({percentage:.3}%) removed from '
+              f'pseudo-alignment:', file=sys.stderr)
+        print(f'      A: {a:,}', file=sys.stderr)
+        print(f'      C: {c:,}', file=sys.stderr)
+        print(f'      G: {g:,}', file=sys.stderr)
+        print(f'      T: {t:,}', file=sys.stderr)
+        print(f'  other: {n:,}', file=sys.stderr)
     return drop_positions(sequences, positions_to_remove)
 
 
@@ -69,13 +99,13 @@ def drop_positions(sequences, positions_to_remove):
 
 def count_real_bases(base_set):
     count = 0
-    if 'A' in base_set:
+    if 'A' in base_set or 'a' in base_set:
         count += 1
-    if 'C' in base_set:
+    if 'C' in base_set or 'c' in base_set:
         count += 1
-    if 'G' in base_set:
+    if 'G' in base_set or 'g' in base_set:
         count += 1
-    if 'T' in base_set:
+    if 'T' in base_set or 't' in base_set:
         count += 1
     return count
 
