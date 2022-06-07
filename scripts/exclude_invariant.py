@@ -45,9 +45,9 @@ def drop_invariant_positions(sequences):
     alignment_length = get_alignment_length(sequences)
     positions_to_remove = set()
     a, c, g, t, n = 0, 0, 0, 0, 0
-    print(f'0 / {alignment_length:,}', file=sys.stderr, end='')
+    print(f'0 / {alignment_length:,}', file=sys.stderr, end='', flush=True)
     for i in range(alignment_length):
-        print(f'\r{i+1:,} / {alignment_length:,}', file=sys.stderr, end='')
+        print(f'\r{i+1:,} / {alignment_length:,}', file=sys.stderr, end='', flush=True)
         bases_at_pos = {seq[i] for seq in sequences.values()}
         real_base_count = count_real_bases(bases_at_pos)
         if real_base_count == 1:
@@ -65,7 +65,7 @@ def drop_invariant_positions(sequences):
         elif real_base_count == 0:
             positions_to_remove.add(i)
             n += 1
-    print('\n', file=sys.stderr)
+    print('\n', file=sys.stderr, flush=True)
     assert a + c + g + t + n == len(positions_to_remove)
     if not positions_to_remove:
         print(f'no invariant positions removed from pseudo-alignment', file=sys.stderr)
