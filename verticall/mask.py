@@ -312,7 +312,6 @@ def finalise(masked_sequences, ref_name, exclude_reference, exclude_invariant):
     assert ref_name in masked_sequences
     if exclude_reference:
         del masked_sequences[ref_name]
-    masked_sequences = drop_gap_positions(masked_sequences)
     if exclude_invariant:
         masked_sequences = drop_invariant_positions(masked_sequences)
     log(f'Final pseudo-alignment length: {get_alignment_length(masked_sequences)}')
@@ -329,25 +328,6 @@ def save_to_file(masked_sequences, filename):
             else:
                 f.write(f'>{name}\n{seq}\n')
     log()
-
-
-def drop_gap_positions(sequences):
-    """
-    Returns an alignment where any columns that consist entirely of gaps are removed
-    """
-    alignment_length = get_alignment_length(sequences)
-    positions_to_remove = set()
-    for i in range(alignment_length):
-        for seq in sequences.values():
-            base = seq[i].upper()
-            if base != '-':
-                break
-        else:  # no break
-            positions_to_remove.add(i)
-    log(f'{len(positions_to_remove):,} all-gap positions '
-        f'({100.0 * len(positions_to_remove)/alignment_length:.3}%) removed from pseudo-alignment')
-    log()
-    return drop_positions(sequences, positions_to_remove)
 
 
 def drop_invariant_positions(sequences):
@@ -382,11 +362,11 @@ def drop_invariant_positions(sequences):
         percentage = 100.0 * len(positions_to_remove)/alignment_length
         log(f'{len(positions_to_remove):,} invariant positions ({percentage:.3}%) removed from '
             f'pseudo-alignment:')
-        log(f'  A: {a:,}')
-        log(f'  C: {c:,}')
-        log(f'  G: {g:,}')
-        log(f'  T: {t:,}')
-        log(f'  N: {n:,}')
+        log(f'      A: {a:,}')
+        log(f'      C: {c:,}')
+        log(f'      G: {g:,}')
+        log(f'      T: {t:,}')
+        log(f'  other: {n:,}')
     log()
     return drop_positions(sequences, positions_to_remove)
 

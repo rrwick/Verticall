@@ -66,27 +66,6 @@ def test_get_alignment_positions():
     assert 'length of reference sequence' in str(e.value)
 
 
-def test_drop_empty_positions():
-    sequences = {'A': 'agcTACGACCTA',
-                 'B': 'agcTACG-CcTA',
-                 'C': 'agcNNNGACcTA'}
-    assert verticall.mask.drop_gap_positions(sequences) == {'A': 'agcTACGACCTA',
-                                                            'B': 'agcTACG-CcTA',
-                                                            'C': 'agcNNNGACcTA'}
-    sequences = {'A': 'AGCtACG-CCTA',
-                 'B': 'AGCtACg-CCTA',
-                 'C': 'AGCNNNG-CCTA'}
-    assert verticall.mask.drop_gap_positions(sequences) == {'A': 'AGCtACGCCTA',
-                                                            'B': 'AGCtACgCCTA',
-                                                            'C': 'AGCNNNGCCTA'}
-    sequences = {'A': 'AGNT-CNACN-A',
-                 'B': 'AGNT-C--C--A',
-                 'C': 'AGNNNNG-C--A'}
-    assert verticall.mask.drop_gap_positions(sequences) == {'A': 'AGNT-CNACNA',
-                                                            'B': 'AGNT-C--C-A',
-                                                            'C': 'AGNNNNG-C-A'}
-
-
 def test_drop_invariant_positions():
     sequences = {'A': 'AGCTACGAcctA',
                  'B': 'aGCaACGACGtA',
@@ -118,9 +97,9 @@ def test_finalise():
     sequences = {'A': 'AACtACG-CCTA',
                  'B': 'AGCtACg-CCGA',
                  'C': 'AGCNNNG-CCTA'}
-    assert verticall.mask.finalise(sequences, 'A', False, False) == {'A': 'AACtACGCCTA',
-                                                                     'B': 'AGCtACgCCGA',
-                                                                     'C': 'AGCNNNGCCTA'}
+    assert verticall.mask.finalise(sequences, 'A', False, False) == {'A': 'AACtACG-CCTA',
+                                                                     'B': 'AGCtACg-CCGA',
+                                                                     'C': 'AGCNNNG-CCTA'}
     sequences = {'A': 'AACtACG-CCTA',
                  'B': 'AGCtACg-CCGA',
                  'C': 'AGCNNNG-CCTA'}
@@ -130,8 +109,8 @@ def test_finalise():
     sequences = {'A': 'AACtACG-CCTA',
                  'B': 'AGCtACg-CCGA',
                  'C': 'AGCNNNG-CCTA'}
-    assert verticall.mask.finalise(sequences, 'A', True, False) == {'B': 'AGCtACgCCGA',
-                                                                    'C': 'AGCNNNGCCTA'}
+    assert verticall.mask.finalise(sequences, 'A', True, False) == {'B': 'AGCtACg-CCGA',
+                                                                    'C': 'AGCNNNG-CCTA'}
     sequences = {'A': 'AACtACG-CCTA',
                  'B': 'AGCtACg-CCGA',
                  'C': 'AGCNNNG-CCTA'}
