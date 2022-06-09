@@ -362,11 +362,11 @@ def drop_invariant_positions(sequences):
         percentage = 100.0 * len(positions_to_remove)/alignment_length
         log(f'{len(positions_to_remove):,} invariant positions ({percentage:.3}%) removed from '
             f'pseudo-alignment:')
-        log(f'      A: {a:,}')
-        log(f'      C: {c:,}')
-        log(f'      G: {g:,}')
-        log(f'      T: {t:,}')
-        log(f'  other: {n:,}')
+        log(f'  {a:9,} × A')
+        log(f'  {c:9,} × C')
+        log(f'  {g:9,} × G')
+        log(f'  {t:9,} × T')
+        log(f'  {n:9,} × other')
     log()
     return drop_positions(sequences, positions_to_remove)
 

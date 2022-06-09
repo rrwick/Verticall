@@ -36,6 +36,7 @@ def main():
     alignment = drop_invariant_positions(alignment)
     for name, seq in alignment.items():
         print(f'>{name}\n{seq}')
+    print(file=sys.stderr)
 
 
 def drop_invariant_positions(sequences):
@@ -47,7 +48,8 @@ def drop_invariant_positions(sequences):
     a, c, g, t, n = 0, 0, 0, 0, 0
     print(f'0 / {alignment_length:,}', file=sys.stderr, end='', flush=True)
     for i in range(alignment_length):
-        print(f'\r{i+1:,} / {alignment_length:,}', file=sys.stderr, end='', flush=True)
+        if (i+1) % 1000 == 0:
+            print(f'\r{i+1:,} / {alignment_length:,}', file=sys.stderr, end='', flush=True)
         bases_at_pos = {seq[i] for seq in sequences.values()}
         real_base_count = count_real_bases(bases_at_pos)
         if real_base_count == 1:
@@ -65,7 +67,7 @@ def drop_invariant_positions(sequences):
         elif real_base_count == 0:
             positions_to_remove.add(i)
             n += 1
-    print('\n', file=sys.stderr, flush=True)
+    print(f'\r{alignment_length:,} / {alignment_length:,}', file=sys.stderr, end='\n\n', flush=True)
     assert a + c + g + t + n == len(positions_to_remove)
     if not positions_to_remove:
         print(f'no invariant positions removed from pseudo-alignment', file=sys.stderr)
@@ -73,11 +75,11 @@ def drop_invariant_positions(sequences):
         percentage = 100.0 * len(positions_to_remove)/alignment_length
         print(f'{len(positions_to_remove):,} invariant positions ({percentage:.3}%) removed from '
               f'pseudo-alignment:', file=sys.stderr)
-        print(f'      A: {a:,}', file=sys.stderr)
-        print(f'      C: {c:,}', file=sys.stderr)
-        print(f'      G: {g:,}', file=sys.stderr)
-        print(f'      T: {t:,}', file=sys.stderr)
-        print(f'  other: {n:,}', file=sys.stderr)
+        print(f'  {a:9,} × A', file=sys.stderr)
+        print(f'  {c:9,} × C', file=sys.stderr)
+        print(f'  {g:9,} × G', file=sys.stderr)
+        print(f'  {t:9,} × T', file=sys.stderr)
+        print(f'  {n:9,} × other', file=sys.stderr)
     return drop_positions(sequences, positions_to_remove)
 
 
