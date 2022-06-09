@@ -100,12 +100,10 @@ def get_mean_distance(alignments):
 
 def cull_redundant_alignments(alignments, allowed_overlap):
     alignments = sorted(alignments, key=lambda x: x.alignment_score, reverse=True)
-    alignments_by_contig = collections.defaultdict(list)
     alignments_no_redundancy = []
     for a in alignments:
-        if not any(a.overlaps(b, allowed_overlap) for b in alignments_by_contig[a.query_name]):
+        if not any(a.overlaps(b, allowed_overlap) for b in alignments_no_redundancy):
             alignments_no_redundancy.append(a)
-        alignments_by_contig[a.query_name].append(a)
     return alignments_no_redundancy
 
 
@@ -275,7 +273,7 @@ class Alignment(object):
     def query_covered_bases(self):
         return self.query_end - self.query_start
 
-    def overlaps(self, other, allowed_overlap):
+    def overlaps_on_query(self, other, allowed_overlap):
         """
         Tests whether this alignment overlaps with the other alignment in the query sequence. A bit
         of overlap can be allowed using the allowed_overlap parameter.
@@ -287,6 +285,27 @@ class Alignment(object):
         if this_start >= this_end:
             return False
         return (this_start < other.query_end) and (other.query_start < this_end)
+
+    def overlaps_on_target(self, other, allowed_overlap):
+        """
+        Tests whether this alignment overlaps with the other alignment in the target sequence. A bit
+        of overlap can be allowed using the allowed_overlap parameter.
+        """
+        if self.target_name != other.target_name:
+            return False
+        this_start = self.target_start + allowed_overlap
+        this_end = self.target_end - allowed_overlap
+        if this_start >= this_end:
+            return False
+        return (this_start < other.target_end) and (other.target_start < this_end)
+
+    def overlaps(self, other, allowed_overlap):
+        """
+        Tests whether this alignment overlaps with the other alignment in either the query or
+        target sequence.
+        """
+        return (self.overlaps_on_query(other, allowed_overlap) or
+                self.overlaps_on_target(other, allowed_overlap))
 
     def get_max_differences(self):
         if self.window_differences:

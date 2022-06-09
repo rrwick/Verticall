@@ -61,8 +61,130 @@ def test_query_covered_bases():
     assert a.query_covered_bases() == 100
 
 
-def test_overlaps_1():
+def test_overlaps_on_query_1():
     # Completely overlapped - cover the same query range.
+    a = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    b = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    for allowed_overlap in [0, 10, 20]:
+        assert a.overlaps_on_query(b, allowed_overlap)
+        assert b.overlaps_on_query(a, allowed_overlap)
+
+
+def test_overlaps_on_query_2():
+    # Not at all overlapped - far apart on the query.
+    a = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    b = verticall.alignment.Alignment('A\t1000\t450\t550\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    for allowed_overlap in [0, 10, 20]:
+        assert not a.overlaps_on_query(b, allowed_overlap)
+        assert not b.overlaps_on_query(a, allowed_overlap)
+
+
+def test_overlaps_on_query_3():
+    # Adjacent on the query but not overlapped.
+    a = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    b = verticall.alignment.Alignment('A\t1000\t150\t250\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    for allowed_overlap in [0, 10, 20]:
+        assert not a.overlaps_on_query(b, allowed_overlap)
+        assert not b.overlaps_on_query(a, allowed_overlap)
+    for allowed_overlap in [-1, -10, -20]:
+        assert a.overlaps_on_query(b, allowed_overlap)
+        assert b.overlaps_on_query(a, allowed_overlap)
+
+
+def test_overlaps_on_query_4():
+    # Overlap by 5 bp on the query.
+    a = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    b = verticall.alignment.Alignment('A\t1000\t145\t245\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    for allowed_overlap in [0, 1, 2, 3, 4]:
+        assert a.overlaps_on_query(b, allowed_overlap)
+        assert b.overlaps_on_query(a, allowed_overlap)
+    for allowed_overlap in [5, 10, 100]:
+        assert not a.overlaps_on_query(b, allowed_overlap)
+        assert not b.overlaps_on_query(a, allowed_overlap)
+
+
+def test_overlaps_on_query_5():
+    # Different query sequence, so no overlap.
+    a = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    b = verticall.alignment.Alignment('B\t1000\t50\t150\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    for allowed_overlap in [0, 10, 20]:
+        assert not a.overlaps_on_query(b, allowed_overlap)
+        assert not b.overlaps_on_query(a, allowed_overlap)
+
+
+def test_overlaps_on_target_1():
+    # Completely overlapped - cover the same target range.
+    a = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    b = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    for allowed_overlap in [0, 10, 20]:
+        assert a.overlaps_on_target(b, allowed_overlap)
+        assert b.overlaps_on_target(a, allowed_overlap)
+
+
+def test_overlaps_on_target_2():
+    # Not at all overlapped - far apart on the query.
+    a = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    b = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'C\t1000\t450\t550\t100\t100\tAS:i:100\tcg:Z:100=')
+    for allowed_overlap in [0, 10, 20]:
+        assert not a.overlaps_on_target(b, allowed_overlap)
+        assert not b.overlaps_on_target(a, allowed_overlap)
+
+
+def test_overlaps_on_target_3():
+    # Adjacent on the query but not overlapped.
+    a = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    b = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'C\t1000\t150\t250\t100\t100\tAS:i:100\tcg:Z:100=')
+    for allowed_overlap in [0, 10, 20]:
+        assert not a.overlaps_on_target(b, allowed_overlap)
+        assert not b.overlaps_on_target(a, allowed_overlap)
+    for allowed_overlap in [-1, -10, -20]:
+        assert a.overlaps_on_target(b, allowed_overlap)
+        assert b.overlaps_on_target(a, allowed_overlap)
+
+
+def test_overlaps_on_target_4():
+    # Overlap by 5 bp on the query.
+    a = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    b = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'C\t1000\t145\t245\t100\t100\tAS:i:100\tcg:Z:100=')
+    for allowed_overlap in [0, 1, 2, 3, 4]:
+        assert a.overlaps_on_target(b, allowed_overlap)
+        assert b.overlaps_on_target(a, allowed_overlap)
+    for allowed_overlap in [5, 10, 100]:
+        assert not a.overlaps_on_target(b, allowed_overlap)
+        assert not b.overlaps_on_target(a, allowed_overlap)
+
+
+def test_overlaps_on_target_5():
+    # Different target sequence, so no overlap.
+    a = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    b = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'B\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    for allowed_overlap in [0, 10, 20]:
+        assert not a.overlaps_on_target(b, allowed_overlap)
+        assert not b.overlaps_on_target(a, allowed_overlap)
+
+
+def test_overlaps_1():
+    # Completely overlapped - cover the same query and target range.
     a = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
                                       'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
     b = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
@@ -73,53 +195,67 @@ def test_overlaps_1():
 
 
 def test_overlaps_2():
-    # Not at all overlapped - far apart on the query.
+    # Completely overlapped in the query (but different targets).
     a = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
                                       'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
-    b = verticall.alignment.Alignment('A\t1000\t450\t550\t+\t'
-                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    b = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'B\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
     for allowed_overlap in [0, 10, 20]:
-        assert not a.overlaps(b, allowed_overlap)
-        assert not b.overlaps(a, allowed_overlap)
+        assert a.overlaps(b, allowed_overlap)
+        assert b.overlaps(a, allowed_overlap)
 
 
 def test_overlaps_3():
-    # Adjacent on the query but not overlapped.
-    a = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
-                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
-    b = verticall.alignment.Alignment('A\t1000\t150\t250\t+\t'
-                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
-    for allowed_overlap in [0, 10, 20]:
-        assert not a.overlaps(b, allowed_overlap)
-        assert not b.overlaps(a, allowed_overlap)
-    for allowed_overlap in [-1, -10, -20]:
-        assert a.overlaps(b, allowed_overlap)
-        assert b.overlaps(a, allowed_overlap)
-
-
-def test_overlaps_4():
-    # Overlap by 5 bp on the query.
-    a = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
-                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
-    b = verticall.alignment.Alignment('A\t1000\t145\t245\t+\t'
-                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
-    for allowed_overlap in [0, 1, 2, 3, 4]:
-        assert a.overlaps(b, allowed_overlap)
-        assert b.overlaps(a, allowed_overlap)
-    for allowed_overlap in [5, 10, 100]:
-        assert not a.overlaps(b, allowed_overlap)
-        assert not b.overlaps(a, allowed_overlap)
-
-
-def test_overlaps_5():
-    # Different query sequence, so no overlap.
+    # Completely overlapped in the targets (but different queries).
     a = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
                                       'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
     b = verticall.alignment.Alignment('B\t1000\t50\t150\t+\t'
                                       'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
     for allowed_overlap in [0, 10, 20]:
-        assert not a.overlaps(b, allowed_overlap)
-        assert not b.overlaps(a, allowed_overlap)
+        assert a.overlaps(b, allowed_overlap)
+        assert b.overlaps(a, allowed_overlap)
+
+
+def test_cull_redundant_alignments_1():
+    # Totally different queries and targets, so no culling.
+    a = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'B\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    b = verticall.alignment.Alignment('C\t1000\t50\t150\t+\t'
+                                      'D\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    culled_alignments = verticall.alignment.cull_redundant_alignments([a, b], 0)
+    assert len(culled_alignments) == 2
+
+
+def test_cull_redundant_alignments_2():
+    # Far apart, so no culling.
+    a = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    b = verticall.alignment.Alignment('A\t1000\t450\t550\t+\t'
+                                      'C\t1000\t450\t550\t100\t100\tAS:i:100\tcg:Z:100=')
+    culled_alignments = verticall.alignment.cull_redundant_alignments([a, b], 0)
+    assert len(culled_alignments) == 2
+
+
+def test_cull_redundant_alignments_3():
+    # Alignment b is culled because it's contained in alignment a in the query.
+    a = verticall.alignment.Alignment('A\t1000\t0\t200\t+\t'
+                                      'B\t1000\t0\t200\t100\t100\tAS:i:200\tcg:Z:200=')
+    b = verticall.alignment.Alignment('A\t1000\t50\t150\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    culled_alignments = verticall.alignment.cull_redundant_alignments([a, b], 0)
+    assert len(culled_alignments) == 1
+    assert culled_alignments[0].target_name == 'B'
+
+
+def test_cull_redundant_alignments_4():
+    # Alignment b is culled because it's contained in alignment a in the target.
+    a = verticall.alignment.Alignment('A\t1000\t0\t200\t+\t'
+                                      'C\t1000\t0\t200\t100\t100\tAS:i:200\tcg:Z:200=')
+    b = verticall.alignment.Alignment('B\t1000\t50\t150\t+\t'
+                                      'C\t1000\t50\t150\t100\t100\tAS:i:100\tcg:Z:100=')
+    culled_alignments = verticall.alignment.cull_redundant_alignments([a, b], 0)
+    assert len(culled_alignments) == 1
+    assert culled_alignments[0].query_name == 'A'
 
 
 def test_swap_insertions_and_deletions():
