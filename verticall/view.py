@@ -116,8 +116,8 @@ def distribution_plot_1(sample_name_a, sample_name_b, window_size, masses, smoot
          geom_line(aes(x='distance', y='smoothed_mass'), size=0.5) +
          geom_vline(xintercept=mean, colour='#000000', linetype='dotted', size=0.5) +
          geom_vline(xintercept=median, colour='#000000', linetype='dashed', size=0.5) +
-         theme_bw() +
-         labs(title=title, x='distance', y='probability mass'))
+         theme_bw() + theme(figure_size=(10, 5)) +
+         labs(title=title, x='distance', y='mass'))
 
     if sqrt_distance:
         g += scale_x_sqrt(limits=(0, x_max))
@@ -155,8 +155,8 @@ def distribution_plot_2(sample_name_a, sample_name_b, window_size, vertical_mass
                       size=1, colour=horizontal_colour) +
          geom_vline(xintercept=mean, colour='#000000', linetype='dotted', size=0.5) +
          geom_vline(xintercept=median, colour='#000000', linetype='dashed', size=0.5) +
-         theme_bw() +
-         labs(title=title, x='distance', y='probability mass'))
+         theme_bw() + theme(figure_size=(10, 5)) +
+         labs(title=title, x='distance', y='mass'))
 
     if sqrt_distance:
         g += scale_x_sqrt(limits=(0, x_max))
@@ -205,7 +205,7 @@ def alignment_plot(sample_name_a, sample_name_b, alignments, window_size, sqrt_d
     y_max = 1.05 * (max_differences / window_size)
 
     g = (ggplot() +
-         theme_bw() +
+         theme_bw() + theme(figure_size=(15, 5)) +
          theme(panel_grid_major_x=element_blank(), panel_grid_minor_x=element_blank()) +
          scale_x_continuous(expand=(0, 0), limits=(0, x_max)) +
          labs(title=title, x='alignment position', y='distance'))
@@ -250,7 +250,7 @@ def contig_plot(sample_name, painted, window_size, sqrt_distance, vertical_colou
     y_max = 1.05 * (max(1, painted.get_max_differences()) / window_size)
 
     g = (ggplot() +
-         theme_bw() +
+         theme_bw() + theme(figure_size=(15, 5)) +
          theme(panel_grid_major_x=element_blank(), panel_grid_minor_x=element_blank()) +
          scale_x_continuous(expand=(0, 0), limits=(0, x_max)) +
          labs(title=title, x='contig position', y='distance'))
