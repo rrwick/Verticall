@@ -83,6 +83,8 @@ def find_assemblies(in_dir, extensions=None):
         find_assemblies_with_extension(e, assemblies)
     assemblies = sorted(assemblies.items())
 
+    if len(assemblies) == 0:
+        sys.exit(f'Error: found no samples in {in_dir.resolve()}')
     log(f'Found {len(assemblies):,} samples in {in_dir.resolve()}\n')
     return assemblies
 
@@ -264,7 +266,7 @@ def prepare_log_text(log_text, verbose):
 
 def process_one_pair(all_args, view=False, view_num=1):
     """
-    This is the master function for each pairwise comparison. It gets called once for each assembly
+    This is the main function for each pairwise comparison. It gets called once for each assembly
     pair and carries out all analysis on that pair.
 
     Since this function can be run in parallel, it doesn't log text directly, but instead collects
