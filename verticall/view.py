@@ -222,13 +222,13 @@ def alignment_plot(sample_name_a, sample_name_b, alignments, window_size, sqrt_d
     for a in alignments:
         for start, end in a.get_vertical_blocks(include_ambiguous):
             g += annotate('rect', xmin=start+offset, xmax=end+offset, ymin=0.0, ymax=y_max,
-                          fill=vertical_colour, alpha=0.25)
+                          fill=vertical_colour, alpha=0.35)
         for start, end in a.get_horizontal_blocks(include_ambiguous):
             g += annotate('rect', xmin=start+offset, xmax=end+offset, ymin=0.0, ymax=y_max,
-                          fill=horizontal_colour, alpha=0.25)
+                          fill=horizontal_colour, alpha=0.35)
         for start, end in a.get_ambiguous_blocks(include_ambiguous):
             g += annotate('rect', xmin=start+offset, xmax=end+offset, ymin=0.0, ymax=y_max,
-                          fill=ambiguous_colour, alpha=0.25)
+                          fill=ambiguous_colour, alpha=0.35)
         positions = [offset + ((w[0] + w[1]) / 2.0) for w in a.windows_no_overlap]
         distances = [d / window_size for d in a.window_differences]
         df = pd.DataFrame(list(zip(positions, distances)), columns=['pos', 'dist'])
@@ -267,10 +267,10 @@ def contig_plot(sample_name, painted, window_size, sqrt_distance, vertical_colou
     for name, contig in painted.contigs.items():
         for start, end in contig.get_vertical_blocks():
             g += annotate('rect', xmin=start+offset, xmax=end+offset, ymin=0.0, ymax=y_max,
-                          fill=vertical_colour, alpha=0.25)
+                          fill=vertical_colour, alpha=0.35)
         for start, end in contig.get_horizontal_blocks():
             g += annotate('rect', xmin=start+offset, xmax=end+offset, ymin=0.0, ymax=y_max,
-                          fill=horizontal_colour, alpha=0.25)
+                          fill=horizontal_colour, alpha=0.35)
         for points in contig.alignment_points:
             positions = [offset + p[0] for p in points]
             distances = [p[1] / window_size for p in points]
