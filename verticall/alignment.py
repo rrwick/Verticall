@@ -13,7 +13,6 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 
-import collections
 import re
 import subprocess
 import sys
@@ -99,7 +98,7 @@ def get_mean_distance(alignments):
 
 
 def cull_redundant_alignments(alignments, allowed_overlap):
-    alignments = sorted(alignments, key=lambda x: x.alignment_score, reverse=True)
+    alignments = sorted(alignments, key=lambda x: x.matches, reverse=True)
     alignments_no_redundancy = []
     for a in alignments:
         if not any(a.overlaps(b, allowed_overlap) for b in alignments_no_redundancy):
