@@ -1,4 +1,4 @@
-# Verticall
+<p align="center"><picture><source srcset="images/logo-dark.png" media="(prefers-color-scheme: dark)"><img src="images/logo.png" alt="Verticall logo" width="70%"></picture></p>
 
 Verticall is a tool to help produce bacterial genome phylogenies which are not influenced by horizontally acquired sequences such as recombination. It can be used to produce distance-based trees or ML-trees and works with a wide range of relatedness.
 
