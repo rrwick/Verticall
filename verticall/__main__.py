@@ -173,6 +173,10 @@ def pairwise_and_view_settings(group):
     settings_args.add_argument('--verbose', action='store_true',
                                help='Output more detail to stderr for debugging (default: only '
                                     'output basic information)')
+    settings_args.add_argument('--skip_check', action='store_true',
+                               help='Do not carry out the assembly check for duplicate contig '
+                                    'names and ambiguous bases (default: perform the assembly '
+                                    'check')
 
     alignment_args = group.add_argument_group('Alignment')
     # TODO: explore different indexing options (e.g. -k and -w) to see how they affect the results.

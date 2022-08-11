@@ -28,7 +28,8 @@ def pairwise(args):
     welcome_message(args)
     assemblies = find_assemblies(args.in_dir)
     reference = find_reference(args.reference)
-    check_assemblies(assemblies, reference)
+    if not args.skip_check:
+        check_assemblies(assemblies, reference)
     build_indices(args, assemblies)
     with open(args.out_file, 'wt') as table_file:
         if parse_part(args.part)[0] == 0:  # only include the header in the first part
