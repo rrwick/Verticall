@@ -219,7 +219,7 @@ def matrix_subparser(subparsers):
                                help='Filename of PHYLIP matrix output')
 
     settings_args = group.add_argument_group('Settings')
-    settings_args.add_argument('--distance_type', type=str, default='mean_vertical',
+    settings_args.add_argument('--distance_type', type=str, default='median_vertical_window',
                                choices=['mean', 'mean_window', 'median_window', 'peak_window',
                                         'mean_vertical_window', 'median_vertical_window',
                                         'mean_vertical'],
