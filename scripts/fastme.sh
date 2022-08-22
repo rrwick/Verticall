@@ -26,6 +26,6 @@ fastme --method B --nni B --spr -i "$phylip" -o temp.newick -I "$info"
 R -e 'library(ape); library(phangorn); tree <- read.tree("temp.newick"); tree$edge.length <- pmax(tree$edge.length, 0.0); tree <- midpoint(tree); write.tree(tree, "temp.newick")'
 mv temp.newick "$newick"
 
-# # Minimum-variance rooting:
+# Minimum-variance rooting:
 FastRoot.py -m MV -i "$newick" -o temp.newick
 mv temp.newick "$newick"
