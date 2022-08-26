@@ -36,7 +36,7 @@ def test_welcome_message(capsys):
 
 
 def test_finished_message(capsys):
-    verticall.pairwise.finished_message()
+    verticall.pairwise.finished_message(True)
     _, err = capsys.readouterr()
     assert 'Finished' in err
 

@@ -31,11 +31,12 @@ def pairwise(args):
     if not args.skip_check:
         check_assemblies(assemblies, reference)
     build_indices(args, assemblies)
-    with open(args.out_file, 'wt') as table_file:
-        if parse_part(args.part)[0] == 0:  # only include the header in the first part
-            table_file.write(get_table_header())
-        process_all_pairs(args, assemblies, reference, table_file)
-    finished_message()
+    if not args.index_only:
+        with open(args.out_file, 'wt') as table_file:
+            if parse_part(args.part)[0] == 0:  # only include the header in the first part
+                table_file.write(get_table_header())
+            process_all_pairs(args, assemblies, reference, table_file)
+    finished_message(args.index_only)
 
 
 def welcome_message(args):
@@ -56,12 +57,17 @@ def welcome_message(args):
     explanation(explanation_text)
 
 
-def finished_message():
+def finished_message(index_only):
     section_header('Finished!')
-    explanation('You can now use the resulting tab-delimited file to produce a distance matrix '
-                '(using Verticall matrix), summarise an assembly\'s vertical-vs-horizontal regions '
-                '(using Verticall summary) or mask horizontal regions from a SNV matrix (using '
-                'Verticall mask).')
+    if index_only:
+        explanation('The assemblies have been checked and the indices have been built, so you can '
+                    'now run Verticall pairwise using its --skip_check option to speed up '
+                    'parallel processing.')
+    else:
+        explanation('You can now use the resulting tab-delimited file to produce a distance matrix '
+                    '(using Verticall matrix), summarise an assembly\'s vertical-vs-horizontal '
+                    'regions (using Verticall summary) or mask horizontal regions from a SNV '
+                    'matrix (using Verticall mask).')
 
 
 def find_assemblies(in_dir, extensions=None):
