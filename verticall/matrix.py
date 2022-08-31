@@ -19,7 +19,7 @@ import math
 import sys
 
 from .log import log, section_header, explanation, warning
-from .misc import check_file_exists
+from .misc import check_file_exists, get_open_func
 from .tsv import get_column_index
 
 
@@ -54,16 +54,13 @@ def load_tsv_file(filename, distance_type):
     check_file_exists(filename)
     distances, sample_names = collections.defaultdict(list), set()
     column_index = None
-    # excluded_samples = get_multi_result_samples(filename) if multi == 'exclude' else set()
-    with open(filename, 'rt') as f:
+    with get_open_func(filename)(filename, 'rt') as f:
         for i, line in enumerate(f):
             parts = line.strip('\n').split('\t')
             if i == 0:  # header line
                 column_index = get_column_index(parts, distance_type + '_distance', filename)
             else:
                 assembly_a, assembly_b = parts[0], parts[1]
-                # if assembly_a in excluded_samples or assembly_b in excluded_samples:
-                #     continue
                 distance = get_distance_from_line_parts(parts, column_index)
                 sample_names.add(assembly_a)
                 sample_names.add(assembly_b)
@@ -172,7 +169,7 @@ def save_matrix(filename, distances, sample_names, silent=False):
         for a in sample_names:
             f.write(a)
             for b in sample_names:
-                distance = distances[(a, b)]
+                distance = distances[(a, b)] if (a, b) in distances else None
                 if distance is None:
                     distance = ''
                     missing_distances = True
@@ -192,7 +189,8 @@ def jukes_cantor_correction(distances, sample_names):
     """
     for a in sample_names:
         for b in sample_names:
-            distances[(a, b)] = jukes_cantor(distances[(a, b)])
+            if (a, b) in distances:
+                distances[(a, b)] = jukes_cantor(distances[(a, b)])
 
 
 def jukes_cantor(d):
@@ -214,8 +212,8 @@ def make_symmetrical(distances, sample_names):
     Makes the distance matrix symmetrical, changing it in-place.
     """
     for a, b in itertools.combinations(sample_names, 2):
-        d1 = distances[(a, b)]
-        d2 = distances[(b, a)]
+        d1 = distances[(a, b)] if (a, b) in distances else None
+        d2 = distances[(b, a)] if (b, a) in distances else None
         if d1 is not None and d2 is not None:
             mean_distance = (d1 + d2) / 2.0
         elif d1 is None and d2 is None:

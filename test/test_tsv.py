@@ -29,7 +29,7 @@ def test_get_column_index_1():
     assert verticall.tsv.get_column_index(header_parts, 'peak_distance', 'filename') == 9
     assert verticall.tsv.get_column_index(header_parts, 'mean_vertical_distance', 'filename') == 10
     assert verticall.tsv.get_column_index(header_parts,
-                                          'median_vertical_distance','filename') == 11
+                                          'median_vertical_distance', 'filename') == 11
     with pytest.raises(SystemExit) as e:
         verticall.tsv.get_column_index(header_parts, 'bad', 'filename')
     assert 'no column named' in str(e.value)

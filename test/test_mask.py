@@ -17,7 +17,6 @@ If not, see <https://www.gnu.org/licenses/>.
 import collections
 import pathlib
 import pytest
-import tempfile
 
 import verticall.mask
 
