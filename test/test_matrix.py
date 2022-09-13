@@ -143,6 +143,19 @@ def test_filter_names():
     assert 'could not find sample' in str(e.value)
 
 
+def test_exclude_names():
+    all_names = ['a', 'b', 'c', 'd', 'e', 'f']
+    assert verticall.matrix.exclude_names(all_names, 'b,c') == ['a', 'd', 'e', 'f']
+    assert verticall.matrix.exclude_names(all_names, 'f,c') == ['a', 'b', 'd', 'e']
+    assert verticall.matrix.exclude_names(all_names, 'e') == ['a', 'b', 'c', 'd', 'f']
+    with pytest.raises(SystemExit) as e:
+        verticall.matrix.exclude_names(all_names, 'a,b,c,d,e,f')
+    assert 'all samples have been excluded' in str(e.value)
+    with pytest.raises(SystemExit) as e:
+        verticall.matrix.exclude_names(all_names, 'a,b,c,q')
+    assert 'could not find sample' in str(e.value)
+
+
 def test_get_distance_from_line_parts():
     parts = ['a', 'b', '0.0002', '', '0.0001', 'not_a_num']
     assert verticall.matrix.get_distance_from_line_parts(parts, 2) == pytest.approx(0.0002)

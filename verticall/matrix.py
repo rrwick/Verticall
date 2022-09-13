@@ -29,6 +29,8 @@ def matrix(args):
     distances, sample_names = resolve_multi_distances(distances, sample_names, args.multi)
     if args.names is not None:
         sample_names = filter_names(sample_names, args.names)
+    if args.exclude_names is not None:
+        sample_names = exclude_names(sample_names, args.exclude_names)
     if not args.no_jukes_cantor:
         jukes_cantor_correction(distances, sample_names)
     if not args.asymmetrical:
@@ -145,6 +147,18 @@ def filter_names(all_names, specified_names):
             filtered_names.add(name)
         else:
             sys.exit(f'Error: could not find sample {name}')
+    return sorted(filtered_names)
+
+
+def exclude_names(all_names, names_to_exclude):
+    filtered_names = set(all_names)
+    for name in names_to_exclude.split(','):
+        if name in filtered_names:
+            filtered_names.remove(name)
+        else:
+            sys.exit(f'Error: could not find sample {name}')
+    if len(filtered_names) == 0:
+        sys.exit(f'Error: all samples have been excluded')
     return sorted(filtered_names)
 
 

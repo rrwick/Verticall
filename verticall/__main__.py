@@ -242,6 +242,9 @@ def matrix_subparser(subparsers):
     settings_args.add_argument('--names', type=str,
                                help='Samples names to include in matrix (comma-delimited, '
                                     'default: include all samples)')
+    settings_args.add_argument('--exclude_names', type=str,
+                               help='Samples names to exclude from matrix (comma-delimited, '
+                                    'default: do not exclude any samples)')
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
