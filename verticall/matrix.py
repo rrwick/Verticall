@@ -90,7 +90,7 @@ def resolve_multi_distances(distances, sample_names, multi):
         log('Resolving using TSV file order (keeping the first distance for each pair)')
         distances = {p: d[0] for p, d in distances.items()}
     elif multi == 'exclude':
-        log('Resolving by excluding any samples in a multi-distance pair')
+        log('Resolving by excluding samples in multi-distance pairs')
         distances, sample_names = exclude_multi_distances(distances, multi_distance_pairs)
     elif multi == 'low':
         log('Resolving to minimum (keeping the lowest distance for each pair)')
@@ -105,10 +105,23 @@ def resolve_multi_distances(distances, sample_names, multi):
 
 
 def exclude_multi_distances(distances, multi_distance_pairs):
-    excluded_samples = set()
+    """
+    This function looks for any samples
+    """
+    counts = collections.defaultdict(int)
     for assembly_a, assembly_b in multi_distance_pairs:
-        excluded_samples.add(assembly_a)
-        excluded_samples.add(assembly_b)
+        counts[assembly_a] += 1
+        counts[assembly_b] += 1
+    counts = sorted(counts.items(), key=lambda x: (1.0/x[1], x[0]))
+
+    excluded_samples = set()
+    for assembly, _ in counts:
+        excluded_samples.add(assembly)
+        multi_distance_pairs = {p for p in multi_distance_pairs
+                                if p[0] != assembly and p[1] != assembly}
+        if len(multi_distance_pairs) == 0:
+            break
+
     excluded_str = ', '.join(sorted(excluded_samples))
     log()
     log(f'The following samples will be excluded due to multiple results: {excluded_str}')

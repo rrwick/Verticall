@@ -326,7 +326,7 @@ def test_resolve_multi_distances_4():
     distances, sample_names = verticall.matrix.load_tsv_file(in_tsv, 'median_vertical_window')
     distances, sample_names = verticall.matrix.resolve_multi_distances(distances, sample_names,
                                                                        'exclude')
-    assert sample_names == ['INF001', 'INF002', 'INF003', 'INF004', 'INF005']
+    assert sample_names == ['INF001', 'INF002', 'INF003', 'INF004', 'INF005', 'INF097']
     truth = get_truth_median_vertical_window_distances()
     for a in sample_names:
         for b in sample_names:
