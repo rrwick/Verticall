@@ -167,7 +167,7 @@ def pairwise_and_view_settings(group):
                                help='Aim to have at least this many comparison windows between '
                                     'assemblies')
     settings_args.add_argument('--window_size', type=int, default=None,
-                               help='Use this defined window size for all pairwise comparisons'
+                               help='Use this defined window size for all pairwise comparisons '
                                     '(default: dynamically choose window size for each pair)')
     settings_args.add_argument('--ignore_indels', action='store_true',
                                help='Only use mismatches to determine distance (default: use '
@@ -239,7 +239,7 @@ def matrix_subparser(subparsers):
     settings_args.add_argument('--multi', type=str, default='first',
                                choices=['first', 'exclude', 'low', 'high'],
                                help='Behaviour when there are multiple results for a sample pair')
-    settings_args.add_argument('--names', type=str,
+    settings_args.add_argument('--include_names', type=str,
                                help='Samples names to include in matrix (comma-delimited, '
                                     'default: include all samples)')
     settings_args.add_argument('--exclude_names', type=str,

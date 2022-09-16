@@ -28,7 +28,7 @@ def matrix(args):
     distances, sample_names = load_tsv_file(args.in_file, args.distance_type)
     distances, sample_names = resolve_multi_distances(distances, sample_names, args.multi)
     if args.names is not None:
-        sample_names = filter_names(sample_names, args.names)
+        sample_names = include_names(sample_names, args.include_names)
     if args.exclude_names is not None:
         sample_names = exclude_names(sample_names, args.exclude_names)
     if not args.no_jukes_cantor:
@@ -139,10 +139,10 @@ def get_distance_from_line_parts(parts, column_index):
         sys.exit(f'Error: could not convert {distance} to a number')
 
 
-def filter_names(all_names, specified_names):
+def include_names(all_names, names_to_include):
     all_names = set(all_names)
     filtered_names = set()
-    for name in specified_names.split(','):
+    for name in names_to_include.split(','):
         if name in all_names:
             filtered_names.add(name)
         else:
