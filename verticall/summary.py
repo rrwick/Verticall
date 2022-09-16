@@ -21,7 +21,7 @@ from plotnine import ggplot, aes, geom_area, geom_vline, labs, theme_bw, scale_x
 import sys
 
 from .matrix import get_column_index
-from .misc import iterate_fasta
+from .misc import iterate_fasta, get_open_func
 from .tsv import split_region_str
 
 
@@ -65,7 +65,7 @@ def get_contig_lengths(assembly_filename):
 def load_data(filename, sample_name):
     data = []
     v_column, h_column, u_column = None, None, None
-    with open(filename, 'rt') as pairwise_file:
+    with get_open_func(filename)(filename, 'rt') as pairwise_file:
         for i, line in enumerate(pairwise_file):
             parts = line.strip('\n').split('\t')
             if i == 0:
