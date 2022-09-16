@@ -303,7 +303,7 @@ def summary_subparser(subparsers):
 
     required_args = group.add_argument_group('Required arguments')
     required_args.add_argument('-i', '--in_file', type=pathlib.Path, required=True,
-                               help='Filename of tsv created by vertical pairwise')
+                               help='Filename of TSV created by vertical pairwise')
     required_args.add_argument('-a', '--assembly', type=pathlib.Path, required=True,
                                help='Filename of assembly to be summarised')
 
@@ -315,7 +315,7 @@ def summary_subparser(subparsers):
                                help='Instead of outputting a table, display an interactive plot')
 
     colour_args = group.add_argument_group('Colours')
-    colour_settings(colour_args, 'ambiguous')
+    colour_settings(colour_args, 'unaligned')
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,

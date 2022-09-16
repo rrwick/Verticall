@@ -131,7 +131,7 @@ def summary_plot(sample_name, summarised_data, contig_lengths, vertical_colour, 
         y_max = max(y_max, vertical + horizontal + unaligned)
 
     g = (ggplot() +
-         theme_bw() +
+         theme_bw() + theme(figure_size=(15, 5)) +
          theme(panel_grid_major_x=element_blank(), panel_grid_minor_x=element_blank()) +
          scale_x_continuous(expand=(0, 0), limits=(0, x_max)) +
          scale_y_continuous(expand=(0, 0), limits=(0, y_max)) +
