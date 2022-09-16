@@ -226,10 +226,7 @@ def matrix_subparser(subparsers):
                                choices=['mean', 'mean_window', 'median_window', 'peak_window',
                                         'mean_vertical_window', 'median_vertical_window',
                                         'mean_vertical'],
-                               help='Which distance to use in matrix (choose from mean, '
-                                    'mean_window, median_window, peak_window, '
-                                    'mean_vertical_window, median_vertical_window and '
-                                    'mean_vertical, default: DEFAULT)')
+                               help='Which distance to use in matrix')
     settings_args.add_argument('--asymmetrical', action='store_true',
                                help='Do not average pairs to make symmetrical matrices (default: '
                                     'make matrices symmetrical)')

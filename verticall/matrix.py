@@ -27,7 +27,7 @@ def matrix(args):
     welcome_message()
     distances, sample_names = load_tsv_file(args.in_file, args.distance_type)
     distances, sample_names = resolve_multi_distances(distances, sample_names, args.multi)
-    if args.names is not None:
+    if args.include_names is not None:
         sample_names = include_names(sample_names, args.include_names)
     if args.exclude_names is not None:
         sample_names = exclude_names(sample_names, args.exclude_names)
