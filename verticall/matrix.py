@@ -105,26 +105,26 @@ def resolve_multi_distances(distances, sample_names, multi):
 
 
 def exclude_multi_distances(distances, multi_distance_pairs):
-    """
-    This function looks for any samples
-    """
     counts = collections.defaultdict(int)
     for assembly_a, assembly_b in multi_distance_pairs:
         counts[assembly_a] += 1
         counts[assembly_b] += 1
     counts = sorted(counts.items(), key=lambda x: (1.0/x[1], x[0]))
 
-    excluded_samples = set()
-    for assembly, _ in counts:
+    excluded_samples, excluded_logs = set(), []
+    for assembly, count in counts:
         excluded_samples.add(assembly)
+        excluded_logs.append(f'  {assembly} (in {count} multi-result pairs)')
         multi_distance_pairs = {p for p in multi_distance_pairs
                                 if p[0] != assembly and p[1] != assembly}
         if len(multi_distance_pairs) == 0:
             break
 
-    excluded_str = ', '.join(sorted(excluded_samples))
     log()
-    log(f'The following samples will be excluded due to multiple results: {excluded_str}')
+    log(f'The following samples will be excluded due to multiple results:')
+    for excluded_log in excluded_logs:
+        log(excluded_log)
+
     new_distances, new_sample_names = {}, set()
     for pair, distance_list in distances.items():
         assembly_a, assembly_b = pair
