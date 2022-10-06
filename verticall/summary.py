@@ -31,7 +31,7 @@ def summary(args):
     summarised_data = summarise_data(data, contig_lengths, args.all)
     if args.plot:
         plot = summary_plot(sample_name, summarised_data, contig_lengths, args.vertical_colour,
-                            args.horizontal_colour, args.ambiguous_colour)
+                            args.horizontal_colour, args.unaligned_colour)
         plt.show()
     else:
         print('contig', 'position', 'vertical', 'horizontal', 'unaligned')
@@ -118,7 +118,7 @@ def summarise_data(data, contig_lengths, output_all):
 
 
 def summary_plot(sample_name, summarised_data, contig_lengths, vertical_colour, horizontal_colour,
-                 ambiguous_colour):
+                 unaligned_colour):
     title = f'{sample_name} painting summary'
 
     boundaries = [0]
@@ -157,7 +157,7 @@ def summary_plot(sample_name, summarised_data, contig_lengths, vertical_colour, 
         offset += length
 
     g += scale_fill_manual({'vertical': vertical_colour, 'horizontal': horizontal_colour,
-                            'unaligned': ambiguous_colour}, guide=False)
+                            'unaligned': unaligned_colour}, guide=False)
 
     for b in boundaries:
         g += geom_vline(xintercept=b, colour='#000000', size=0.5)
