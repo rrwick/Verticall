@@ -14,10 +14,7 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 
-import matplotlib.pyplot as plt
 import pandas as pd
-from plotnine import ggplot, aes, geom_area, geom_vline, labs, theme_bw, scale_x_continuous, \
-    scale_y_continuous, scale_fill_manual, element_blank, theme
 import sys
 
 from .matrix import get_column_index
@@ -26,6 +23,7 @@ from .tsv import split_region_str
 
 
 def summary(args):
+    import matplotlib.pyplot as plt
     contig_lengths, sample_name = get_contig_lengths(args.assembly)
     data = load_data(args.in_file, sample_name)
     summarised_data = summarise_data(data, contig_lengths, args.all)
@@ -119,6 +117,8 @@ def summarise_data(data, contig_lengths, output_all):
 
 def summary_plot(sample_name, summarised_data, contig_lengths, vertical_colour, horizontal_colour,
                  unaligned_colour):
+    from plotnine import ggplot, aes, geom_area, geom_vline, labs, theme_bw, scale_x_continuous, \
+        scale_y_continuous, scale_fill_manual, element_blank, theme
     title = f'{sample_name} painting summary'
 
     boundaries = [0]
