@@ -312,7 +312,8 @@ def summary_subparser(subparsers):
                                help='Output one line for all assembly positions (default: omit '
                                     'redundant adjacent lines)')
     settings_args.add_argument('--plot', action='store_true',
-                               help='Instead of outputting a table, display an interactive plot')
+                               help='Instead of outputting a table, display an interactive plot '
+                                    '(default: do not display a plot)')
 
     colour_args = group.add_argument_group('Colours')
     colour_settings(colour_args, 'unaligned')
