@@ -13,11 +13,7 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 
-import matplotlib.pyplot as plt
 import pandas as pd
-from plotnine import ggplot, aes, geom_segment, geom_line, geom_vline, labs, theme_bw, \
-    scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt, scale_color_manual, \
-    element_blank, theme, annotate
 import warnings
 import sys
 
@@ -79,6 +75,7 @@ def get_sample_names_and_filenames(args, assemblies):
 def show_plots(sample_name_a, sample_name_b, alignments, window_size, masses, smoothed_masses,
                thresholds, vertical_masses, horizontal_masses, painted_a, sqrt_distance,
                sqrt_mass, vertical_colour, horizontal_colour, ambiguous_colour):
+    import matplotlib.pyplot as plt
     fig_1 = distribution_plot_1(sample_name_a, sample_name_b, window_size, masses, smoothed_masses,
                                 thresholds, sqrt_distance, sqrt_mass, vertical_colour,
                                 horizontal_colour, ambiguous_colour)
@@ -96,6 +93,9 @@ def show_plots(sample_name_a, sample_name_b, alignments, window_size, masses, sm
 def distribution_plot_1(sample_name_a, sample_name_b, window_size, masses, smoothed_masses,
                         thresholds, sqrt_distance, sqrt_mass, vertical_colour, horizontal_colour,
                         ambiguous_colour):
+    from plotnine import ggplot, aes, geom_segment, geom_line, geom_vline, labs, theme_bw, \
+        scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt, scale_color_manual, \
+        theme
     title = f'{sample_name_a} vs {sample_name_b} full distribution with thresholds'
     mean = get_distance(masses, window_size, 'mean')
     median = get_distance(masses, window_size, 'median')
@@ -134,6 +134,8 @@ def distribution_plot_1(sample_name_a, sample_name_b, window_size, masses, smoot
 def distribution_plot_2(sample_name_a, sample_name_b, window_size, vertical_masses,
                         horizontal_masses, sqrt_distance, sqrt_mass, vertical_colour,
                         horizontal_colour):
+    from plotnine import ggplot, aes, geom_segment, geom_vline, labs, theme_bw, \
+        scale_x_continuous, scale_x_sqrt, scale_y_continuous, scale_y_sqrt, theme
     title = f'{sample_name_a} vs {sample_name_b} vertical vs horizontal distribution'
     mean = get_distance(vertical_masses, window_size, 'mean')
     median = get_distance(vertical_masses, window_size, 'median')
@@ -193,6 +195,8 @@ def group_using_thresholds(masses, thresholds):
 
 def alignment_plot(sample_name_a, sample_name_b, alignments, window_size, sqrt_distance,
                    vertical_colour, horizontal_colour, ambiguous_colour, include_ambiguous=False):
+    from plotnine import ggplot, aes, geom_line, geom_vline, labs, theme_bw, scale_x_continuous, \
+        scale_y_continuous, scale_y_sqrt, element_blank, theme, annotate
     title = f'{sample_name_a} vs {sample_name_b} painted alignments'
 
     boundaries = [0]
@@ -240,6 +244,8 @@ def alignment_plot(sample_name_a, sample_name_b, alignments, window_size, sqrt_d
 
 def contig_plot(sample_name, painted, window_size, sqrt_distance, vertical_colour,
                 horizontal_colour):
+    from plotnine import ggplot, aes, geom_line, geom_vline, labs, theme_bw, scale_x_continuous, \
+        scale_y_continuous, scale_y_sqrt, element_blank, theme, annotate
     title = f'{sample_name} painted contigs'
 
     boundaries = [0]
