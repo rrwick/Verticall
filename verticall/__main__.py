@@ -182,10 +182,8 @@ def pairwise_and_view_settings(group):
                                     'output basic information)')
 
     alignment_args = group.add_argument_group('Alignment')
-    # TODO: explore different indexing options (e.g. -k and -w) to see how they affect the results.
     alignment_args.add_argument('--index_options', type=str, default='-k15 -w10',
                                 help='Minimap2 options for assembly indexing')
-    # TODO: explore different alignment options (e.g. the things set by -x asm20).
     alignment_args.add_argument('--align_options', type=str, default='-x asm20',
                                 help='Minimap2 options for assembly-to-assembly alignment')
     alignment_args.add_argument('--allowed_overlap', type=int, default=100,

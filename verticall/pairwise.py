@@ -31,6 +31,7 @@ def pairwise(args):
     if not args.skip_check:
         check_assemblies(assemblies, reference)
     build_indices(args, assemblies)
+    create_output_dir_if_needed(args.out_file)
     if not args.index_only:
         with open(args.out_file, 'wt') as table_file:
             if parse_part(args.part)[0] == 0:  # only include the header in the first part
@@ -158,6 +159,10 @@ def check_one_assembly(filename):
             ambiguous_bases = True
     duplicate_contig_names = len(contig_names) > len(set(contig_names))
     return duplicate_contig_names, ambiguous_bases
+
+
+def create_output_dir_if_needed(out_file):
+    out_file.parent.mkdir(exist_ok=True, parents=True)
 
 
 def process_all_pairs(args, assemblies, reference, table_file):

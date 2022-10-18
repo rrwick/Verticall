@@ -17,6 +17,7 @@ If not, see <https://www.gnu.org/licenses/>.
 import collections
 import pathlib
 import pytest
+import tempfile
 
 import verticall.pairwise
 
@@ -141,3 +142,27 @@ def test_check_assemblies():
     with pytest.raises(SystemExit) as e:
         verticall.pairwise.check_assemblies(assemblies, None)
     assert 'ambiguous' in str(e.value)
+
+
+def test_create_output_dir_if_needed_1():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        out_file = pathlib.Path(temp_dir) / 'out.tsv'
+        verticall.pairwise.create_output_dir_if_needed(out_file)
+        with open(out_file, 'wt') as f:
+            f.write('test')
+
+
+def test_create_output_dir_if_needed_2():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        out_file = pathlib.Path(temp_dir) / 'dir1' / 'out.tsv'
+        verticall.pairwise.create_output_dir_if_needed(out_file)
+        with open(out_file, 'wt') as f:
+            f.write('test')
+
+
+def test_create_output_dir_if_needed_3():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        out_file = pathlib.Path(temp_dir) / 'dir1' / 'dir2' / 'out.tsv'
+        verticall.pairwise.create_output_dir_if_needed(out_file)
+        with open(out_file, 'wt') as f:
+            f.write('test')
