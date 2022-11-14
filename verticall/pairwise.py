@@ -20,7 +20,8 @@ import sys
 from .alignment import build_indices, align_sample_pair
 from .distance import get_distribution, smooth_distribution, get_peak_distance
 from .log import log, section_header, explanation, warning
-from .misc import split_list, iterate_fasta, contains_ambiguous_bases, check_file_exists
+from .misc import split_list, iterate_fasta, contains_ambiguous_bases, check_file_exists, \
+    get_open_func
 from .paint import paint_alignments, paint_assemblies
 
 
@@ -214,15 +215,16 @@ def get_arg_list(args, assemblies, reference):
     for --part was used, this will include a subset of the pairs.
     """
     arg_list = []
+    existing_pairs = load_existing_pairs(args.existing_tsv)
     if reference is None:
         for name_a, filename_a in assemblies:
             for name_b, filename_b in assemblies:
-                if name_a != name_b:
+                if name_a != name_b and (name_a, name_b) not in existing_pairs:
                     arg_list.append((args, name_a, name_b, filename_a, filename_b))
     else:
         ref_name, ref_filename = reference
         for assembly_name, assembly_filename in assemblies:
-            if ref_name != assembly_name:
+            if ref_name != assembly_name and (ref_name, assembly_name) not in existing_pairs:
                 arg_list.append((args, ref_name, assembly_name, ref_filename, assembly_filename))
 
     part_num, part_total = parse_part(args.part)
@@ -230,6 +232,19 @@ def get_arg_list(args, assemblies, reference):
         arg_list = split_list(arg_list, part_total)[part_num]
 
     return arg_list
+
+
+def load_existing_pairs(filename):
+    existing_pairs = set()
+    if filename is not None:
+        with get_open_func(filename)(filename, 'rt') as f:
+            for i, line in enumerate(f):
+                parts = line.strip('\n').split('\t')
+                if i == 0 and parts[0] == 'assembly_a' and parts[1] == 'assembly_b':  # header line
+                    continue
+                else:
+                    existing_pairs.add((parts[0], parts[1]))
+    return existing_pairs
 
 
 def parse_part(part_str):

@@ -117,6 +117,9 @@ def pairwise_subparser(subparsers):
                                   help='Do not carry out the assembly check for duplicate contig '
                                        'names and ambiguous bases (default: perform the assembly '
                                        'check)')
+    performance_args.add_argument('--existing_tsv', type=pathlib.Path,
+                                  help='Verticall will skip any assembly pairs present in this '
+                                       'existing TSV file (default: do not skip any pairs)')
 
     other_args = group.add_argument_group('Other')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,

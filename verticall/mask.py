@@ -47,7 +47,7 @@ def welcome_message(args):
 def finished_message():
     section_header('Finished!')
     explanation('You can now use the masked pseudo-alignment to build a phylogeny using tools '
-                'such as RAxML.')
+                'such as IQ-TREE or RAxML.')
 
 
 def load_regions(filename, ref_name, multi):

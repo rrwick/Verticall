@@ -67,48 +67,79 @@ def test_get_arg_list_1():
     """
     Make sure that we get the same arguments regardless of how we split them into parts.
     """
-    Args = collections.namedtuple('Args', ['part'])
+    get_arg_list = verticall.pairwise.get_arg_list
+    Args = collections.namedtuple('Args', ['part', 'existing_tsv'])
     assemblies = [('a', 'a.fasta'), ('b', 'b.fasta'), ('c', 'c.fasta'), ('d', 'd.fasta'),
                   ('e', 'e.fasta'), ('f', 'f.fasta'), ('g', 'g.fasta'), ('h', 'h.fasta')]
 
-    arg_list_1 = verticall.pairwise.get_arg_list(Args(part='1/1'), assemblies, None)
+    arg_list_1 = get_arg_list(Args(part='1/1', existing_tsv=None), assemblies, None)
     assert len(arg_list_1) == 56
 
-    arg_list_1_2 = verticall.pairwise.get_arg_list(Args(part='1/2'), assemblies, None)
-    arg_list_2_2 = verticall.pairwise.get_arg_list(Args(part='2/2'), assemblies, None)
+    arg_list_1_2 = get_arg_list(Args(part='1/2', existing_tsv=None), assemblies, None)
+    arg_list_2_2 = get_arg_list(Args(part='2/2', existing_tsv=None), assemblies, None)
     arg_list_2 = arg_list_1_2 + arg_list_2_2
     assert [a[1:] for a in arg_list_1] == [a[1:] for a in arg_list_2]
 
-    arg_list_1_3 = verticall.pairwise.get_arg_list(Args(part='1/3'), assemblies, None)
-    arg_list_2_3 = verticall.pairwise.get_arg_list(Args(part='2/3'), assemblies, None)
-    arg_list_3_3 = verticall.pairwise.get_arg_list(Args(part='3/3'), assemblies, None)
+    arg_list_1_3 = get_arg_list(Args(part='1/3', existing_tsv=None), assemblies, None)
+    arg_list_2_3 = get_arg_list(Args(part='2/3', existing_tsv=None), assemblies, None)
+    arg_list_3_3 = get_arg_list(Args(part='3/3', existing_tsv=None), assemblies, None)
     arg_list_3 = arg_list_1_3 + arg_list_2_3 + arg_list_3_3
     assert [a[1:] for a in arg_list_1] == [a[1:] for a in arg_list_3]
 
-    arg_list_1_4 = verticall.pairwise.get_arg_list(Args(part='1/4'), assemblies, None)
-    arg_list_2_4 = verticall.pairwise.get_arg_list(Args(part='2/4'), assemblies, None)
-    arg_list_3_4 = verticall.pairwise.get_arg_list(Args(part='3/4'), assemblies, None)
-    arg_list_4_4 = verticall.pairwise.get_arg_list(Args(part='4/4'), assemblies, None)
+    arg_list_1_4 = get_arg_list(Args(part='1/4', existing_tsv=None), assemblies, None)
+    arg_list_2_4 = get_arg_list(Args(part='2/4', existing_tsv=None), assemblies, None)
+    arg_list_3_4 = get_arg_list(Args(part='3/4', existing_tsv=None), assemblies, None)
+    arg_list_4_4 = get_arg_list(Args(part='4/4', existing_tsv=None), assemblies, None)
     arg_list_4 = arg_list_1_4 + arg_list_2_4 + arg_list_3_4 + arg_list_4_4
     assert [a[1:] for a in arg_list_1] == [a[1:] for a in arg_list_4]
 
-    arg_list_1_5 = verticall.pairwise.get_arg_list(Args(part='1/5'), assemblies, None)
-    arg_list_2_5 = verticall.pairwise.get_arg_list(Args(part='2/5'), assemblies, None)
-    arg_list_3_5 = verticall.pairwise.get_arg_list(Args(part='3/5'), assemblies, None)
-    arg_list_4_5 = verticall.pairwise.get_arg_list(Args(part='4/5'), assemblies, None)
-    arg_list_5_5 = verticall.pairwise.get_arg_list(Args(part='5/5'), assemblies, None)
+    arg_list_1_5 = get_arg_list(Args(part='1/5', existing_tsv=None), assemblies, None)
+    arg_list_2_5 = get_arg_list(Args(part='2/5', existing_tsv=None), assemblies, None)
+    arg_list_3_5 = get_arg_list(Args(part='3/5', existing_tsv=None), assemblies, None)
+    arg_list_4_5 = get_arg_list(Args(part='4/5', existing_tsv=None), assemblies, None)
+    arg_list_5_5 = get_arg_list(Args(part='5/5', existing_tsv=None), assemblies, None)
     arg_list_5 = arg_list_1_5 + arg_list_2_5 + arg_list_3_5 + arg_list_4_5 + arg_list_5_5
     assert [a[1:] for a in arg_list_1] == [a[1:] for a in arg_list_5]
 
 
 def test_get_arg_list_2():
-    Args = collections.namedtuple('Args', ['part'])
+    Args = collections.namedtuple('Args', ['part', 'existing_tsv'])
     assemblies = [('a', 'a.fasta'), ('b', 'b.fasta'), ('c', 'c.fasta'), ('d', 'd.fasta'),
                   ('e', 'e.fasta'), ('f', 'f.fasta'), ('g', 'g.fasta'), ('h', 'h.fasta')]
     reference = ('ref', 'ref.fasta')
 
-    arg_list = verticall.pairwise.get_arg_list(Args(part='1/1'), assemblies, reference)
+    arg_list = verticall.pairwise.get_arg_list(Args(part='1/1', existing_tsv=None), assemblies,
+                                               reference)
     assert len(arg_list) == 8
+
+
+def test_get_arg_list_3():
+    Args = collections.namedtuple('Args', ['part', 'existing_tsv'])
+    assemblies = [('a', 'a.fasta'), ('b', 'b.fasta'), ('c', 'c.fasta'), ('d', 'd.fasta'),
+                  ('e', 'e.fasta'), ('f', 'f.fasta'), ('g', 'g.fasta'), ('h', 'h.fasta')]
+
+    arg_list = verticall.pairwise.get_arg_list(Args(part='1/1', existing_tsv=None), assemblies,
+                                               None)
+    assert len(arg_list) == 56
+
+
+def test_get_arg_list_4():
+    Args = collections.namedtuple('Args', ['part', 'existing_tsv'])
+    assemblies = [('a', 'a.fasta'), ('b', 'b.fasta'), ('c', 'c.fasta'), ('d', 'd.fasta'),
+                  ('e', 'e.fasta'), ('f', 'f.fasta'), ('g', 'g.fasta'), ('h', 'h.fasta')]
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        out_file = pathlib.Path(temp_dir) / 'existing.tsv'
+        verticall.pairwise.create_output_dir_if_needed(out_file)
+        with open(out_file, 'wt') as f:
+            f.write('assembly_a\tassembly_b\n')
+            f.write('a\tb\n')
+            f.write('a\tc\n')
+            f.write('a\td\n')
+
+        arg_list = verticall.pairwise.get_arg_list(Args(part='1/1', existing_tsv=out_file),
+                                                   assemblies, None)
+        assert len(arg_list) == 53
 
 
 def test_find_assemblies_1():
