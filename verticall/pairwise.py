@@ -237,6 +237,7 @@ def get_arg_list(args, assemblies, reference):
 def load_existing_pairs(filename):
     existing_pairs = set()
     if filename is not None:
+        log(f'Loading pairs to skip from {filename}...')
         with get_open_func(filename)(filename, 'rt') as f:
             for i, line in enumerate(f):
                 parts = line.strip('\n').split('\t')
@@ -246,6 +247,8 @@ def load_existing_pairs(filename):
                     continue
                 else:
                     existing_pairs.add((parts[0], parts[1]))
+        log(f'  found {len(existing_pairs)} pairs to skip')
+        log()
     return existing_pairs
 
 
