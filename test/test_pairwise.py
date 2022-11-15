@@ -197,3 +197,33 @@ def test_create_output_dir_if_needed_3():
         verticall.pairwise.create_output_dir_if_needed(out_file)
         with open(out_file, 'wt') as f:
             f.write('test')
+
+
+def test_load_existing_pairs_1():
+    tsv = pathlib.Path('test/test_matrix/pairwise.tsv')
+    pairs = verticall.pairwise.load_existing_pairs(tsv)
+    assert len(pairs) == 56
+
+
+def test_load_existing_pairs_2():
+    tsv = pathlib.Path('test/test_matrix/pairwise_blank_lines.tsv')
+    pairs = verticall.pairwise.load_existing_pairs(tsv)
+    assert len(pairs) == 56
+
+
+def test_load_existing_pairs_3():
+    tsv = pathlib.Path('test/test_matrix/empty.tsv')
+    pairs = verticall.pairwise.load_existing_pairs(tsv)
+    assert len(pairs) == 0
+
+
+def test_load_existing_pairs_4():
+    tsv = pathlib.Path('test/test_matrix/empty_blank_lines.tsv')
+    pairs = verticall.pairwise.load_existing_pairs(tsv)
+    assert len(pairs) == 0
+
+
+def test_load_existing_pairs_5():
+    tsv = pathlib.Path('test/test_matrix/header_only.tsv')
+    pairs = verticall.pairwise.load_existing_pairs(tsv)
+    assert len(pairs) == 0

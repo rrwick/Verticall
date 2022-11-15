@@ -240,6 +240,8 @@ def load_existing_pairs(filename):
         with get_open_func(filename)(filename, 'rt') as f:
             for i, line in enumerate(f):
                 parts = line.strip('\n').split('\t')
+                if len(parts) < 2:
+                    continue
                 if i == 0 and parts[0] == 'assembly_a' and parts[1] == 'assembly_b':  # header line
                     continue
                 else:

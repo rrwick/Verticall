@@ -137,7 +137,8 @@ def test_include_names():
     assert verticall.matrix.include_names(all_names, 'b,c') == ['b', 'c']
     assert verticall.matrix.include_names(all_names, 'f,c') == ['c', 'f']
     assert verticall.matrix.include_names(all_names, 'e') == ['e']
-    assert verticall.matrix.include_names(all_names, 'a,b,c,d,e,f') == ['a', 'b', 'c', 'd', 'e', 'f']
+    assert verticall.matrix.include_names(all_names, 'a,b,c,d,e,f') == ['a', 'b', 'c',
+                                                                        'd', 'e', 'f']
     with pytest.raises(SystemExit) as e:
         verticall.matrix.include_names(all_names, 'a,b,c,q,e,f')
     assert 'could not find sample' in str(e.value)
@@ -279,6 +280,34 @@ def test_load_tsv_file_4():
     for a in sample_names:
         for b in sample_names:
             assert distances[(a, b)] == pytest.approx(truth[(a, b)])
+
+
+def test_load_tsv_file_5():
+    in_tsv = pathlib.Path('test/test_matrix/pairwise_blank_lines.tsv')
+    distances, sample_names = verticall.matrix.load_tsv_file(in_tsv, 'mean')
+    truth = get_truth_mean_distances()
+    for a in sample_names:
+        for b in sample_names:
+            assert distances[(a, b)] == pytest.approx(truth[(a, b)])
+
+
+def test_load_tsv_file_6():
+    in_tsv = pathlib.Path('test/test_matrix/empty.tsv')
+    with pytest.raises(SystemExit):
+        verticall.matrix.load_tsv_file(in_tsv, 'mean')
+
+
+def test_load_tsv_file_7():
+    in_tsv = pathlib.Path('test/test_matrix/empty_blank_lines.tsv')
+    with pytest.raises(SystemExit):
+        verticall.matrix.load_tsv_file(in_tsv, 'mean')
+
+
+def test_load_tsv_file_8():
+    in_tsv = pathlib.Path('test/test_matrix/header_only.tsv')
+    distances, sample_names = verticall.matrix.load_tsv_file(in_tsv, 'mean')
+    assert len(distances) == 0
+    assert len(sample_names) == 0
 
 
 def test_resolve_multi_distances_1():

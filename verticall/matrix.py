@@ -61,12 +61,19 @@ def load_tsv_file(filename, distance_type):
             parts = line.strip('\n').split('\t')
             if i == 0:  # header line
                 column_index = get_column_index(parts, distance_type + '_distance', filename)
+                if column_index is None:
+                    sys.exit(f'Error: could not find {distance_type}_distance column in {filename}')
             else:
-                assembly_a, assembly_b = parts[0], parts[1]
-                distance = get_distance_from_line_parts(parts, column_index)
-                sample_names.add(assembly_a)
-                sample_names.add(assembly_b)
-                distances[(assembly_a, assembly_b)].append(distance)
+                try:
+                    assembly_a, assembly_b = parts[0], parts[1]
+                    distance = get_distance_from_line_parts(parts, column_index)
+                    sample_names.add(assembly_a)
+                    sample_names.add(assembly_b)
+                    distances[(assembly_a, assembly_b)].append(distance)
+                except IndexError:
+                    pass
+    if column_index is None:
+        sys.exit(f'Error: {filename} seems to be empty')
     sample_names = sorted(sample_names)
     log(f'{len(distances)} distances loaded for {len(sample_names)} assemblies')
     for sample_name in sample_names:

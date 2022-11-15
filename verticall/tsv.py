@@ -42,6 +42,7 @@ def get_column_index(header_parts, column, filename):
     for i, header in enumerate(header_parts):
         if column == header:
             return i
+    return None
 
 
 def check_header_for_assembly_a_regions(header_parts, filename):
