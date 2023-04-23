@@ -160,18 +160,67 @@ def test_find_assemblies_2():
     assert 'duplicate' in str(e.value)
 
 
-def test_check_assemblies():
+def test_check_assemblies_1():
     assemblies = [('a', pathlib.Path('test/test_pairwise/assemblies/a.fasta'))]
-    verticall.pairwise.check_assemblies(assemblies, None)
+    verticall.pairwise.check_assemblies(assemblies, 1, None)
 
     assemblies = [('b', pathlib.Path('test/test_pairwise/assemblies/b.fasta.gz'))]
     with pytest.raises(SystemExit) as e:
-        verticall.pairwise.check_assemblies(assemblies, None)
+        verticall.pairwise.check_assemblies(assemblies, 1, None)
     assert 'duplicate contig names' in str(e.value)
 
     assemblies = [('c', pathlib.Path('test/test_pairwise/assemblies/c.fna'))]
     with pytest.raises(SystemExit) as e:
-        verticall.pairwise.check_assemblies(assemblies, None)
+        verticall.pairwise.check_assemblies(assemblies, 1, None)
+    assert 'ambiguous' in str(e.value)
+
+
+def test_check_assemblies_2():
+    assemblies = [('a', pathlib.Path('test/test_pairwise/assemblies/a.fasta'))]
+    verticall.pairwise.check_assemblies(assemblies, 4, None)
+
+    assemblies = [('b', pathlib.Path('test/test_pairwise/assemblies/b.fasta.gz'))]
+    with pytest.raises(SystemExit) as e:
+        verticall.pairwise.check_assemblies(assemblies, 4, None)
+    assert 'duplicate contig names' in str(e.value)
+
+    assemblies = [('c', pathlib.Path('test/test_pairwise/assemblies/c.fna'))]
+    with pytest.raises(SystemExit) as e:
+        verticall.pairwise.check_assemblies(assemblies, 4, None)
+    assert 'ambiguous' in str(e.value)
+
+
+def test_check_assemblies_3():
+    assemblies = [('a', pathlib.Path('test/test_pairwise/assemblies/a.fasta')),
+                  ('b', pathlib.Path('test/test_pairwise/assemblies/b.fasta.gz')),
+                  ('c', pathlib.Path('test/test_pairwise/assemblies/c.fna'))]
+    with pytest.raises(SystemExit) as e:
+        verticall.pairwise.check_assemblies(assemblies, 1, None)
+    assert 'duplicate contig names' in str(e.value)
+    assert 'ambiguous' in str(e.value)
+
+
+def test_check_assemblies_4():
+    assemblies = [('a', pathlib.Path('test/test_pairwise/assemblies/a.fasta')),
+                  ('b', pathlib.Path('test/test_pairwise/assemblies/b.fasta.gz')),
+                  ('c', pathlib.Path('test/test_pairwise/assemblies/c.fna'))]
+    with pytest.raises(SystemExit) as e:
+        verticall.pairwise.check_assemblies(assemblies, 4, None)
+    assert 'duplicate contig names' in str(e.value)
+    assert 'ambiguous' in str(e.value)
+
+
+def test_check_assemblies_5():
+    reference = ('a', pathlib.Path('test/test_pairwise/assemblies/a.fasta'))
+
+    assemblies = [('b', pathlib.Path('test/test_pairwise/assemblies/b.fasta.gz'))]
+    with pytest.raises(SystemExit) as e:
+        verticall.pairwise.check_assemblies(assemblies, 1, reference)
+    assert 'duplicate contig names' in str(e.value)
+
+    assemblies = [('c', pathlib.Path('test/test_pairwise/assemblies/c.fna'))]
+    with pytest.raises(SystemExit) as e:
+        verticall.pairwise.check_assemblies(assemblies, 4, reference)
     assert 'ambiguous' in str(e.value)
 
 

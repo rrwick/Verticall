@@ -30,7 +30,7 @@ def pairwise(args):
     assemblies = find_assemblies(args.in_dir)
     reference = find_reference(args.reference)
     if not args.skip_check:
-        check_assemblies(assemblies, reference)
+        check_assemblies(assemblies, args.threads, reference)
     build_indices(args, assemblies)
     create_output_dir_if_needed(args.out_file)
     if not args.index_only:
@@ -115,7 +115,7 @@ def get_default_assembly_extensions():
     return ['.fasta', '.fasta.gz', '.fna', '.fna.gz', '.fa', '.fa.gz']
 
 
-def check_assemblies(assemblies, reference=None):
+def check_assemblies(assemblies, threads=1, reference=None):
     """
     Checks to make sure the assemblies look good: no duplicate contig names, no ambiguous bases.
     """
@@ -123,14 +123,32 @@ def check_assemblies(assemblies, reference=None):
         assemblies = sorted(set(assemblies + [reference]))
     files_with_duplicate_contig_names, files_with_ambiguous_bases = [], []
     log(f'Checking assemblies: 0 / {len(assemblies)}', end='')
-    for i, a in enumerate(assemblies):
-        sample_name, filename = a
-        duplicate_contig_names, ambiguous_bases = check_one_assembly(filename)
-        if duplicate_contig_names:
-            files_with_duplicate_contig_names.append(filename)
-        if ambiguous_bases:
-            files_with_ambiguous_bases.append(filename)
-        log(f'\rChecking assemblies: {i + 1} / {len(assemblies)}', end='')
+
+    # If only using a single thread, do the assembly checks in a simple loop (easier for debugging).
+    i = 0
+    filenames = [f for _, f in assemblies]
+    if threads == 1:
+        for filename in filenames:
+            _, duplicate_contig_names, ambiguous_bases = check_one_assembly(filename)
+            if duplicate_contig_names:
+                files_with_duplicate_contig_names.append(filename)
+            if ambiguous_bases:
+                files_with_ambiguous_bases.append(filename)
+            i += 1
+            log(f'\rChecking assemblies: {i} / {len(assemblies)}', end='')
+
+    # If using multiple threads, use a process pool to work in parallel.
+    else:
+        with Pool(processes=threads) as pool:
+            for filename, duplicate_contig_names, ambiguous_bases in \
+                    pool.imap(check_one_assembly, filenames):
+                if duplicate_contig_names:
+                    files_with_duplicate_contig_names.append(filename)
+                if ambiguous_bases:
+                    files_with_ambiguous_bases.append(filename)
+                i += 1
+                log(f'\rChecking assemblies: {i} / {len(assemblies)}', end='')
+
     log('\n')
     if not files_with_duplicate_contig_names and not files_with_ambiguous_bases:
         return
@@ -159,7 +177,7 @@ def check_one_assembly(filename):
         if ambiguous_bases or contains_ambiguous_bases(seq):
             ambiguous_bases = True
     duplicate_contig_names = len(contig_names) > len(set(contig_names))
-    return duplicate_contig_names, ambiguous_bases
+    return filename, duplicate_contig_names, ambiguous_bases
 
 
 def create_output_dir_if_needed(out_file):
