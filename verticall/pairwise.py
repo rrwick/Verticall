@@ -31,7 +31,7 @@ def pairwise(args):
     reference = find_reference(args.reference)
     if not args.skip_check:
         check_assemblies(assemblies, args.threads, reference)
-    build_indices(args, assemblies)
+    build_indices(args, assemblies, args.threads)
     create_output_dir_if_needed(args.out_file)
     if not args.index_only:
         with open(args.out_file, 'wt') as table_file:

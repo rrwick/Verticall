@@ -13,6 +13,7 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 
+from multiprocessing import Pool
 import re
 import subprocess
 import sys
@@ -23,30 +24,61 @@ from .misc import get_fasta_size, get_n50, get_window_count, get_window_coverage
     get_difference_count
 
 
-def build_indices(args, assemblies):
+def build_indices(args, assemblies, threads=1):
     section_header('Building alignment indices')
     explanation('To facilitate faster alignments, Verticall pre-builds a minimap2 index for each '
                 'assembly, if such an index does not already exist.')
     index_options = args.index_options.split()
     if not args.verbose:
         log(f'0 / {len(assemblies)}', end='')
-    for i, a in enumerate(assemblies):
-        sample_name, assembly_filename = a
+    i = 0
+
+    arg_list = []
+    for sample_name, assembly_filename in assemblies:
         if not index_exists(args.in_dir, sample_name, args.verbose):
-            index_file = (args.in_dir / (sample_name + '.mmi')).resolve()
-            command = ['minimap2']
-            command += index_options
-            command += ['-d', index_file, assembly_filename]
-            if args.verbose:
-                log(' '.join(str(x) for x in command))
-            p = subprocess.run(command, capture_output=True, text=True)
-            if p.returncode != 0:
+            arg_list.append((args.in_dir, sample_name, assembly_filename, index_options))
+        elif not args.verbose:
+            i += 1
+            log(f'\r{i} / {len(assemblies)}', end='')
+
+    # If only using a single thread, build indices in a simple loop (easier for debugging).
+    if threads == 1:
+        for all_args in arg_list:
+            sample_name, command_str, return_code = build_one_index(all_args)
+            if return_code != 0:
                 sys.exit(f'\nError: minimap2 failed to index sample {sample_name}:\n{p.stderr}')
-        if not args.verbose:
-            log(f'\r{i+1} / {len(assemblies)}', end='')
+            if args.verbose:
+                log(command_str)
+            else:
+                i += 1
+                log(f'\r{i} / {len(assemblies)}', end='')
+
+    # If using multiple threads, use a process pool to work in parallel.
+    else:
+        with Pool(processes=threads) as pool:
+            for sample_name, command_str, return_code in pool.imap(build_one_index, arg_list):
+                if return_code != 0:
+                    sys.exit(f'\nError: minimap2 failed to index sample {sample_name}:\n{p.stderr}')
+                if args.verbose:
+                    log(command_str)
+                else:
+                    i += 1
+                    log(f'\r{i} / {len(assemblies)}', end='')
+
     if not args.verbose:
         log()
     log()
+
+
+def build_one_index(all_args):
+    in_dir, sample_name, assembly_filename, index_options = all_args
+    index_file = (in_dir / (sample_name + '.mmi')).resolve()
+    command = ['minimap2']
+    command += index_options
+    command += ['-d', index_file, assembly_filename]
+    command_str = ' '.join(str(x) for x in command)
+    p = subprocess.run(command, capture_output=True, text=True)
+    return sample_name, command_str, p.returncode
 
 
 def index_exists(directory, sample_name, verbose):

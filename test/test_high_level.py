@@ -72,14 +72,14 @@ def get_args(in_dir, smoothing_factor=0.8, secondary=0.7, ignore_indels=False, a
                 index_options=index_options)
 
 
-def set_up(temp_dir, args, seq_a, seq_b):
+def set_up(temp_dir, args, seq_a, seq_b, threads=1):
     temp_dir = pathlib.Path(temp_dir)
     assembly_a = temp_dir / 'A.fasta'
     assembly_b = temp_dir / 'B.fasta'
     write_fasta(assembly_a, 'a', seq_a)
     write_fasta(assembly_b, 'b', seq_b)
     assemblies = verticall.pairwise.find_assemblies(temp_dir)
-    verticall.alignment.build_indices(args, assemblies)
+    verticall.alignment.build_indices(args, assemblies, threads)
     return assembly_a, assembly_b
 
 
@@ -116,7 +116,7 @@ def test_identical():
     seq_b = seq_a
     with tempfile.TemporaryDirectory() as temp_dir:
         args = get_args(temp_dir)
-        assembly_a, assembly_b = set_up(temp_dir, args, seq_a, seq_b)
+        assembly_a, assembly_b = set_up(temp_dir, args, seq_a, seq_b, 2)
         log_text, table_lines = \
             verticall.pairwise.process_one_pair((args, 'A', 'B', assembly_a, assembly_b))
     assert len(table_lines) == 1
@@ -148,7 +148,7 @@ def test_identical_different_start_opposite_strand():
     seq_b = reverse_complement(seq_a[250000:] + seq_a[:250000])
     with tempfile.TemporaryDirectory() as temp_dir:
         args = get_args(temp_dir)
-        assembly_a, assembly_b = set_up(temp_dir, args, seq_a, seq_b)
+        assembly_a, assembly_b = set_up(temp_dir, args, seq_a, seq_b, 4)
         log_text, table_lines = \
             verticall.pairwise.process_one_pair((args, 'A', 'B', assembly_a, assembly_b))
     assert len(table_lines) == 1
