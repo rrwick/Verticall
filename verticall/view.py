@@ -112,7 +112,7 @@ def distribution_plot_1(sample_name_a, sample_name_b, window_size, masses, smoot
                       size=1) +
          scale_color_manual({'very_low': horizontal_colour, 'low': ambiguous_colour,
                              'very_high': horizontal_colour, 'high': ambiguous_colour,
-                             'central': vertical_colour}, guide=False) +
+                             'central': vertical_colour}, guide=None) +
          geom_line(aes(x='distance', y='smoothed_mass'), size=0.5) +
          geom_vline(xintercept=mean, colour='#000000', linetype='dotted', size=0.5) +
          geom_vline(xintercept=median, colour='#000000', linetype='dashed', size=0.5) +
@@ -128,7 +128,7 @@ def distribution_plot_1(sample_name_a, sample_name_b, window_size, masses, smoot
     else:
         g += scale_y_continuous(expand=(0, 0), limits=(0, y_max))
 
-    return g.draw()
+    return g.draw(show=True)
 
 
 def distribution_plot_2(sample_name_a, sample_name_b, window_size, vertical_masses,
@@ -169,7 +169,7 @@ def distribution_plot_2(sample_name_a, sample_name_b, window_size, vertical_mass
     else:
         g += scale_y_continuous(expand=(0, 0), limits=(0, y_max))
 
-    return g.draw()
+    return g.draw(show=True)
 
 
 def group_using_thresholds(masses, thresholds):
@@ -239,7 +239,7 @@ def alignment_plot(sample_name_a, sample_name_b, alignments, window_size, sqrt_d
         g += geom_line(data=df, mapping=aes(x='pos', y='dist'), size=0.5)
         offset += len(a.simplified_cigar)
 
-    return g.draw()
+    return g.draw(show=True)
 
 
 def contig_plot(sample_name, painted, window_size, sqrt_distance, vertical_colour,
@@ -284,7 +284,7 @@ def contig_plot(sample_name, painted, window_size, sqrt_distance, vertical_colou
             g += geom_line(data=df, mapping=aes(x='pos', y='dist'), size=0.5)
         offset += contig.length
 
-    return g.draw()
+    return g.draw(show=True)
 
 
 def check_hex_colour(colour):

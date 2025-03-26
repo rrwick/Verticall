@@ -157,9 +157,9 @@ def summary_plot(sample_name, summarised_data, contig_lengths, vertical_colour, 
         offset += length
 
     g += scale_fill_manual({'vertical': vertical_colour, 'horizontal': horizontal_colour,
-                            'unaligned': unaligned_colour}, guide=False)
+                            'unaligned': unaligned_colour}, guide=None)
 
     for b in boundaries:
         g += geom_vline(xintercept=b, colour='#000000', size=0.5)
 
-    return g.draw()
+    return g.draw(show=True)
