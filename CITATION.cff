@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the manuscript listed below."
+title: "Verticall"
+authors:
+  - family-names: "Wick"
+    given-names: "Ryan R"
+    orcid: "https://orcid.org/0000-0001-8349-0778"
+repository-code: "https://github.com/rrwick/Verticall"
+preferred-citation:
+  type: article
+  authors:
+    - family-names: "Odih"
+      given-names: "Erkison Ewomazino"
+      orcid: "https://orcid.org/0000-0003-4503-9403"
+    - family-names: "Wick"
+      given-names: "Ryan R"
+      orcid: "https://orcid.org/0000-0001-8349-0778"
+    - family-names: "Holt"
+      given-names: "Kathryn E"
+      orcid: "https://orcid.org/0000-0003-3949-2471"
+  title: "Verticall: A fast and robust tool for recombination detection in large-scale bacterial genomic datasets"
+  journal: "bioRxiv"
+  year: 2026
+  month: 4
+  date-published: "2026-04-21"
+  doi: "10.64898/2026.04.21.719734"
